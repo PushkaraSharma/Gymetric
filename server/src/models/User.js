@@ -5,7 +5,7 @@ const UserSchema = new mongoose.Schema({
     passwordHash: {type: String, default: null},
     role: {type: String, enum: ['admin', 'staff'], required: true},
     permissions: {type: [String], default: []},
-    gymId: {type: mongoose.Schema.Types.ObjectId, ref: 'Gym'},
+    gymId: {type: mongoose.Schema.Types.ObjectId, ref: 'Gym', required: true},
     isActive: {type: Boolean, default: null},
 }, {timestamps: true});
 

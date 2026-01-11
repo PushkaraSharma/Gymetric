@@ -6,6 +6,8 @@ const ClientSchema = new mongoose.Schema({
     age: Number,
     birthday: Date,
     gender: { type: String, enum: ['Male', 'Female', 'Other'] },
+    membershipStatus: {type: String, enum: ['active', 'expired', 'cancelled', 'trial', 'trial_expired']},
+    currentMembershipEndDate: Date,
     // Membership Linking
     membershipHistory: [{
         planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Memberships' },
@@ -13,14 +15,15 @@ const ClientSchema = new mongoose.Schema({
         startDate: Date,
         endDate: Date,
         amountPaid: Number,
-        status: { type: String, enum: ['active', 'expired', 'cancelled'] }
+        status: { type: String, enum: ['active', 'expired', 'cancelled', 'trial', 'trial_expired'] }
     }],
     //payment transaction history
     paymentHistory: [{
         amount: Number,
         method: { type: String, enum: ['Cash', 'UPI', 'Card', 'Transfer'] },
         date: { type: Date, default: Date.now }
-    }]
+    }],
+    gymId: {type: mongoose.Schema.Types.ObjectId, ref: 'Gym', required: true},
 }, { timestamps: true });
 
 export default mongoose.models.Client || mongoose.model('Client', ClientSchema);

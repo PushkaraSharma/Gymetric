@@ -44,12 +44,12 @@ export const loginAdmin = async(request, reply) => {
         const token = jwt.sign({userId: user._id, gymId: user.gymId._id, role: user.role}, process.env.JWT_SECRET, {expiresIn: '1d'});
         return reply.status(200).send({
             success: true,
-            token,
             data: {
                 username: user.username,
                 role: user.role,
                 gymName: (user.gymId).name,
                 address: (user.gymId).address,
+                token
             }
         })
     } catch (error){

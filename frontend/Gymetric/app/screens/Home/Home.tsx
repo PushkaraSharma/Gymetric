@@ -1,0 +1,170 @@
+import { Platform, ScrollView, TextStyle, View, ViewStyle } from 'react-native'
+import React, { JSX, useCallback, useState } from 'react'
+import { Drawer } from "react-native-drawer-layout"
+import { useAppTheme } from '@/theme/context'
+import { ThemedStyle } from '@/theme/types'
+import { useSafeAreaInsetsStyle } from '@/utils/useSafeAreaInsetsStyle'
+import { Screen } from '@/components/Screen'
+import { $styles } from '@/theme/styles'
+import { DrawerIconButton } from '../DemoShowroomScreen/DrawerIconButton'
+import { Text } from "@/components/Text"
+import { AntDesign, FontAwesome5, Ionicons } from '@expo/vector-icons'
+import { colors } from '@/theme/colors'
+import { spacing } from '@/theme/spacing'
+
+const Home = () => {
+    const { themed } = useAppTheme()
+
+    const [open, setOpen] = useState(false);
+
+    const $drawerInsets = useSafeAreaInsetsStyle(["top"]);
+
+    const toggleDrawer = useCallback(() => {
+        if (!open) {
+            setOpen(true)
+        } else {
+            setOpen(false)
+        }
+    }, [open]);
+
+    const growthLabel = (value: string, warning: boolean = false, bgColor?: any) => (
+        <View style={[themed($growthLabel), warning && {backgroundColor: colors.errorBackground}, bgColor && { backgroundColor: bgColor }]}>
+            {!warning && <AntDesign name='rise' color={bgColor ? colors.tint : colors.activeTxt} size={15} />}
+            <Text size='xxs' style={{ paddingLeft: 5, color: bgColor ? colors.tint : warning ? colors.error : colors.activeTxt }}>{value}</Text>
+        </View>
+    )
+
+    const DashboardCard = (label: string, value: number, additional: string, warning: boolean, icon: JSX.Element,) => {
+        return <View style={[$styles.card, { width: '48%', padding: spacing.md }]}>
+            <View style={$styles.flexRow}>
+                <Text>{label}</Text>
+                {icon}
+            </View>
+            <Text preset='heading' style={{ marginBottom: 5 }}>{value}</Text>
+            {growthLabel(additional, warning)}
+        </View>
+    };
+
+
+    return (
+        <Drawer
+            open={open}
+            onOpen={() => setOpen(true)}
+            onClose={() => setOpen(false)}
+            drawerType="back"
+            drawerPosition={'left'}
+            renderDrawerContent={() => (
+                <View style={themed([$drawer, $drawerInsets])}>
+                    {/* <View style={themed($logoContainer)}>
+              <Image source={logo} style={$logoImage} />
+            </View>
+            <FlatList<DemoListItem["item"]>
+              ref={menuRef}
+              contentContainerStyle={themed($listContentContainer)}
+              data={Object.values(Demos).map((d) => ({
+                name: d.name,
+                useCases: d.data({ theme, themed }).map((u) => {
+                  if (hasValidStringProp(u.props, "name")) {
+                    return translate((u.props as { name: TxKeyPath }).name)
+                  }
+                  return ""
+                }),
+              }))}
+              keyExtractor={(item) => item.name}
+              renderItem={({ item, index: sectionIndex }) => (
+                <ShowroomListItem {...{ item, sectionIndex, handleScroll }} />
+              )}
+            /> */}
+                </View>
+            )}
+        >
+            <Screen
+                preset="fixed"
+                safeAreaEdges={["top"]}
+                contentContainerStyle={$styles.flex1}
+                {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
+            >
+                <DrawerIconButton onPress={toggleDrawer} />
+                <ScrollView style={{ paddingHorizontal: 15 }}>
+                    <View>
+                        <Text preset="heading" style={{}}>Dashboard</Text>
+                        <Text preset='formHelper' style={themed({ color: colors.textDim })}>Good morning, Alex 👋</Text>
+                    </View>
+                    <View style={[$styles.flexRow]}>
+                        {DashboardCard('Total Clients', 142, '+5%', false,
+                            <View style={{ backgroundColor: colors.palette.accent200, padding: 5, borderRadius: 20 }}>
+                                <Ionicons name='people' size={20} color={colors.tint} />
+                            </View>
+                        )}
+                        {DashboardCard('Active', 98, '+12%', false,
+                            <View style={{ backgroundColor: colors.activeBg, padding: 5, borderRadius: 20 }}>
+                                <FontAwesome5 name='running' size={20} color={colors.activeTxt} />
+                            </View>
+                        )}
+                    </View>
+                    <View style={[$styles.card, themed($mainCard)]}>
+                        <View style={[$styles.flexRow, { alignItems: 'flex-start' }]}>
+                            <View>
+                                <Text style={themed($textColor)}>Revenue this month</Text>
+                                <Text preset='heading' style={themed({ color: colors.background })}>$12,450</Text>
+                            </View>
+                            <View style={themed({ backgroundColor: '#ffffff47', padding: 8, borderRadius: 20 })}>
+                                <Ionicons name='cash' size={25} color={'#fff'} />
+                            </View>
+                        </View>
+                        <View style={{ marginTop: 15, flexDirection: 'row', alignItems: 'center' }}>
+                            {growthLabel('+8%', false, '#fff')}
+                            <Text style={themed({ color: colors.background, marginLeft: 10 })} size='xs'>Target: $15,000</Text>
+                        </View>
+                    </View>
+                        <View style={[$styles.flexRow]}>
+                        {DashboardCard('Attendence', 142, '+5%', false,
+                            <View style={{ backgroundColor: colors.palette.accent200, padding: 5, borderRadius: 20 }}>
+                                <Ionicons name='people' size={20} color={colors.tint} />
+                            </View>
+                        )}
+                        {DashboardCard('Expiring', 7, 'Renewals needed', true,
+                            <View style={{ backgroundColor: colors.errorBackground, padding: 5, borderRadius: 20 }}>
+                                <Ionicons name='warning' size={20} color={colors.error} />
+                            </View>
+                        )}
+                    </View>
+                    
+                </ScrollView>
+            </Screen>
+        </Drawer>
+    )
+}
+
+export default Home
+
+
+const $drawer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    backgroundColor: colors.background,
+    flex: 1,
+})
+
+const $logoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+    alignSelf: "flex-start",
+    justifyContent: "center",
+    height: 56,
+    paddingHorizontal: spacing.lg,
+})
+
+const $growthLabel: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    backgroundColor: colors.activeBg,
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.xs,
+    borderRadius: 5,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+})
+
+const $mainCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    backgroundColor: colors.tint,
+    padding: spacing.md
+})
+
+const $textColor: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+    color: colors.background
+})
