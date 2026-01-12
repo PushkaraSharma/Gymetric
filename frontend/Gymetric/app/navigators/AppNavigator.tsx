@@ -10,6 +10,7 @@ import type {  NavigationProps } from "./navigationTypes"
 import { navigationRef, useBackButtonHandler } from "./navigationUtilities"
 import { useMMKVString } from "react-native-mmkv"
 import { MainNavigator } from "./MainNavigator"
+import CreateClient from "@/screens/Clients/CreateClient"
 
 const exitRoutes = Config.exitRoutes
 
@@ -33,6 +34,7 @@ const AppStack = () => {
       {authToken ? (
         <>
           <Stack.Screen name="Main" component={MainNavigator} />
+          <Stack.Screen name="Add Client" component={CreateClient}/>
         </>
       ) : (
         <>

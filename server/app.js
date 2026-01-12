@@ -8,6 +8,7 @@ import { connectDB } from './src/config/connect.js';
 import { PORT } from './src/config/config.js';
 import { dashboardRoutes } from './src/routes/dashboard.js';
 import { startExpiryCheck } from './src/services/expiryCron.js';
+import { gymRoutes } from './src/routes/gym.js';
 
 const start = async() => {
     await connectDB(process.env.MONGO_URI);
@@ -20,6 +21,7 @@ const start = async() => {
     app.register(clientRoutes, {prefix: '/api/client'});
     app.register(membershipRoutes, {prefix: '/api/membership'});
     app.register(dashboardRoutes, {prefix: '/api/dashboard'});
+    app.register(gymRoutes, {prefix: '/api/gym'});
     app.listen({port: PORT, host: '0.0.0.0'}, (err, addr) => {
         if(err){
             console.log(err)

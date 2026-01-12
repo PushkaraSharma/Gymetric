@@ -1,5 +1,5 @@
-import { Platform, ScrollView, TextStyle, View, ViewStyle } from 'react-native'
-import React, { JSX, useCallback, useState } from 'react'
+import { Platform, Pressable, ScrollView, TextStyle, View, ViewStyle } from 'react-native'
+import React, { JSX, useCallback, useEffect, useState } from 'react'
 import { Drawer } from "react-native-drawer-layout"
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
@@ -11,14 +11,19 @@ import { Text } from "@/components/Text"
 import { AntDesign, FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { colors } from '@/theme/colors'
 import { spacing } from '@/theme/spacing'
+import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
+import { selectGymInfo, setLoading } from '@/redux/state/GymStates'
+import { api } from '@/services/api'
+import { navigate } from '@/navigators/navigationUtilities'
 
 const Home = () => {
-    const { themed } = useAppTheme()
-
+    const { themed } = useAppTheme();
+    const dispatch = useAppDispatch();
+    const gymInfo = useAppSelector(selectGymInfo);
     const [open, setOpen] = useState(false);
+    const [summary, setSummary] = useState<{ [key: string]: any } | null>(null);
 
     const $drawerInsets = useSafeAreaInsetsStyle(["top"]);
-
     const toggleDrawer = useCallback(() => {
         if (!open) {
             setOpen(true)
@@ -28,7 +33,7 @@ const Home = () => {
     }, [open]);
 
     const growthLabel = (value: string, warning: boolean = false, bgColor?: any) => (
-        <View style={[themed($growthLabel), warning && {backgroundColor: colors.errorBackground}, bgColor && { backgroundColor: bgColor }]}>
+        <View style={[themed($growthLabel), warning && { backgroundColor: colors.errorBackground }, bgColor && { backgroundColor: bgColor }]}>
             {!warning && <AntDesign name='rise' color={bgColor ? colors.tint : colors.activeTxt} size={15} />}
             <Text size='xxs' style={{ paddingLeft: 5, color: bgColor ? colors.tint : warning ? colors.error : colors.activeTxt }}>{value}</Text>
         </View>
@@ -45,6 +50,18 @@ const Home = () => {
         </View>
     };
 
+    const loadData = async () => {
+        dispatch(setLoading({ loading: true }));
+        const response = await api.dashboardAPI();
+        if (response.kind === 'ok') {
+            setSummary(response.data);
+        }
+        dispatch(setLoading({ loading: false }));
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
 
     return (
         <Drawer
@@ -88,15 +105,15 @@ const Home = () => {
                 <ScrollView style={{ paddingHorizontal: 15 }}>
                     <View>
                         <Text preset="heading" style={{}}>Dashboard</Text>
-                        <Text preset='formHelper' style={themed({ color: colors.textDim })}>Good morning, Alex 👋</Text>
+                        <Text preset='formHelper' style={themed({ color: colors.textDim })}>Good morning, {gymInfo?.ownerName} 👋</Text>
                     </View>
                     <View style={[$styles.flexRow]}>
-                        {DashboardCard('Total Clients', 142, '+5%', false,
+                        {DashboardCard('Total Clients', summary?.totalClients ?? 0, '+5%', false,
                             <View style={{ backgroundColor: colors.palette.accent200, padding: 5, borderRadius: 20 }}>
                                 <Ionicons name='people' size={20} color={colors.tint} />
                             </View>
                         )}
-                        {DashboardCard('Active', 98, '+12%', false,
+                        {DashboardCard('Active', summary?.activeMembers ?? 0, '+12%', false,
                             <View style={{ backgroundColor: colors.activeBg, padding: 5, borderRadius: 20 }}>
                                 <FontAwesome5 name='running' size={20} color={colors.activeTxt} />
                             </View>
@@ -106,7 +123,7 @@ const Home = () => {
                         <View style={[$styles.flexRow, { alignItems: 'flex-start' }]}>
                             <View>
                                 <Text style={themed($textColor)}>Revenue this month</Text>
-                                <Text preset='heading' style={themed({ color: colors.background })}>$12,450</Text>
+                                <Text preset='heading' style={themed({ color: colors.background })}>₹{summary?.revenueThisMonth ?? 0}</Text>
                             </View>
                             <View style={themed({ backgroundColor: '#ffffff47', padding: 8, borderRadius: 20 })}>
                                 <Ionicons name='cash' size={25} color={'#fff'} />
@@ -114,23 +131,25 @@ const Home = () => {
                         </View>
                         <View style={{ marginTop: 15, flexDirection: 'row', alignItems: 'center' }}>
                             {growthLabel('+8%', false, '#fff')}
-                            <Text style={themed({ color: colors.background, marginLeft: 10 })} size='xs'>Target: $15,000</Text>
+                            <Text style={themed({ color: colors.background, marginLeft: 10 })} size='xs'>Target: ₹15,000</Text>
                         </View>
                     </View>
-                        <View style={[$styles.flexRow]}>
+                    <View style={[$styles.flexRow]}>
                         {DashboardCard('Attendence', 142, '+5%', false,
                             <View style={{ backgroundColor: colors.palette.accent200, padding: 5, borderRadius: 20 }}>
                                 <Ionicons name='people' size={20} color={colors.tint} />
                             </View>
                         )}
-                        {DashboardCard('Expiring', 7, 'Renewals needed', true,
+                        {DashboardCard('Expiring', summary?.expiringIn7Days ?? 0, 'Renewals needed', true,
                             <View style={{ backgroundColor: colors.errorBackground, padding: 5, borderRadius: 20 }}>
                                 <Ionicons name='warning' size={20} color={colors.error} />
                             </View>
                         )}
                     </View>
-                    
                 </ScrollView>
+                <Pressable style={themed($addBtn)} onPress={() => {navigate('Add Client')}}>
+                    <Ionicons name='add' size={30} color={colors.background} />
+                </Pressable>
             </Screen>
         </Drawer>
     )
@@ -144,11 +163,23 @@ const $drawer: ThemedStyle<ViewStyle> = ({ colors }) => ({
     flex: 1,
 })
 
-const $logoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    alignSelf: "flex-start",
-    justifyContent: "center",
-    height: 56,
-    paddingHorizontal: spacing.lg,
+const $addBtn: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+    backgroundColor: colors.tint,
+    position: 'absolute',
+    right: 20,
+    bottom: 0,
+    borderRadius: 30,
+    padding: 10,
+    elevation: 1,
+    shadowOffset: {
+        width: 0,
+        height: 1,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 2,
+    shadowColor: '#000',
+    marginBottom: 5
+
 })
 
 const $growthLabel: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

@@ -13,7 +13,6 @@ import { api } from "@/services/api"
 import { useMMKVString } from "react-native-mmkv"
 import { saveString } from "@/utils/storage"
 
-
 export const LoginScreen = () => {
   const authPasswordInput = useRef<TextInput>(null)
 
@@ -138,11 +137,6 @@ const $appName: ThemedStyle<TextStyle> = ({ spacing }) => ({
 
 const $enterDetails: ThemedStyle<TextStyle> = ({ spacing }) => ({
   marginBottom: spacing.lg,
-})
-
-const $hint: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  color: colors.tint,
-  marginBottom: spacing.md,
 })
 
 const $textField: ThemedStyle<ViewStyle> = ({ spacing }) => ({
