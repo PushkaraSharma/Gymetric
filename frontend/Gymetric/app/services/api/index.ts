@@ -12,9 +12,10 @@ import type { ApiResult, BackendResponse, EpisodeItem } from "@/services/api/typ
 
 import { GeneralApiProblem, getGeneralApiProblem } from "./apiProblem"
 import type { ApiConfig, ApiFeedResponse } from "./types"
-import { storage } from "@/utils/storage"
+import { remove, storage } from "@/utils/storage"
 import { store } from "@/redux/Store"
 import { setGymInfo } from "@/redux/state/GymStates"
+import Toast from "react-native-toast-message"
 
 export const DEFAULT_API_CONFIG: ApiConfig = {
   url: Config.API_URL,
@@ -36,17 +37,23 @@ export class Api {
       },
     })
   }
+  setAuthToken(token?: string) {
+    if (token) {
+      this.apisauce.setHeader('Authorization', `Bearer ${token}`)
+    } else {
+      this.apisauce.deleteHeader('Authorization')
+    }
+  }
 
   async apiRequest<T>(method: "get" | "post" | "put" | "patch" | "delete", url: string, body?: any, params?: any): Promise<ApiResult> {
     const response: ApiResponse<BackendResponse<T>> = await this.apisauce[method](url, body, { params });
     if (!response.ok) {//Network fail
-      const message = response?.data?.message ?? "Network error"
-      return {kind: 'error', message};
+      const message = response?.data?.message ?? "Network error";
+      Toast.show({ type: 'error', text1: response.status == 401 ? 'Session Expired' : 'Internal error', text2: message, visibilityTime: 2000 });
+      if (response.status === 401) remove('authToken');
+      return { kind: 'error', message };
     }
-    if (!response.data?.success) {//backend fail
-      return {kind: 'error', message: response?.data?.message ?? "Network error"};
-    }
-    return {kind: 'ok', data: response?.data?.data as T};
+    return { kind: 'ok', data: response?.data?.data as T };
   };
 
   async getEpisodes(): Promise<{ kind: "ok"; episodes: EpisodeItem[] } | GeneralApiProblem> {
@@ -81,23 +88,40 @@ export class Api {
   }
 
   async loginAPI(username: string, password: string) {
-    return this.apiRequest('post', '/api/auth/login', {username, password});
+    return this.apiRequest('post', '/api/auth/login', { username, password });
   }
 
-  dashboardAPI = async() => {
+  dashboardAPI = async () => {
     return this.apiRequest('get', '/api/dashboard/summary');
   }
 
-  gymInfo = async() => {
+  gymInfo = async () => {
     const response = await this.apiRequest('get', '/api/gym/info');
-    if(response.kind === 'ok'){
-      store.dispatch(setGymInfo({gymInfo: response.data}));
+    if (response.kind === 'ok') {
+      store.dispatch(setGymInfo({ gymInfo: response.data }));
     }
   };
 
-  allClients = async() => {
-      return await this.apiRequest('get', '/api/client/all');
+  allClients = async () => {
+    return await this.apiRequest('get', '/api/client/all');
   };
+
+  allMemberships = async () => {
+    return await this.apiRequest('get', '/api/membership/all');
+  };
+
+  createClient = async (body: any) => {
+    return await this.apiRequest('post', '/api/client/add', body);
+  };
+
+  updateClient = async (body: any) => {
+    return await this.apiRequest('patch', '/api/client/update', body);
+  };
+
+  getClient = async (id: string) => {
+    return await this.apiRequest('get', `/api/client/clientInfo?id=${id}`, null);
+  };
+
 
 }
 

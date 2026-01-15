@@ -5,7 +5,7 @@ import Membership from "../models/Memberships.js";
 export const getAllClients = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const clients = await Client.find({ gymId }).select('name phoneNumber membershipStatus currentMembershipEndDate').sort({ name: 1 });
+        const clients = await Client.find({ gymId }).select('name phoneNumber membershipStatus currentMembershipEndDate id').sort({ name: 1 });
         return reply.status(200).send({ success: true, data: clients });
     } catch (error) {
         return reply.status(500).send({ success: false, error: error.message });
@@ -15,15 +15,22 @@ export const getAllClients = async (request, reply) => {
 export const addClient = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const { name, phoneNumber, age, birthday, gender, planId, paymentMethod } = request.body;
+        const { name, phoneNumber, age, birthday, gender, planId, paymentMethod, paymentReceived, startDate, amount } = request.body;
         const plan = await Membership.findById(planId);
+        console.group()
         if (!plan) {
             return reply.status(404).send({ success: false, error: "Membership not found" });
         }
-        const startDate = new Date();
+        const customeStartDate = startDate ? new Date(startDate) : new Date();
         const endDate = new Date();
-        endDate.setDate(startDate.getDate() + plan.durationInDays);
-
+        endDate.setDate(customeStartDate.getDate() + plan.durationInDays);
+        let payments = [];
+        let balance = 0;
+        if(paymentReceived){
+            payments.push({ amount, method: paymentMethod, date: customeStartDate});
+        }else{
+            balance = amount;
+        }
         const client = await Client.create({
             name,
             phoneNumber,
@@ -32,12 +39,14 @@ export const addClient = async (request, reply) => {
             gender,
             membershipStatus: plan.isTrial ? 'trial' : 'active',
             currentMembershipEndDate: endDate,
-            membershipHistory: [{ planId, startDate, endDate }],
-            paymentHistory: [{ amount: plan.price, method: paymentMethod, date: startDate }],
+            membershipHistory: [{ planId, customeStartDate, endDate }],
+            paymentHistory: payments,
+            balance,
             gymId
         });
         return reply.status(201).send({ success: true, data: client });
     } catch (error) {
+        console.log(error)
         return reply.status(500).send({ success: false, error: error.message });
     }
 
@@ -46,13 +55,12 @@ export const addClient = async (request, reply) => {
 export const updateClient = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const { id } = request.params;
-        const { name, phoneNumber, age, birthday, gender, planId, paymentMethod } = request.body;
+        const { id, name, phoneNumber, age, birthday, gender, planId, paymentMethod } = request.body;
         const client = Client.findOne({ _id: id, gymId });
         if (!client) {
             return reply.status(404).send({ success: false, message: 'Client not found' });
         }
-
+        console.log("got updated data", id)
         const updateData = { name, phoneNumber, age, gender, birthday };
 
         if (planId) { //if is it given -> meaning we are updating membership of customer 
@@ -62,7 +70,7 @@ export const updateClient = async (request, reply) => {
             const endDate = new Date();
             endDate.setDate(startDate.getDate() + plan.durationInDays);
             updateData.$push = {
-                membershipHistory: {planId, startDate, endDate},
+                membershipHistory: {planId, startDate, endDate, planName: membership?.name},
                 paymentHistory: { amount: membership.price, method: paymentMethod, date: startDate },
             }
             updateData.membershipStatus =  membership.isTrial ? 'trial' : 'active';
@@ -84,8 +92,10 @@ export const updateClient = async (request, reply) => {
 export const getClientById = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const { id } = request.params;
+        const { id } = request.query;
+        console.log("-------", id)
         const client = await Client.findOne({ _id: id, gymId });
+        console.log(client)
         if (!client) {
             return reply.status(404).send({ success: false, error: "Client not found" });
         }

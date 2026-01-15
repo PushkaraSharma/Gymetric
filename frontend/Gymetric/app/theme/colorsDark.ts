@@ -6,6 +6,7 @@ const palette = {
   neutral500: "#978F8A",
   neutral400: "#564E4A",
   neutral300: "#3C3836",
+  neutral250: '',
   neutral200: "#191015",
   neutral100: "#000000",
 
@@ -36,6 +37,9 @@ const palette = {
 
   activeTxt: '#DCFCE7',
   activeBg: '#166534',
+
+    lightgray: '#F5F5F5'
+
 } as const
 
 export const colors = {

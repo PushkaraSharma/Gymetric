@@ -94,7 +94,7 @@ export const useEpisode = (episode: EpisodeItem) => {
 
   let datePublished
   try {
-    const formatted = formatDate(episode.pubDate)
+    const formatted = episode.pubDate
     datePublished = {
       textLabel: formatted,
       accessibilityLabel: translate("demoPodcastListScreen:accessibility.publishLabel", {

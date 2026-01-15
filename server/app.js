@@ -12,7 +12,6 @@ import { gymRoutes } from './src/routes/gym.js';
 
 const start = async() => {
     await connectDB(process.env.MONGO_URI);
-
     startExpiryCheck();
 
     const app = fastify();

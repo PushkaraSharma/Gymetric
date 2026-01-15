@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "orientation": "portrait",
   "userInterfaceStyle": "automatic",
-  "icon": "./assets/images/app-icon-all.png",
+  "icon": "./assets/images/app-icon.png",
   "updates": {
     "fallbackToCacheTimeout": 0
   },
@@ -15,31 +15,24 @@
     "**/*"
   ],
   "android": {
-    "icon": "./assets/images/app-icon-android-legacy.png",
+    "icon": "./assets/images/app-icon.png",
     "package": "com.gymetric",
-    "adaptiveIcon": {
-      "foregroundImage": "./assets/images/app-icon-android-adaptive-foreground.png",
-      "backgroundImage": "./assets/images/app-icon-android-adaptive-background.png"
-    },
     "allowBackup": false,
     "edgeToEdgeEnabled": true
   },
   "ios": {
-    "icon": "./assets/images/app-icon-ios.png",
+    "icon": "./assets/images/app-icon.png",
     "supportsTablet": true,
     "bundleIdentifier": "com.gymetric"
   },
-  "web": {
-    "favicon": "./assets/images/app-icon-web-favicon.png",
-    "bundler": "metro"
-  },
   "plugins": [
+    "@react-native-community/datetimepicker",
     "expo-localization",
     "expo-font",
     [
       "expo-splash-screen",
       {
-        "image": "./assets/images/app-icon-android-adaptive-foreground.png",
+        "image": "./assets/images/app-icon.png",
         "imageWidth": 300,
         "resizeMode": "contain",
         "backgroundColor": "#191015"

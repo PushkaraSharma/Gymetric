@@ -1,20 +1,23 @@
-import { ComponentType, FC, useEffect, useMemo, useRef, useState } from "react"
-import { TextInput, TextStyle, View, ViewStyle } from "react-native"
+import { useMemo, useRef, useState } from "react"
+import { Image, TextInput, TextStyle, View, ViewStyle } from "react-native"
 import { Button } from "@/components/Button"
-import { Icon, PressableIcon } from "@/components/Icon"
+import { PressableIcon } from "@/components/Icon"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { TextField, type TextFieldAccessoryProps } from "@/components/TextField"
-import type { AppStackScreenProps } from "@/navigators/navigationTypes"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 import { $styles } from "@/theme/styles"
 import { api } from "@/services/api"
 import { useMMKVString } from "react-native-mmkv"
-import { saveString } from "@/utils/storage"
+import { save, saveString } from "@/utils/storage"
+import { useAppDispatch } from "@/redux/Hooks"
+import { setLoggedInUser } from "@/redux/state/GymStates"
+import { AutoImage } from "@/components/AutoImage"
 
 export const LoginScreen = () => {
   const authPasswordInput = useRef<TextInput>(null)
+  const dispatch = useAppDispatch();
 
   const [isAuthPasswordHidden, setIsAuthPasswordHidden] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -38,9 +41,12 @@ export const LoginScreen = () => {
       setLoading(true)
       const res = await api.loginAPI(username, password)
       if (res.kind === "ok") {
-        saveString("authToken", res.data.token)
-        setUsername("")
-        setPassword("")
+        saveString("authToken", res.data.token);
+        save("userData", res.data);
+        api.setAuthToken(res.data.token)
+        setUsername("");
+        setPassword("");
+        dispatch(setLoggedInUser({ loggedInUser: res.data }));
         return
       }
       setValidation({ type: "password", msg: res.message ?? "Invalid credentials" })
@@ -69,65 +75,72 @@ export const LoginScreen = () => {
 
   return (
     <Screen
-      preset="auto"
+      preset="fixed"
       contentContainerStyle={themed($screenContentContainer)}
-      safeAreaEdges={["top", "bottom"]}
+      safeAreaEdges={["top"]}
     >
-      <View style={$styles.card}>
-        <Icon icon="ladybug" containerStyle={themed($customIconContainer)} />
-        <Text tx="loginScreen:appName" preset="heading" style={themed($appName)} />
-        <Text preset="subheading" style={themed($enterDetails)}>Welcome back, please login to continue</Text>
-        <TextField
-          status={validation.type === 'username' ? 'error' : undefined}
-          value={username}
-          onChangeText={setUsername}
-          containerStyle={themed($textField)}
-          autoCapitalize="none"
-          autoCorrect={false}
-          helper={validation.type === 'username' ? validation.msg : undefined}
-          keyboardType="email-address"
-          label="Username"
-          placeholder="Enter your username"
-          onSubmitEditing={() => authPasswordInput.current?.focus()}
-        />
-        <TextField
-          status={validation.type === 'password' ? 'error' : undefined}
-          ref={authPasswordInput}
-          value={password}
-          onChangeText={setPassword}
-          containerStyle={themed($textField)}
-          autoCapitalize="none"
-          autoComplete="password"
-          autoCorrect={false}
-          secureTextEntry={isAuthPasswordHidden}
-          label="Password"
-          placeholder="Enter your password"
-          onSubmitEditing={login}
-          RightAccessory={PasswordRightAccessory}
-          helper={validation.type === 'password' ? validation.msg : undefined}
-        />
-        <Button
-          text="Tap to log in!"
-          style={themed($tapButton)}
-          preset="reversed"
-          onPress={login}
-          disabled={loading}
-        />
+      <View style={{ flex: 1, zIndex: 2 }}>
+        <View style={$styles.card}>
+          <View style={themed($customIconContainer)}>
+            <Image source={require('../../assets/images/app-icon.png')} resizeMode="stretch" style={{ width: 70, height: 70 }} />
+          </View>
+          <Text tx="loginScreen:appName" preset="heading" style={themed($appName)} />
+          <Text preset="subheading" style={themed($enterDetails)}>Welcome back, please login to continue</Text>
+          <TextField
+            status={validation.type === 'username' ? 'error' : undefined}
+            value={username}
+            onChangeText={setUsername}
+            containerStyle={themed($textField)}
+            autoCapitalize="none"
+            autoCorrect={false}
+            helper={validation.type === 'username' ? validation.msg : undefined}
+            keyboardType="email-address"
+            label="Username"
+            placeholder="Enter your username"
+            onSubmitEditing={() => authPasswordInput.current?.focus()}
+          />
+          <TextField
+            status={validation.type === 'password' ? 'error' : undefined}
+            ref={authPasswordInput}
+            value={password}
+            onChangeText={setPassword}
+            containerStyle={themed($textField)}
+            autoCapitalize="none"
+            autoComplete="password"
+            autoCorrect={false}
+            secureTextEntry={isAuthPasswordHidden}
+            label="Password"
+            placeholder="Enter your password"
+            onSubmitEditing={login}
+            RightAccessory={PasswordRightAccessory}
+            helper={validation.type === 'password' ? validation.msg : undefined}
+          />
+          <Button
+            text={loading ? "Logging in..." : "Tap to log in!"}
+            style={themed($tapButton)}
+            preset="reversed"
+            onPress={login}
+            disabled={loading}
+          />
+        </View>
       </View>
+      <Image source={require('../../assets/images/gymbg.png')} style={{ position: 'absolute', bottom: -20, opacity: 0.8 }} resizeMode='cover' />
     </Screen>
   )
 }
 
 const $customIconContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.palette.accent200,
-  padding: spacing.md,
+  backgroundColor: colors.palette.neutral200,
+  padding: spacing.xs,
   borderRadius: 50,
-  alignSelf: 'center'
+  alignSelf: 'center',
 })
 
 const $screenContentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: spacing.xxl,
   paddingHorizontal: spacing.lg,
+  flex: 1,
+  justifyContent: 'flex-start'
 })
 
 const $appName: ThemedStyle<TextStyle> = ({ spacing }) => ({

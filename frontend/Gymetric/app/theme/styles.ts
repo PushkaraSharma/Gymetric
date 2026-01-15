@@ -21,7 +21,7 @@ export const $styles = {
     justifyContent: "center",
     overflow: "hidden",
   } as ViewStyle,
-  
+
   card: {
     backgroundColor: colors.palette.neutral100,
     borderRadius: 8,
@@ -33,4 +33,12 @@ export const $styles = {
     justifyContent: 'space-between',
     alignItems: 'center'
   } as ViewStyle,
+
+  shadow: {
+    shadowColor: colors.palette.neutral800,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12.81,
+    elevation: 16,
+  }
 }

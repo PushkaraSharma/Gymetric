@@ -38,6 +38,8 @@ const palette = {
   activeBg: '#DCFCE7',
   activeTxt: '#166534',
 
+  lightgray: '#e9e5e5ff'
+
 } as const
 
 export const colors = {

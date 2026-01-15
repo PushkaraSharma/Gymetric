@@ -34,6 +34,8 @@ import * as storage from "./utils/storage"
 import Toast from 'react-native-toast-message';
 import { Provider } from 'react-redux';
 import { store } from "./redux/Store"
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export const NAVIGATION_PERSISTENCE_KEY = "NAVIGATION_STATE"
 
@@ -97,18 +99,22 @@ export function App() {
   // otherwise, we're ready to render the app
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <KeyboardProvider>
-        <Provider store={store}>
-          <ThemeProvider>
-            <AppNavigator
-              linking={linking}
-              initialState={initialNavigationState}
-              onStateChange={onNavigationStateChange}
-            />
-            <Toast />
-          </ThemeProvider>
-        </Provider>
-      </KeyboardProvider>
+      <GestureHandlerRootView>
+        <KeyboardProvider>
+          <Provider store={store}>
+            <ThemeProvider>
+              <BottomSheetModalProvider>
+                <AppNavigator
+                  linking={linking}
+                  initialState={initialNavigationState}
+                  onStateChange={onNavigationStateChange}
+                />
+                <Toast topOffset={initialWindowMetrics?.insets.top}/>
+              </BottomSheetModalProvider>
+            </ThemeProvider>
+          </Provider>
+        </KeyboardProvider>
+      </GestureHandlerRootView>
     </SafeAreaProvider>
   )
 }

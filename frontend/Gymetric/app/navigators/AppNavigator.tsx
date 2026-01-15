@@ -6,11 +6,13 @@ import { ErrorBoundary } from "@/screens/ErrorScreen/ErrorBoundary"
 import { LoginScreen } from "@/screens/LoginScreen"
 import { useAppTheme } from "@/theme/context"
 
-import type {  NavigationProps } from "./navigationTypes"
+import type { NavigationProps } from "./navigationTypes"
 import { navigationRef, useBackButtonHandler } from "./navigationUtilities"
 import { useMMKVString } from "react-native-mmkv"
 import { MainNavigator } from "./MainNavigator"
-import CreateClient from "@/screens/Clients/CreateClient"
+import CreateClient from "@/screens/Clients/ClientOnboarding"
+import ClientDetails from "@/screens/Clients/ClientDetails/ClientDetails"
+import UpdateClientbasicInfo from "@/screens/Clients/UpdateClientBasicInfo"
 
 const exitRoutes = Config.exitRoutes
 
@@ -19,7 +21,7 @@ const Stack = createNativeStackNavigator();
 const AppStack = () => {
   const [authToken] = useMMKVString('authToken');
 
-  const { theme: { colors }} = useAppTheme()
+  const { theme: { colors } } = useAppTheme();
 
   return (
     <Stack.Navigator
@@ -34,7 +36,12 @@ const AppStack = () => {
       {authToken ? (
         <>
           <Stack.Screen name="Main" component={MainNavigator} />
-          <Stack.Screen name="Add Client" component={CreateClient}/>
+          <Stack.Group>
+            <Stack.Screen name="Add Client" component={CreateClient} />
+            <Stack.Screen name="Client Profile" component={ClientDetails} />
+            <Stack.Screen name="Update Basic Information" component={UpdateClientbasicInfo} />
+          </Stack.Group>
+
         </>
       ) : (
         <>

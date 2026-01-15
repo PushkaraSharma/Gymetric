@@ -15,6 +15,8 @@ import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo, setLoading } from '@/redux/state/GymStates'
 import { api } from '@/services/api'
 import { navigate } from '@/navigators/navigationUtilities'
+import { useFocusEffect } from '@react-navigation/native'
+import SideDrawer from './SideDrawer'
 
 const Home = () => {
     const { themed } = useAppTheme();
@@ -59,9 +61,11 @@ const Home = () => {
         dispatch(setLoading({ loading: false }));
     };
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [])
+    );
 
     return (
         <Drawer
@@ -70,30 +74,7 @@ const Home = () => {
             onClose={() => setOpen(false)}
             drawerType="back"
             drawerPosition={'left'}
-            renderDrawerContent={() => (
-                <View style={themed([$drawer, $drawerInsets])}>
-                    {/* <View style={themed($logoContainer)}>
-              <Image source={logo} style={$logoImage} />
-            </View>
-            <FlatList<DemoListItem["item"]>
-              ref={menuRef}
-              contentContainerStyle={themed($listContentContainer)}
-              data={Object.values(Demos).map((d) => ({
-                name: d.name,
-                useCases: d.data({ theme, themed }).map((u) => {
-                  if (hasValidStringProp(u.props, "name")) {
-                    return translate((u.props as { name: TxKeyPath }).name)
-                  }
-                  return ""
-                }),
-              }))}
-              keyExtractor={(item) => item.name}
-              renderItem={({ item, index: sectionIndex }) => (
-                <ShowroomListItem {...{ item, sectionIndex, handleScroll }} />
-              )}
-            /> */}
-                </View>
-            )}
+            renderDrawerContent={() => <SideDrawer/>}
         >
             <Screen
                 preset="fixed"
@@ -109,8 +90,8 @@ const Home = () => {
                     </View>
                     <View style={[$styles.flexRow]}>
                         {DashboardCard('Total Clients', summary?.totalClients ?? 0, '+5%', false,
-                            <View style={{ backgroundColor: colors.palette.accent200, padding: 5, borderRadius: 20 }}>
-                                <Ionicons name='people' size={20} color={colors.tint} />
+                            <View style={{ backgroundColor: colors.palette.primary100, padding: 5, borderRadius: 20 }}>
+                                <Ionicons name='people' size={20} color={colors.palette.primary500} />
                             </View>
                         )}
                         {DashboardCard('Active', summary?.activeMembers ?? 0, '+12%', false,
@@ -136,8 +117,8 @@ const Home = () => {
                     </View>
                     <View style={[$styles.flexRow]}>
                         {DashboardCard('Attendence', 142, '+5%', false,
-                            <View style={{ backgroundColor: colors.palette.accent200, padding: 5, borderRadius: 20 }}>
-                                <Ionicons name='people' size={20} color={colors.tint} />
+                            <View style={{ backgroundColor: colors.palette.primary100, padding: 5, borderRadius: 20 }}>
+                                <Ionicons name='people' size={20} color={colors.palette.primary500} />
                             </View>
                         )}
                         {DashboardCard('Expiring', summary?.expiringIn7Days ?? 0, 'Renewals needed', true,
@@ -147,7 +128,7 @@ const Home = () => {
                         )}
                     </View>
                 </ScrollView>
-                <Pressable style={themed($addBtn)} onPress={() => {navigate('Add Client')}}>
+                <Pressable style={themed($addBtn)} onPress={() => { navigate('Add Client') }}>
                     <Ionicons name='add' size={30} color={colors.background} />
                 </Pressable>
             </Screen>
@@ -192,7 +173,7 @@ const $growthLabel: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 })
 
 const $mainCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    backgroundColor: colors.tint,
+    backgroundColor: colors.palette.primary500,
     padding: spacing.md
 })
 

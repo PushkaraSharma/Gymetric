@@ -14,16 +14,18 @@ const ClientSchema = new mongoose.Schema({
         planName: String, // Snapshot in case plan name changes later
         startDate: Date,
         endDate: Date,
-        amountPaid: Number,
+        amount: Number,
         status: { type: String, enum: ['active', 'expired', 'cancelled', 'trial', 'trial_expired'] }
     }],
     //payment transaction history
     paymentHistory: [{
         amount: Number,
         method: { type: String, enum: ['Cash', 'UPI', 'Card', 'Transfer'] },
-        date: { type: Date, default: Date.now }
+        date: { type: Date, default: Date.now },
+        remarks: String
     }],
     gymId: {type: mongoose.Schema.Types.ObjectId, ref: 'Gym', required: true},
+    balance: {type: Number, default: 0}
 }, { timestamps: true });
 
 export default mongoose.models.Client || mongoose.model('Client', ClientSchema);
