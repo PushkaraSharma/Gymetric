@@ -10,9 +10,9 @@ import type { NavigationProps } from "./navigationTypes"
 import { navigationRef, useBackButtonHandler } from "./navigationUtilities"
 import { useMMKVString } from "react-native-mmkv"
 import { MainNavigator } from "./MainNavigator"
-import CreateClient from "@/screens/Clients/ClientOnboarding"
+import CreateClient from "@/screens/Clients/CreateUpdateClient/ClientOnboarding"
 import ClientDetails from "@/screens/Clients/ClientDetails/ClientDetails"
-import UpdateClientbasicInfo from "@/screens/Clients/UpdateClientBasicInfo"
+import UpdateClientbasicInfo from "@/screens/Clients/CreateUpdateClient/UpdateClientBasicInfo"
 
 const exitRoutes = Config.exitRoutes
 

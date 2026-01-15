@@ -40,6 +40,7 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate }) 
                     onChangeText={(val) => { handleForm('phoneNumber', val) }}
                     containerStyle={themed($textField)}
                     keyboardType='number-pad'
+                    maxLength={10}
                     autoCorrect={false}
                     label="Phone Number"
                     placeholder="Enter phone number"
@@ -89,5 +90,5 @@ const $textField: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 })
 
 const $dateView: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, padding: 8, borderWidth: 1, borderColor: colors.palette.neutral400, borderRadius: 5
+    flexDirection: 'row', backgroundColor: colors.palette.neutral100, alignItems: 'center', justifyContent: 'space-between', marginTop: 8, padding: 8, borderWidth: 1, borderColor: colors.palette.neutral400, borderRadius: 5
 })

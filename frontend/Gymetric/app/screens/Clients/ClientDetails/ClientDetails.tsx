@@ -1,4 +1,4 @@
-import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { Image, Platform, Pressable, ScrollView, StyleSheet, View, Linking } from 'react-native'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
@@ -6,7 +6,7 @@ import { Header } from '@/components/Header'
 import { useAppTheme } from '@/theme/context'
 import { useAppDispatch } from '@/redux/Hooks'
 import { goBack, navigate } from '@/navigators/navigationUtilities'
-import { FontAwesome5, Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons'
+import { Feather, FontAwesome5, Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons'
 import { spacing } from '@/theme/spacing'
 import { colors } from '@/theme/colors'
 import { setLoading } from '@/redux/state/GymStates'
@@ -23,13 +23,20 @@ const ClientDetails = ({ navigation, route }: any) => {
 
     const [client, setClient] = useState<{ [key: string]: any } | null>(null);
     const [membershipDays, setMembershipDays] = useState<{ total: number, remain: number, used: number, progress: number }>({ total: 0, remain: 0, used: 0, progress: 0 })
+    const [tab, setTab] = useState<'Memberships' | 'Payments'>('Memberships');
 
     const getDaysProgress = (start: Date, end: Date) => {
         const today = new Date();
-        const total = differenceInCalendarDays(end, start);
-        const remain = isAfter(today, end) ? 0 : differenceInCalendarDays(end, today);
+        today.setHours(0, 0, 0, 0);
+        const startDate = new Date(start);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(end);
+        endDate.setHours(0, 0, 0, 0);
+        const total = differenceInCalendarDays(endDate, startDate) + 1;
+        const remain = isAfter(today, endDate) ? 0 : differenceInCalendarDays(endDate, today);
         const used = total - remain;
         const progress = used / total;
+        console.log(startDate, endDate, total, remain, used, progress)
         setMembershipDays({ total, remain, used, progress });
     };
 
@@ -38,10 +45,27 @@ const ClientDetails = ({ navigation, route }: any) => {
         const response = await api.getClient(route?.params?.data?._id);
         if (response.kind === 'ok') {
             setClient(response.data);
-            const latestMem = response.data.membershipHistory?.[0];
-            getDaysProgress(latestMem?.startDate, latestMem?.endDate);
+            const activeMembership = response.data.activeMembership;
+            getDaysProgress(activeMembership?.startDate, activeMembership?.endDate);
         }
         dispatch(setLoading({ loading: false }));
+    };
+
+    const callNumber = async (phoneNumber: string) => {
+        const url = `tel:${phoneNumber}`
+        const canOpen = await Linking.canOpenURL(url);
+        if (canOpen) {
+            await Linking.openURL(url)
+        }
+    };
+
+    const openWhatsAppChat = async (phoneNumber: string, message = "") => {
+        const formattedNumber = phoneNumber.replace(/\D/g, "");
+        const url = `https://wa.me/${formattedNumber}?text=${encodeURIComponent(message)}`;
+        const canOpen = await Linking.canOpenURL(url);
+        if (canOpen) {
+            await Linking.openURL(url);
+        }
     };
 
     const RenderPayment = (payment: any, index: number) => (
@@ -80,8 +104,8 @@ const ClientDetails = ({ navigation, route }: any) => {
                 }
                 backgroundColor="#fff"
             />
-            <ScrollView style={{ paddingHorizontal: 15 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 25 }}>
-                <View style={{ marginVertical: spacing.lg, alignItems: 'center' }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
+                <View style={{ marginVertical: spacing.md, alignItems: 'center', paddingHorizontal: 15 }}>
                     <View style={[{ marginBottom: spacing.md, borderRadius: 40, padding: spacing.sm, backgroundColor: colors.tintInactive, borderWidth: 4, borderColor: '#fff' }, $styles.shadow]}>
                         <Octicons name='person' size={50} />
                     </View>
@@ -93,67 +117,57 @@ const ClientDetails = ({ navigation, route }: any) => {
                         <Text size='xs' style={{ color: colors.textDim }}>Member since {client ? formatDate(client?.createdAt, 'MMM yyyy') : '-'}</Text>
                     </View>
                 </View>
-                <View>
-                    <Text preset='subheading'>Contact Information</Text>
-                    <View style={[$styles.card, { padding: spacing.md }]}>
-                        <View style={[$styles.flexRow, { borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: 10, borderColor: colors.border }]}>
-                            <View>
-                                <Text style={{ color: colors.textDim }}>Phone Number</Text>
-                                <Text>{client?.phoneNumber ?? '-'}</Text>
-                            </View>
-                            <FontAwesome5 name='phone' size={25} color={colors.tint} />
-                        </View>
-                        <View style={[$styles.flexRow, { paddingTop: 10, borderColor: colors.border }]}>
-                            <View>
-                                <Text style={{ color: colors.textDim }}>Birthday</Text>
-                                <Text>{client?.birthday ? formatDate(client?.birthday, 'dd MMM') : '-'}</Text>
-                            </View>
-                            <View>
-                                <Text style={{ color: colors.textDim }}>Age</Text>
-                                <Text>{client?.age ?? '-'}</Text>
-                            </View>
-                            <View>
-                                <Text style={{ color: colors.textDim }}>Gender</Text>
-                                <Text>{client?.gender}</Text>
-                            </View>
-                        </View>
-                    </View>
+                <View style={[$styles.flexRow, { justifyContent: 'space-around', paddingHorizontal: 15 }]}>
+                    <Button text='Whatsapp' onPress={() => { openWhatsAppChat(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={() => <Ionicons name="logo-whatsapp" size={20} style={{ marginRight: 10 }} />} />
+                    <Button text='Call' onPress={() => { callNumber(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={() => <Feather name="phone" size={20} style={{ marginRight: 10 }} />} />
                 </View>
-                <View>
-                    <Text preset='subheading'>Active Plan</Text>
-                    <View style={[$styles.card, { padding: 0 }]}>
-                        <View style={{ borderTopEndRadius: 10, overflow: 'hidden', borderTopStartRadius: 10 }}>
-                            <Image source={require('../../../../assets/images/membershipImage.jpg')} style={{ height: 150 }} />
-                        </View>
-                        <View style={{ padding: spacing.md }}>
-                            <View style={[$styles.flexRow, { marginBottom: 10 }]}>
-                                <View>
-                                    <Text preset='subheading'>{client?.membershipHistory?.[0]?.planName ?? 'Pro Monthly Plan'}</Text>
-                                    <Text style={{ color: colors.textDim }}>Full access to all facilities</Text>
+                <View style={[$styles.flexRow, { borderBottomWidth: 0.5, borderColor: colors.border, marginVertical: spacing.xl, justifyContent: 'space-around' }]}>
+                    {
+                        ['Memberships', 'Payments'].map((type: string, index: number) => (
+                            <Pressable key={index} style={{ borderBottomWidth: 3, paddingBottom: 5, paddingHorizontal: 15, borderColor: type === tab ? colors.tint : colors.background }} onPress={() => { setTab(type as 'Payments') }}>
+                                <Text weight={'semiBold'} style={{ color: type === tab ? colors.text : colors.textDim }}>{type}</Text>
+                            </Pressable>
+                        ))
+                    }
+                </View>
+                {
+                    tab === 'Memberships' ?
+                        <View style={{ paddingHorizontal: 15 }}>
+                            <Text preset='subheading'>Current Plan {client && membershipDays?.used === 0 && <Text size='xs' style={themed({ color: colors.tint })}>(Will start from {formatDate(client?.activeMembership?.startDate, 'dd MMM')})</Text>}</Text>
+                            <View style={[$styles.card, { padding: 0, marginVertical: spacing.xxs }]}>
+                                <View style={{ borderTopEndRadius: 10, overflow: 'hidden', borderTopStartRadius: 10 }}>
+                                    <Image source={require('../../../../assets/images/membershipImage.jpg')} style={{ height: 150 }} />
+                                </View>
+                                <View style={{ padding: spacing.md }}>
+                                    <View style={[$styles.flexRow, { marginBottom: 10 }]}>
+                                        <View>
+                                            <Text preset='subheading'>{client?.activeMembership?.planName ?? 'Pro Monthly Plan'}</Text>
+                                            <Text style={{ color: colors.textDim }}>{client?.activeMembership?.description ?? "Full access to all facilities"}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={$styles.flexRow}>
+                                        <Text>Days Utilised</Text>
+                                        <Text weight='semiBold' style={{ color: colors.tint }}>{`${membershipDays?.used} / ${membershipDays?.total}`} days</Text>
+                                    </View>
+                                    <View style={{ height: 8, backgroundColor: 'lightgray', borderRadius: 4, marginTop: 5, marginBottom: 15 }}>
+                                        <View style={{ height: 8, width: `${membershipDays.progress * 100}%`, backgroundColor: colors.tint, borderRadius: 4, }}
+                                        />
+                                    </View>
+                                    <View style={[$styles.flexRow, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 10 }]}>
+                                        <View>
+                                            <Text weight='medium' style={{ color: colors.textDim }}>{membershipDays?.remain > 0 ? "Expires On" : "Expired On"}</Text>
+                                            <Text weight='medium' size='md'>{client?.currentEndDate ? formatDate(client?.currentEndDate, 'MMM dd, yyyy') : '-'}</Text>
+                                        </View>
+                                        <Button disabled={membershipDays?.used === 0} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: colors.tint, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => { }} />
+                                    </View>
                                 </View>
                             </View>
-                            <View style={$styles.flexRow}>
-                                <Text>Days Remaining</Text>
-                                <Text weight='semiBold' style={{ color: colors.tint }}>{`${membershipDays?.used} / ${membershipDays?.total}`} days</Text>
-                            </View>
-                            <View style={{ height: 8, backgroundColor: 'lightgray', borderRadius: 4, marginTop: 5, marginBottom: 15 }}>
-                                <View style={{ height: 8, width: `${membershipDays.progress * 100}%`, backgroundColor: colors.tint, borderRadius: 4, }}
-                                />
-                            </View>
-                            <View style={[$styles.flexRow, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 10 }]}>
-                                <View>
-                                    <Text weight='medium' style={{ color: colors.textDim }}>{membershipDays?.remain > 0 ? "Expires On" : "Expired On"}</Text>
-                                    <Text weight='medium' size='md'>{client?.currentMembershipEndDate ? formatDate(client?.currentMembershipEndDate, 'MMM dd, yyyy') : '-'}</Text>
-                                </View>
-                                <Button text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: colors.tint })} preset="reversed" onPress={() => { }} />
-                            </View>
+                        </View> :
+                        <View style={{ paddingHorizontal: 15 }}>
+                            <Text preset='subheading'>Past Transactions</Text>
+                            {client?.paymentHistory.map((payment: any, index: number) => RenderPayment(payment, index))}
                         </View>
-                    </View>
-                </View>
-                <View>
-                    <Text preset='subheading'>Recent Payments</Text>
-                    {client?.paymentHistory.map((payment: any, index: number) => RenderPayment(payment, index))}
-                </View>
+                }
             </ScrollView>
         </Screen>
     )
@@ -161,4 +175,6 @@ const ClientDetails = ({ navigation, route }: any) => {
 
 export default ClientDetails
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({
+    actionBtn: { width: '45%', minHeight: 45, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10 }
+})

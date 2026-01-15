@@ -1,0 +1,1 @@
+export const MEMBERSHIP_TYPES = ['active', 'expired', 'cancelled', 'trial', 'trial_expired', 'pending', 'future']

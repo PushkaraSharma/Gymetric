@@ -43,8 +43,8 @@ const ClientsList = () => {
         return clients.filter((c) => c.membershipStatus === 'cancelled' || c.membershipStatus === 'trial_expired');
       case 'Expiring Soon':
         return clients.filter((c) => {
-          if (!c.currentMembershipEndDate) return false;
-          const endDate = parseISO(c.currentMembershipEndDate);
+          if (!c.currentEndDate) return false;
+          const endDate = parseISO(c.currentEndDate);
           return (c.membershipStatus === 'active' && isAfter(endDate, now) && isBefore(endDate, sevenDaysFromNow));
         });
       case 'All Clients':
@@ -55,19 +55,19 @@ const ClientsList = () => {
 
 
   const filterChip = (filter: string, index: number) => (
-    <TouchableOpacity key={index} style={[themed($chip), { backgroundColor: selectedFilter === filter ? colors.text : colors.palette.neutral250 }]} onPress={() => { setSelectedFilter(filter) }}>
+    <TouchableOpacity key={index} style={[themed($chip), { height: 35, backgroundColor: selectedFilter === filter ? colors.text : colors.palette.neutral100 }]} onPress={() => { setSelectedFilter(filter) }}>
       <Text style={themed({ color: selectedFilter === filter ? colors.background : colors.text })}>{filter}</Text>
     </TouchableOpacity>
   );
 
   const StatusChip = (st: string) => (
-    <View style={themed({ backgroundColor: st === 'active' ? colors.activeBg : st === 'trial' ? colors.palette.accent200 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 })}>
+    <View style={themed({ backgroundColor: st === 'active' ? colors.activeBg : st === 'trial' ? colors.palette.primary100 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 })}>
       <Text size='xs' style={themed({ color: st === 'active' ? colors.activeTxt : st === 'trial' ? colors.tint : colors.error, textTransform: 'capitalize' })}>{st}</Text>
     </View>
   );
 
   const RenderItem = ({ item, index }: any) => (
-    <Pressable style={[themed($item), $styles.flexRow]} onPress={() => {navigate('Client Profile', {data: item})}}>
+    <Pressable style={[themed($item), $styles.flexRow]} onPress={() => { navigate('Client Profile', { data: item }) }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <View style={themed({ backgroundColor: colors.palette.primary100, borderRadius: 25, marginRight: 15, width: 50, height: 50, alignItems: 'center', justifyContent: 'center' })}>
           <Text style={themed({ color: colors.palette.primary500 })} size='md'>{getInitials(item.name)}</Text>
@@ -77,7 +77,10 @@ const ClientsList = () => {
           <Text weight='light'>{item.phoneNumber}</Text>
         </View>
       </View>
-      {StatusChip(item.membershipStatus)}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        {StatusChip(item.membershipStatus)}
+        <Ionicons name='chevron-forward' size={15} color={colors.tintInactive} style={{marginLeft: 10}}/>
+      </View>
     </Pressable>
   );
 
@@ -121,15 +124,12 @@ const ClientsList = () => {
         placeholder="Seach by name or phone number"
         LeftAccessory={() => <Ionicons name='search' size={22} color={colors.tint} />}
       />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 40, marginBottom: 5, marginLeft: 15 }} contentContainerStyle={{ alignItems: 'center' }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ minHeight: 40, maxHeight: 40, marginBottom: 5, marginLeft: 15 }} contentContainerStyle={{ alignItems: 'center', paddingVertical: 5 }}>
         {filters.map((filter: string, index: number) => filterChip(filter, index))}
       </ScrollView>
-      <View style={themed($divider)} />
-      <View style={[$styles.flexRow, { paddingVertical: 5, paddingHorizontal: 15 }]}>
-        <Text size='xs'>MEMBERS ({clients.length})</Text>
-        <Text style={themed({ color: colors.tint })} size='xs'>Sort by Name</Text>
+      <View style={[$styles.flexRow, { paddingBottom: 10, paddingHorizontal: 15 }]}>
+        <Text size='xs' style={{ color: colors.textDim }}>Members ({clients.length})</Text>
       </View>
-      <View style={themed($divider)} />
       <FlatList
         data={filteredClients}
         keyExtractor={(item, index) => `${item}-${index}`}
@@ -150,7 +150,7 @@ const $addBtn: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $textField: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginVertical: spacing.xs,
   borderRadius: 10,
-  backgroundColor: colors.palette.neutral250,
+  backgroundColor: colors.palette.neutral100,
   alignItems: 'center',
   paddingStart: 10,
   paddingVertical: 5,
@@ -174,5 +174,11 @@ const $divider: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
 })
 
 const $item: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-  paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingHorizontal: 15
+  paddingVertical: 10,
+  borderColor: colors.border,
+  paddingHorizontal: 15,
+  backgroundColor: colors.palette.neutral100,
+  margin: 5,
+  marginHorizontal: 10,
+  borderRadius: 10
 })

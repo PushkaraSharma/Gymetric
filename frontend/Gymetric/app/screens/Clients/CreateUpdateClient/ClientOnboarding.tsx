@@ -21,7 +21,7 @@ import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectLoading, setLoading } from '@/redux/state/GymStates'
 import Toast from 'react-native-toast-message'
 import { ClientDateType, ClientFormType } from '@/utils/types'
-import PersonalInfo from './ClientDetails/PersonalInfo'
+import PersonalInfo from './PersonalInfo'
 
 
 const CreateClient = () => {
@@ -53,10 +53,11 @@ const CreateClient = () => {
     const getMemberships = async () => {
         const response = await api.allMemberships();
         if (response.kind === 'ok') {
-            const firstMem = response.data?.[0];
+            const memberships = response.data.map((item: any) => ({...item, label: `${item.planName} - ₹${item.price}`}));
+            const firstMem = memberships?.[0];
             setSelectedMembership([firstMem]);
             handleForm('amount', firstMem?.price);
-            setMemberships(response.data);
+            setMemberships(memberships);
         }
     };
 
@@ -81,7 +82,7 @@ const CreateClient = () => {
 
     const handleCreate = async () => {
         dispatch(setLoading({ loading: true }));
-        const body = { ...form, planId: selectedMembership?.[0]?._id };
+        const body = { ...form, startDate: form.startDate?.toISOString().split('T')[0], planId: selectedMembership?.[0]?._id };
         const response = await api.createClient(body);
         dispatch(setLoading({ loading: false }));
         if (response.kind == 'ok') {
@@ -104,6 +105,7 @@ const CreateClient = () => {
             <DateTimePickerModal
                 isVisible={datePicker.visible}
                 mode="date"
+                minimumDate={datePicker.type === 'startDate' ? new Date() : new Date('1900-01-01')}
                 date={datePicker.type === 'birthday' ? new Date() : form.startDate ?? new Date()}
                 onConfirm={async (date) => {
                     handleForm(datePicker.type, date);
@@ -146,7 +148,7 @@ const CreateClient = () => {
                                                 onSelect={(val) => { setSelectedMembership(val); handleForm('amount', val?.[0]?.price ?? 0) }}
                                                 options={memberships}
                                                 multiple={false}
-                                                labelKey={'planName'}
+                                                labelKey={'label'}
                                                 valueKey={"_id"}
                                                 containerStyle={{ marginBottom: spacing.lg }}
                                             />
@@ -179,7 +181,7 @@ const CreateClient = () => {
                                             </View>
                                             <View style={[$styles.flexRow, { marginBottom: 15 }]}>
                                                 <Text weight='medium'>Start Date</Text>
-                                                <Pressable style={{ width: '60%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, padding: 8, borderWidth: 1, borderColor: colors.palette.neutral400, borderRadius: 5 }} onPress={() => { setDatePicker({ visible: true, type: 'startDate' }) }}>
+                                                <Pressable style={{ width: '60%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, padding: 8, borderWidth: 1, borderColor: colors.palette.neutral400, borderRadius: 5, backgroundColor: colors.palette.neutral100 }} onPress={() => { setDatePicker({ visible: true, type: 'startDate' }) }}>
                                                     <Text style={{ color: form.startDate ? '#000' : colors.textDim }}>{form.startDate ? formatDate(form.startDate, 'dd/MM/yyyy') : 'dd/mm/yyyy'}</Text>
                                                     <Ionicons name='calendar-outline' size={20} color={colors.textDim} />
                                                 </Pressable>

@@ -5,23 +5,22 @@ export const startExpiryCheck = () => {
   // Runs every day at 00:00 (Midnight)
   cron.schedule('0 0 * * *', async () => {
     console.log('Running Daily Membership Expiry Check...');
-    const now = new Date();
-    //Mark Active - Expired
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    //mark future members active if today 
     await Client.updateMany(
-      { 
-        membershipStatus: 'active', 
-        endDate: { $lt: now } 
-      },
-      { $set: { membershipStatus: 'expired' } }
+      { membershipStatus: 'pending', startDate: { $lte: today } },
+      { $set: { membershipStatus: 'active' } }
     );
 
-    //Mark Trial - Trial Expired
+    //Mark Active/Trial - Expired if today
     await Client.updateMany(
-      { 
-        membershipStatus: 'trial', 
-        endDate: { $lt: now } 
+      {
+        membershipStatus: { $in: ['active', 'trial'] },
+        endDate: { $lt: today }
       },
-      { $set: { membershipStatus: 'trial_expired' } }
+      { $set: { membershipStatus: 'expired' } }
     );
     console.log('Expiry check completed.');
   });

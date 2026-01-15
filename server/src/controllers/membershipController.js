@@ -13,9 +13,9 @@ export const getAllMemberships = async (request, reply) => {
 export const addMembership = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const { planName, durationInDays, price, isTrial } = request.body;
+        const { planName, durationInDays,durationInMonths, price, isTrial, description } = request.body;
         const membership = await Memberships.create({
-            planName, durationInDays, price, isTrial, active: true, gymId
+            planName, durationInDays, durationInMonths, price, isTrial, active: true, gymId, description
         })
         return reply.status(201).send({ success: true, data: membership });
     } catch (error) {

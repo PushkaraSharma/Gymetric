@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { MEMBERSHIP_TYPES } from "../utils/Constants.js";
 
 const ClientSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -6,8 +7,16 @@ const ClientSchema = new mongoose.Schema({
     age: Number,
     birthday: Date,
     gender: { type: String, enum: ['Male', 'Female', 'Other'] },
-    membershipStatus: {type: String, enum: ['active', 'expired', 'cancelled', 'trial', 'trial_expired']},
-    currentMembershipEndDate: Date,
+    membershipStatus: {type: String, enum: MEMBERSHIP_TYPES},
+    currentEndDate: Date,
+    activeMembership: {
+        planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Memberships' },
+        planName: String,
+        startDate: Date,
+        endDate: Date,
+        amount: Number,
+        status: { type: String, enum: MEMBERSHIP_TYPES }
+    },
     // Membership Linking
     membershipHistory: [{
         planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Memberships' },
@@ -15,8 +24,9 @@ const ClientSchema = new mongoose.Schema({
         startDate: Date,
         endDate: Date,
         amount: Number,
-        status: { type: String, enum: ['active', 'expired', 'cancelled', 'trial', 'trial_expired'] }
+        status: { type: String, enum: MEMBERSHIP_TYPES }
     }],
+
     //payment transaction history
     paymentHistory: [{
         amount: Number,

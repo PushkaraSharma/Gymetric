@@ -1,7 +1,7 @@
 import { Platform, StyleSheet, View } from 'react-native'
 import React, { useState } from 'react'
 import { ClientDateType, ClientFormType } from '@/utils/types';
-import PersonalInfo from './ClientDetails/PersonalInfo';
+import PersonalInfo from './PersonalInfo';
 import { Screen } from '@/components/Screen';
 import { $styles } from '@/theme/styles';
 import { Header } from '@/components/Header';
@@ -38,7 +38,7 @@ const UpdateClientbasicInfo = ({ navigation, route }: any) => {
 
   return (
     <Screen
-      preset="auto"
+      preset="fixed"
       contentContainerStyle={[$styles.flex1]}
       safeAreaEdges={["bottom"]}
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}

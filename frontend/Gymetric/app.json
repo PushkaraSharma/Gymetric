@@ -23,7 +23,12 @@
   "ios": {
     "icon": "./assets/images/app-icon.png",
     "supportsTablet": true,
-    "bundleIdentifier": "com.gymetric"
+    "bundleIdentifier": "com.gymetric",
+    "infoPlist": {
+      "LSApplicationQueriesSchemes": [
+        "whatsapp", "tel"
+      ]
+    }
   },
   "plugins": [
     "@react-native-community/datetimepicker",
