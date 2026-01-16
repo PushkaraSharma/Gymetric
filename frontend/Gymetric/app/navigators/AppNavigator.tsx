@@ -13,6 +13,10 @@ import { MainNavigator } from "./MainNavigator"
 import CreateClient from "@/screens/Clients/CreateUpdateClient/ClientOnboarding"
 import ClientDetails from "@/screens/Clients/ClientDetails/ClientDetails"
 import UpdateClientbasicInfo from "@/screens/Clients/CreateUpdateClient/UpdateClientBasicInfo"
+import Memberships from "@/screens/Setting/Memberships/Memberships"
+import CreateEditMembership from "@/screens/Setting/Memberships/CreateEditMembership"
+import BusinessProfile from "@/screens/Setting/BusinessProfile"
+import ContactDetails from "@/screens/Setting/ContactDetails"
 
 const exitRoutes = Config.exitRoutes
 
@@ -40,6 +44,14 @@ const AppStack = () => {
             <Stack.Screen name="Add Client" component={CreateClient} />
             <Stack.Screen name="Client Profile" component={ClientDetails} />
             <Stack.Screen name="Update Basic Information" component={UpdateClientbasicInfo} />
+          </Stack.Group>
+          <Stack.Group>
+            <Stack.Group>
+              <Stack.Screen name="Memberships" component={Memberships} />
+              <Stack.Screen name="Create Edit Membership" component={CreateEditMembership} />
+            </Stack.Group>
+            <Stack.Screen name="Business Profile" component={BusinessProfile}/>
+            <Stack.Screen name="Contact Details" component={ContactDetails}/>
           </Stack.Group>
 
         </>

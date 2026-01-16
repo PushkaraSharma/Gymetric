@@ -122,6 +122,9 @@ export class Api {
     return await this.apiRequest('get', `/api/client/clientInfo?id=${id}`, null);
   };
 
+  updateGym = async (body: any) => {
+    return await this.apiRequest('patch', '/api/gym/update', body);
+  };
 
 }
 

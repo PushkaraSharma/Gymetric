@@ -1,40 +1,49 @@
-import { Platform, StyleSheet, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, View } from 'react-native'
 import React, { JSX } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Text } from '@/components/Text'
 import { colors } from '@/theme/colors'
-import { Ionicons, Octicons } from '@expo/vector-icons'
+import { Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons'
 import { spacing } from '@/theme/spacing'
+import { navigate } from '@/navigators/navigationUtilities'
 
 const Setting = () => {
 
-  const CardWithPrefixIcon = ({ title, description, icon }: { title: string, description: string, icon: JSX.Element }) => (
-    <View style={[$styles.card, $styles.flexRow, { padding: spacing.md }]}>
+  const CardWithPrefixIcon = ({ navigateRoute, title, description, icon, noCard }: { navigateRoute: string, title: string, description?: string, icon: JSX.Element, noCard?: boolean }) => (
+    <Pressable style={[!noCard && $styles.card, $styles.flexRow, { padding: spacing.md }]} onPress={() => navigate(navigateRoute)}>
       <View style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '85%' }}>
         <View style={{ padding: 10, borderRadius: 5, backgroundColor: colors.palette.primary100, marginRight: 15 }}>
           {icon}
         </View>
         <View style={{ flex: 1 }}>
-          <Text preset='subheading'>{title}</Text>
-          <Text size='xs' style={{ color: colors.textDim }} numberOfLines={1}>{description}</Text>
+          <Text preset={noCard ? 'formLabel' : 'subheading'}>{title}</Text>
+          {description && <Text size='xs' style={{ color: colors.textDim }} numberOfLines={1}>{description}</Text>}
         </View>
       </View>
       <Ionicons name='chevron-forward' size={20} color={colors.tintInactive} />
-    </View>
+    </Pressable>
   );
 
   return (
     <Screen
-      preset="auto"
+      preset="fixed"
       safeAreaEdges={["top"]}
-      contentContainerStyle={{ paddingHorizontal: 15 }}
+      contentContainerStyle={{ paddingHorizontal: 15, flex: 1 }}
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
       <Text preset="heading">Settings</Text>
       <View style={{ flex: 1 }}>
-        <CardWithPrefixIcon title='Manage Membership' description='Manage plans, pricing and membership durations' icon={<Octicons name='people' size={25} color={colors.tint} />} />
-        <CardWithPrefixIcon title='Business Profile' description='Gym details, location and hours' icon={<Octicons name='people' size={25} color={colors.tint} />} />
+        <CardWithPrefixIcon navigateRoute='Memberships' title='Manage Membership' description='Manage plans, pricing and membership durations' icon={<Octicons name='people' size={25} color={colors.tint} />} />
+        <CardWithPrefixIcon navigateRoute='Business Profile' title='Business Profile' description='Gym details, location and hours' icon={<Octicons name='people' size={25} color={colors.tint} />} />
+      </View>
+      <View>
+        <Text preset='subheading'>Support</Text>
+        <View style={[$styles.card, { padding: 0 }]}>
+          <CardWithPrefixIcon navigateRoute='Contact Details' title='Help Center' icon={<MaterialIcons name='support-agent' size={25} color={colors.tint} />} noCard />
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />
+          <CardWithPrefixIcon navigateRoute='Contact Details' title='Terms of Service' icon={<Ionicons name='document-text-outline' size={25} color={colors.tint} />} noCard />
+        </View>
       </View>
     </Screen>
   )

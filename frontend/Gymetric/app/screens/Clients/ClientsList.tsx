@@ -61,8 +61,8 @@ const ClientsList = () => {
   );
 
   const StatusChip = (st: string) => (
-    <View style={themed({ backgroundColor: st === 'active' ? colors.activeBg : st === 'trial' ? colors.palette.primary100 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 })}>
-      <Text size='xs' style={themed({ color: st === 'active' ? colors.activeTxt : st === 'trial' ? colors.tint : colors.error, textTransform: 'capitalize' })}>{st}</Text>
+    <View style={themed({ backgroundColor: st === 'active' ? colors.activeBg : st === 'trial' ? colors.palette.accent200 : st === 'future' ? colors.palette.secondary100 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 })}>
+      <Text size='xs' style={themed({ color: st === 'active' ? colors.activeTxt : st === 'trial' ? colors.tint : st === 'future' ? colors.palette.secondary500 : colors.error, textTransform: 'capitalize' })}>{st}</Text>
     </View>
   );
 
