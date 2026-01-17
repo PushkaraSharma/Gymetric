@@ -26,10 +26,9 @@ export const addMembership = async (request, reply) => {
 export const updateMembership = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const { id } = request.params;
         const updatedData = request.body;
         const updatedMembership = await Memberships.findOneAndUpdate(
-            { _id: id, gymId },
+            { _id: updatedData?.id, gymId },
             { $set: updatedData },
             { new: true, runValidators: true }
         );
