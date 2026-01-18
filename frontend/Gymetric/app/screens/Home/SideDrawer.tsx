@@ -25,7 +25,7 @@ const SideDrawer = () => {
     const toggleTheme = useCallback(() => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
         setThemeContextOverride(themeContext === "dark" ? "light" : "dark")
-    }, [themeContext, setThemeContextOverride])
+    }, [themeContext, setThemeContextOverride]);
 
     return (
         <View style={themed([$drawer, $drawerInsets])}>

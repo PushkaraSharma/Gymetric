@@ -22,7 +22,7 @@ const Memberships = () => {
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
 
     const MembershipCards = ({ item }: { item: any }) => (
-        <Pressable style={[$styles.card, $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs, opacity: item.active ? 1 : 0.5 }]} disabled={!item.active} onPress={() => navigate('Create Edit Membership', { membership: item })}>
+        <Pressable style={[$styles.card, $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs, opacity: item.active ? 1 : 0.5 }]} onPress={() => navigate('Create Edit Membership', { membership: item })}>
             <View style={{ flex: 1, maxWidth: '85%' }}>
                 <Text preset={'formLabel'}>{item.planName}</Text>
                 <Text size='xxs' style={styles.daysPill}>{item.durationInDays ? `${item.durationInDays} Days` : `${item.durationInMonths} Months`}</Text>

@@ -7,11 +7,10 @@ import HeaderbackButton from '@/components/HeaderbackButton'
 import { spacing } from '@/theme/spacing'
 import { colors } from '@/theme/colors'
 import { Button } from '@/components/Button'
-import { Ionicons, MaterialCommunityIcons, Octicons } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons'
 import { TextField } from '@/components/TextField'
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
-import { selectGymInfo, selectLoading, setGymInfo, setLoading } from '@/redux/state/GymStates'
-import { ThemeProvider } from '@react-navigation/native'
+import { selectLoading, setGymInfo, setLoading } from '@/redux/state/GymStates'
 import { ThemedStyle } from '@/theme/types'
 import { useAppTheme } from '@/theme/context'
 import { api } from '@/services/api'
@@ -20,14 +19,11 @@ import { goBack } from '@/navigators/navigationUtilities'
 import { Switch } from '@/components/Toggle/Switch'
 import { Checkbox } from '@/components/Toggle/Checkbox'
 import { Text } from '@/components/Text'
-import { ms } from 'date-fns/locale'
 
 type MembershipType = {
   planName: string,
   description: string,
   price: number,
-  // durationInDays: number,
-  // durationInMonths: number,
   isTrial: boolean,
   active: boolean
 }
@@ -61,7 +57,6 @@ const CreateEditMembership = ({ navigation, route }: any) => {
     if (!validate()) return;
     const body: any = { ...form, durationInDays: durationType === 'Days' ? Number(duration) : 0, durationInMonths: durationType === 'Months' ? Number(duration) : 0 };
     if (membership) body['id'] = membership?._id;
-    console.log(body)
     dispatch(setLoading({ loading: true }));
     const response = membership ? await api.updateMembership(body) : await api.createMembership(body);
     if (response.kind === 'ok') {

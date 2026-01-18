@@ -36,7 +36,6 @@ const ClientDetails = ({ navigation, route }: any) => {
         const remain = isAfter(today, endDate) ? 0 : differenceInCalendarDays(endDate, today);
         const used = total - remain;
         const progress = used / total;
-        console.log(startDate, endDate, total, remain, used, progress)
         setMembershipDays({ total, remain, used, progress });
     };
 
@@ -121,7 +120,7 @@ const ClientDetails = ({ navigation, route }: any) => {
                     <Button text='Whatsapp' onPress={() => { openWhatsAppChat(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={() => <Ionicons name="logo-whatsapp" size={20} style={{ marginRight: 10 }} />} />
                     <Button text='Call' onPress={() => { callNumber(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={() => <Feather name="phone" size={20} style={{ marginRight: 10 }} />} />
                 </View>
-                <View style={[$styles.flexRow, { borderBottomWidth: 0.5, borderColor: colors.border, marginVertical: spacing.xl, justifyContent: 'space-around' }]}>
+                <View style={[$styles.flexRow, { borderBottomWidth: 0.5, borderColor: colors.border, marginVertical: spacing.lg, justifyContent: 'space-around' }]}>
                     {
                         ['Memberships', 'Payments'].map((type: string, index: number) => (
                             <Pressable key={index} style={{ borderBottomWidth: 3, paddingBottom: 5, paddingHorizontal: 15, borderColor: type === tab ? colors.tint : colors.background }} onPress={() => { setTab(type as 'Payments') }}>
@@ -133,10 +132,11 @@ const ClientDetails = ({ navigation, route }: any) => {
                 {
                     tab === 'Memberships' ?
                         <View style={{ paddingHorizontal: 15 }}>
+                            {client?.upcomingMembership && <Text style={{color: colors.tint, marginBottom: 10}} weight='medium'>Upcoming plan starts on {formatDate(client?.upcomingMembership?.startDate ??  new Date(), 'dd MMM yyyy')}</Text>}
                             <Text preset='subheading'>Current Plan {client && membershipDays?.used === 0 && <Text size='xs' style={themed({ color: colors.tint })}>(Will start from {formatDate(client?.activeMembership?.startDate, 'dd MMM')})</Text>}</Text>
                             <View style={[$styles.card, { padding: 0, marginVertical: spacing.xxs }]}>
                                 <View style={{ borderTopEndRadius: 10, overflow: 'hidden', borderTopStartRadius: 10 }}>
-                                    <Image source={require('../../../../assets/images/membershipImage.jpg')} style={{ height: 150 }} />
+                                    <Image source={require('../../../assets/images/membershipImage.jpg')} style={{ height: 150 }} />
                                 </View>
                                 <View style={{ padding: spacing.md }}>
                                     <View style={[$styles.flexRow, { marginBottom: 10 }]}>
@@ -158,7 +158,7 @@ const ClientDetails = ({ navigation, route }: any) => {
                                             <Text weight='medium' style={{ color: colors.textDim }}>{membershipDays?.remain > 0 ? "Expires On" : "Expired On"}</Text>
                                             <Text weight='medium' size='md'>{client?.currentEndDate ? formatDate(client?.currentEndDate, 'MMM dd, yyyy') : '-'}</Text>
                                         </View>
-                                        <Button disabled={membershipDays?.used === 0} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: colors.tint, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => { }} />
+                                        <Button disabled={membershipDays?.used === 0} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: colors.tint, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => {navigate('Renew Membership', {client: client})}} />
                                     </View>
                                 </View>
                             </View>

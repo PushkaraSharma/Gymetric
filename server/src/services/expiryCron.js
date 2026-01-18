@@ -4,24 +4,75 @@ import Client from '../models/Client.js';
 export const startExpiryCheck = () => {
   // Runs every day at 00:00 (Midnight)
   cron.schedule('0 0 * * *', async () => {
-    console.log('Running Daily Membership Expiry Check...');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    //mark future members active if today 
-    await Client.updateMany(
-      { membershipStatus: 'pending', startDate: { $lte: today } },
-      { $set: { membershipStatus: 'active' } }
-    );
+    console.log('Running Daily Membership Expiry Check...');
 
-    //Mark Active/Trial - Expired if today
-    await Client.updateMany(
+    //find ones with upcoming plans and are now expired
+    const clientsToPromote = await Client.find({
+      'activeMembership.endDate': { $lt: today },
+      upcomingMembership: { $ne: null }
+    });
+
+    if (clientsToPromote.length > 0) {
+      for (let client of clientsToPromote) {
+        // Promote Upcoming to Active
+        client.activeMembership = { ...client.upcomingMembership, status: 'active' };
+        client.membershipStatus = 'active';
+        client.upcomingMembership = null;
+        await client.save();
+      }
+      console.log(`Promoted ${clientsToPromote.length} queued memberships.`);
+    }
+
+    await Client.bulkWrite([
+      //mark future members active if today 
       {
-        membershipStatus: { $in: ['active', 'trial'] },
-        endDate: { $lt: today }
+        updateMany: {
+          filter: {
+            membershipStatus: 'future',
+            'activeMembership.startDate': { $lte: today }
+          },
+          update: {
+            $set: {
+              membershipStatus: 'active',
+              'activeMembership.status': 'active'
+            }
+          }
+        }
       },
-      { $set: { membershipStatus: 'expired' } }
-    );
+      // 2. Mark Active members as Expired
+      {
+        updateMany: {
+          filter: {
+            membershipStatus: 'active',
+            currentEndDate: { $lt: today }
+          },
+          update: {
+            $set: {
+              membershipStatus: 'expired',
+              'activeMembership.status': 'expired'
+            }
+          }
+        }
+      },
+      // 3. Mark Trial members as Trial_Expired
+      {
+        updateMany: {
+          filter: {
+            membershipStatus: 'trial',
+            currentEndDate: { $lt: today }
+          },
+          update: {
+            $set: {
+              membershipStatus: 'trial_expired',
+              'activeMembership.status': 'trial_expired'
+            }
+          }
+        }
+      }
+    ]);
     console.log('Expiry check completed.');
   });
 };

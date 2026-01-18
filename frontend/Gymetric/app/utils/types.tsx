@@ -10,4 +10,14 @@ export type ClientFormType = {
     startDate?: Date
 }
 
-export type ClientDateType = { visible: boolean, type: 'birthday' | 'startDate' }
+export type MembershipRenewType = {
+    id: number,
+    amount: number,
+    method: string,
+    paymentReceived: boolean,
+    startDate: Date
+}
+
+export type ClientDateType = { visible: boolean, type: 'birthday' | 'startDate' };
+
+export type STEPS =  "Personal Info"|"Membership"|"Payment";

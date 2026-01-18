@@ -1,5 +1,4 @@
 import Client from "../models/Client.js";
-import Memberships from "../models/Memberships.js";
 import Membership from "../models/Memberships.js";
 
 const calculateExpiry = (startDate, months, days) => {
@@ -32,7 +31,7 @@ export const getAllClients = async (request, reply) => {
 export const addClient = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const { name, phoneNumber, age, birthday, gender, planId, paymentMethod, paymentReceived, startDate, amount } = request.body;
+        const { name, phoneNumber, age, birthday, gender, planId, method, paymentReceived, startDate, amount } = request.body;
         const plan = await Membership.findById(planId);
         if (!plan) {
             return reply.status(404).send({ success: false, error: "Membership not found" });
@@ -47,7 +46,7 @@ export const addClient = async (request, reply) => {
         let payments = [];
         let balance = 0;
         if (paymentReceived) {
-            payments.push({ amount, method: paymentMethod, date: customStartDate });
+            payments.push({ amount, method, date: customStartDate });
         } else {
             balance = amount;
         }
@@ -77,27 +76,13 @@ export const addClient = async (request, reply) => {
 export const updateClient = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const { id, name, phoneNumber, age, birthday, gender, planId, paymentMethod } = request.body;
+        const { id, name, phoneNumber, age, birthday, gender } = request.body;
         const client = Client.findOne({ _id: id, gymId });
         if (!client) {
             return reply.status(404).send({ success: false, message: 'Client not found' });
         }
         const updateData = { name, phoneNumber, age, gender, birthday };
-
-        if (planId) { //if is it given -> meaning we are updating membership of customer 
-            const membership = Memberships.findById(planId);
-            if (!membership) return reply.status(404).send({ success: false, error: "Membership not found" });
-            const startDate = new Date();
-            const endDate = new Date();
-            endDate.setDate(startDate.getDate() + plan.durationInDays);
-            updateData.$push = {
-                membershipHistory: { planId, startDate, endDate, planName: membership?.name },
-                paymentHistory: { amount: membership.price, method: paymentMethod, date: startDate },
-            }
-            updateData.membershipStatus = membership.isTrial ? 'trial' : 'active';
-            updateData.currentEndDate = endDate;
-        }
-
+        //membership renew part will be handled in renew section
         const updatedClient = await Client.findOneAndUpdate(
             { _id: id, gymId },
             updateData,
@@ -108,7 +93,6 @@ export const updateClient = async (request, reply) => {
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
-
 
 export const getClientById = async (request, reply) => {
     try {
@@ -137,6 +121,56 @@ export const getClientStats = async (request, reply) => {
                 totalClients, activeMembers, expiredMembers
             }
         })
+    } catch (error) {
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};
+
+export const renewMembership = async (request, reply) => {
+    try {
+        const { id, planId, startDate, amount, method, paymentReceived, remarks } = request.body;
+        const client = await Client.findById(id);
+        const plan = await Membership.findById(planId);
+        if (!client || !plan) {
+            return reply.status(404).send({ success: false, message: `${!client ? 'Client' : 'Plan'} not found` });
+        }
+        const newStartDate = new Date(startDate);
+        newStartDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const newEndDate = calculateExpiry(newStartDate, plan.durationInMonths, plan.durationInDays);
+
+        const newMembershipData = {
+            planId: plan._id,
+            planName: plan.planName,
+            startDate: newStartDate,
+            endDate: newEndDate,
+            amount: amount,
+            status: newStartDate > today ? 'future' : 'active'
+        };
+
+        // If they have a currently running valid membership
+        if (['active'].includes(client.membershipStatus) && client.currentEndDate >= today) { //future membership advance
+            client.upcomingMembership = newMembershipData;
+        } else {
+            // They are expired or trial, so this becomes the primary active one
+            client.activeMembership = newMembershipData;
+            client.membershipStatus = newMembershipData.status;
+        }
+
+        // ALWAYS update the currentEndDate to the furthest date
+        // This ensures the Cron Job doesn't expire them prematurely
+        client.currentEndDate = newEndDate;
+
+        if (paymentReceived) {
+            client.paymentHistory.push({ amount, method, date: today, remarks: remarks || "Plan Renewal" });
+        } else {
+            client.balance += amount;
+        }
+        client.membershipHistory.push(newMembershipData);
+        await client.save();
+        return reply.send({ success: true, client });
     } catch (error) {
         return reply.status(500).send({ success: false, error: error.message });
     }

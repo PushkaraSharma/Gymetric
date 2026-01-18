@@ -122,6 +122,10 @@ export class Api {
     return await this.apiRequest('get', `/api/client/clientInfo?id=${id}`, null);
   };
 
+  renewMembership = async (body: any) => {
+    return await this.apiRequest('patch', '/api/client/renew', body);
+  };
+
   createMembership = async (body: any) => {
     return await this.apiRequest('post', '/api/membership/add', body);
   };

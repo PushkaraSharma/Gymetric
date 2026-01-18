@@ -1,4 +1,4 @@
-import { addClient, getAllClients, getClientById, getClientStats, updateClient } from "../controllers/clientController.js";
+import { addClient, getAllClients, getClientById, getClientStats, renewMembership, updateClient } from "../controllers/clientController.js";
 
 export async function clientRoutes(fastify) {
     fastify.addHook('onRequest', fastify.authenticate);
@@ -17,4 +17,7 @@ export async function clientRoutes(fastify) {
 
     // GET /api/clients/stats
     fastify.get('/stats', getClientStats);
+
+    //PATCH /api/clients/renew
+    fastify.patch('/renew', renewMembership);
 }
