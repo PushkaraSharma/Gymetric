@@ -1,22 +1,23 @@
 import { Platform, Pressable, ScrollView, TextStyle, View, ViewStyle } from 'react-native'
-import React, { JSX, useCallback, useEffect, useState } from 'react'
+import React, { JSX, useCallback, useEffect, useMemo, useState } from 'react'
 import { Drawer } from "react-native-drawer-layout"
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { useSafeAreaInsetsStyle } from '@/utils/useSafeAreaInsetsStyle'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
-import { DrawerIconButton } from '../DemoShowroomScreen/DrawerIconButton'
 import { Text } from "@/components/Text"
 import { AntDesign, FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { colors } from '@/theme/colors'
 import { spacing } from '@/theme/spacing'
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo, setLoading } from '@/redux/state/GymStates'
-import { api } from '@/services/api'
+import { api } from '@/services/Api'
 import { navigate } from '@/navigators/navigationUtilities'
 import { useFocusEffect } from '@react-navigation/native'
 import SideDrawer from './SideDrawer'
+import { DrawerIconButton } from '@/components/DrawerIconButton'
+import { getGreeting } from '@/utils/Helper'
 
 const Home = () => {
     const { themed } = useAppTheme();
@@ -24,8 +25,8 @@ const Home = () => {
     const gymInfo = useAppSelector(selectGymInfo);
     const [open, setOpen] = useState(false);
     const [summary, setSummary] = useState<{ [key: string]: any } | null>(null);
+    const greeting = useMemo(() => getGreeting(), []);
 
-    const $drawerInsets = useSafeAreaInsetsStyle(["top"]);
     const toggleDrawer = useCallback(() => {
         if (!open) {
             setOpen(true)
@@ -86,7 +87,7 @@ const Home = () => {
                 <ScrollView style={{ paddingHorizontal: 15 }}>
                     <View>
                         <Text preset="heading" style={{}}>Dashboard</Text>
-                        <Text preset='formHelper' style={themed({ color: colors.textDim })}>Good morning, {gymInfo?.ownerName} 👋</Text>
+                        <Text preset='formHelper' style={themed({ color: colors.textDim })}>{greeting}, {gymInfo?.ownerName} 👋</Text>
                     </View>
                     <View style={[$styles.flexRow]}>
                         {DashboardCard('Total Clients', summary?.totalClients ?? 0, '+5%', false,

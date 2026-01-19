@@ -10,7 +10,7 @@ import { Feather, FontAwesome5, Ionicons, MaterialIcons, Octicons } from '@expo/
 import { spacing } from '@/theme/spacing'
 import { colors } from '@/theme/colors'
 import { setLoading } from '@/redux/state/GymStates'
-import { api } from '@/services/api'
+import { api } from '@/services/Api'
 import { Text } from '@/components/Text'
 import { differenceInCalendarDays, isAfter, formatDate } from 'date-fns';
 import { Button } from '@/components/Button'

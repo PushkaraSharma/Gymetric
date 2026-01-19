@@ -8,7 +8,7 @@ import { goBack } from '@/navigators/navigationUtilities'
 import { colors } from '@/theme/colors'
 import { Button } from '@/components/Button'
 import { ThemedStyle } from '@/theme/types'
-import { api } from '@/services/api'
+import { api } from '@/services/Api'
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectLoading, setLoading } from '@/redux/state/GymStates'

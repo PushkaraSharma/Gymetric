@@ -10,7 +10,7 @@ import { Button } from '@/components/Button';
 import { colors } from '@/theme/colors';
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks';
 import { selectLoading, setLoading } from '@/redux/state/GymStates';
-import { api } from '@/services/api';
+import { api } from '@/services/Api';
 import Toast from 'react-native-toast-message';
 import { goBack } from '@/navigators/navigationUtilities';
 import DateTimePickerModal from "react-native-modal-datetime-picker";

@@ -15,7 +15,7 @@ import {
 } from "@react-navigation/native"
 import { useMMKVString } from "react-native-mmkv"
 
-import { storage } from "@/utils/storage"
+import { storage } from "@/utils/LocalStorage"
 
 import { setImperativeTheming } from "./context.utils"
 import { darkTheme, lightTheme } from "./theme"

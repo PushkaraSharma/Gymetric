@@ -6,7 +6,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import OnBoardingStepsHeader from '@/components/OnBoardingStepsHeader';
 import { MembershipRenewType, STEPS } from '@/utils/types';
 import SelectMembership from './SelectMembership';
-import { api } from '@/services/api';
+import { api } from '@/services/Api';
 import MembershipPayment from './MembershipPayment';
 import { Button } from '@/components/Button';
 import { colors } from '@/theme/colors';

@@ -1,21 +1,10 @@
-/**
- * This Api class lets you define an API endpoint and methods to request
- * data and process it.
- *
- * See the [Backend API Integration](https://docs.infinite.red/ignite-cli/boilerplate/app/services/#backend-api-integration)
- * documentation for more details.
- */
 import { ApiResponse, ApisauceInstance, create } from "apisauce"
-
 import Config from "@/config"
-import type { ApiResult, BackendResponse, EpisodeItem } from "@/services/api/types"
-
-import { GeneralApiProblem, getGeneralApiProblem } from "./apiProblem"
-import type { ApiConfig, ApiFeedResponse } from "./types"
-import { remove, storage } from "@/utils/storage"
+import { remove, storage } from "@/utils/LocalStorage"
 import { store } from "@/redux/Store"
-import { setGymInfo } from "@/redux/state/GymStates"
+import { setAllClients, setGymInfo } from "@/redux/state/GymStates"
 import Toast from "react-native-toast-message"
+import { ApiConfig, ApiResult, BackendResponse } from "@/utils/types"
 
 export const DEFAULT_API_CONFIG: ApiConfig = {
   url: Config.API_URL,
@@ -56,37 +45,6 @@ export class Api {
     return { kind: 'ok', data: response?.data?.data as T };
   };
 
-  async getEpisodes(): Promise<{ kind: "ok"; episodes: EpisodeItem[] } | GeneralApiProblem> {
-    // make the api call
-    const response: ApiResponse<ApiFeedResponse> = await this.apisauce.get(
-      `api.json?rss_url=https%3A%2F%2Ffeeds.simplecast.com%2FhEI_f9Dx`,
-    )
-
-    // the typical ways to die when calling an api
-    if (!response.ok) {
-      const problem = getGeneralApiProblem(response)
-      if (problem) return problem
-    }
-
-    // transform the data into the format we are expecting
-    try {
-      const rawData = response.data
-
-      // This is where we transform the data into the shape we expect for our model.
-      const episodes: EpisodeItem[] =
-        rawData?.items.map((raw) => ({
-          ...raw,
-        })) ?? []
-
-      return { kind: "ok", episodes }
-    } catch (e) {
-      if (__DEV__ && e instanceof Error) {
-        console.error(`Bad data: ${e.message}\n${response.data}`, e.stack)
-      }
-      return { kind: "bad-data" }
-    }
-  }
-
   async loginAPI(username: string, password: string) {
     return this.apiRequest('post', '/api/auth/login', { username, password });
   }
@@ -103,7 +61,10 @@ export class Api {
   };
 
   allClients = async () => {
-    return await this.apiRequest('get', '/api/client/all');
+    const response = await this.apiRequest('get', '/api/client/all');
+    if (response.kind === 'ok') {
+      store.dispatch(setAllClients({ allClients: response.data }));
+    }
   };
 
   allMemberships = async () => {

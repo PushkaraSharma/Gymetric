@@ -14,7 +14,7 @@ import { selectGymInfo, selectLoading, setGymInfo, setLoading } from '@/redux/st
 import { ThemeProvider } from '@react-navigation/native'
 import { ThemedStyle } from '@/theme/types'
 import { useAppTheme } from '@/theme/context'
-import { api } from '@/services/api'
+import { api } from '@/services/Api'
 import Toast from 'react-native-toast-message'
 import { goBack } from '@/navigators/navigationUtilities'
 

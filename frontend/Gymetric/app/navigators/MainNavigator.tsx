@@ -10,10 +10,7 @@ import { Octicons } from '@expo/vector-icons'
 import { useAppSelector } from "@/redux/Hooks"
 import { selectLoading } from "@/redux/state/GymStates"
 import { useEffect } from "react"
-import { api } from "@/services/api"
-import { DemoShowroomScreen } from "@/screens/DemoShowroomScreen/DemoShowroomScreen"
-import { translate } from "@/i18n/translate"
-import { Icon } from "@/components/Icon"
+import { api } from "@/services/Api"
 
 const Tab = createBottomTabNavigator();
 
@@ -24,6 +21,7 @@ export function MainNavigator() {
 
     useEffect(() => {
         api.gymInfo(); //later will move to initial fetch
+        api.allClients();
     }, []);
 
     return (
@@ -70,20 +68,6 @@ export function MainNavigator() {
                         ),
                     }}
                 />
-                <Tab.Screen
-                          name="DemoShowroom"
-                          component={DemoShowroomScreen}
-                          options={{
-                            tabBarLabel: translate("demoNavigator:componentsTab"),
-                            tabBarIcon: ({ focused }) => (
-                              <Icon
-                                icon="components"
-                                color={focused ? colors.tint : colors.tintInactive}
-                                size={30}
-                              />
-                            ),
-                          }}
-                        />
             </Tab.Navigator>
             {isLoading &&
                 <View style={themed($isLoading)}>

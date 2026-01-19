@@ -1,5 +1,5 @@
 import { FlatList, Platform, Pressable, ScrollView, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Text } from '@/components/Text'
@@ -8,11 +8,9 @@ import { Ionicons } from '@expo/vector-icons'
 import { useAppTheme } from '@/theme/context'
 import { colors } from '@/theme/colors'
 import { TextField } from '@/components/TextField'
-import { DemoDivider } from '../DemoShowroomScreen/DemoDivider'
-import { ListItem } from '@/components/ListItem'
-import { useAppDispatch } from '@/redux/Hooks'
-import { setLoading } from '@/redux/state/GymStates'
-import { api } from '@/services/api'
+import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
+import { selectAllClients, setLoading } from '@/redux/state/GymStates'
+import { api } from '@/services/Api'
 import { spacing } from '@/theme/spacing'
 import { navigate } from '@/navigators/navigationUtilities'
 import { useFocusEffect } from '@react-navigation/native'
@@ -22,11 +20,11 @@ import { getInitials } from '@/utils/Helper'
 const ClientsList = () => {
   const { themed } = useAppTheme();
   const dispatch = useAppDispatch();
+  const clients = useAppSelector(selectAllClients);
 
   const filters = ['All Clients', 'Expiring Soon', 'Active', 'Expired', 'Trial', 'Inactive'];
   const [searchText, setSearchText] = useState<string>('');
   const [selectedFilter, setSelectedFilter] = useState<string>('All Clients');
-  const [clients, setClients] = useState<{ [key: string]: any }[]>([]);
 
   const filteredClients = useMemo(() => {
     if (!clients?.length) return [];
@@ -79,7 +77,7 @@ const ClientsList = () => {
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         {StatusChip(item.membershipStatus)}
-        <Ionicons name='chevron-forward' size={15} color={colors.tintInactive} style={{marginLeft: 10}}/>
+        <Ionicons name='chevron-forward' size={15} color={colors.tintInactive} style={{ marginLeft: 10 }} />
       </View>
     </Pressable>
   );
@@ -87,12 +85,7 @@ const ClientsList = () => {
 
   const getClients = async () => {
     dispatch(setLoading({ loading: true }));
-    const response = await api.allClients();
-    if (response.kind === 'ok') {
-      setClients(response.data);
-    } else {
-      setClients([]);
-    }
+    await api.allClients();
     dispatch(setLoading({ loading: false }));
   };
 
@@ -128,7 +121,7 @@ const ClientsList = () => {
         {filters.map((filter: string, index: number) => filterChip(filter, index))}
       </ScrollView>
       <View style={[$styles.flexRow, { paddingBottom: 10, paddingHorizontal: 15 }]}>
-        <Text size='xs' style={{ color: colors.textDim }}>Members ({clients.length})</Text>
+        <Text size='xs' style={{ color: colors.textDim }}>Members ({clients?.length})</Text>
       </View>
       <FlatList
         data={filteredClients}

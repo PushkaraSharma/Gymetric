@@ -20,4 +20,17 @@ export type MembershipRenewType = {
 
 export type ClientDateType = { visible: boolean, type: 'birthday' | 'startDate' };
 
-export type STEPS =  "Personal Info"|"Membership"|"Payment";
+export type STEPS = "Personal Info" | "Membership" | "Payment";
+
+export interface ApiConfig {
+    url: string
+    timeout: number
+}
+
+export type BackendResponse<T> = {
+    success: boolean
+    data?: T
+    message?: string
+}
+
+export type ApiResult = { kind: "ok"; data: any } | { kind: "error"; message: string }

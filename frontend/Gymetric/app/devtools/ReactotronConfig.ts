@@ -9,7 +9,7 @@ import { ReactotronReactNative } from "reactotron-react-native"
 import mmkvPlugin from "reactotron-react-native-mmkv"
 
 import { goBack, resetRoot, navigate } from "@/navigators/navigationUtilities"
-import { storage } from "@/utils/storage"
+import { storage } from "@/utils/LocalStorage"
 
 import { Reactotron } from "./ReactotronClient"
 

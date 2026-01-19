@@ -30,7 +30,7 @@ import { useNavigationPersistence } from "./navigators/navigationUtilities"
 import { ThemeProvider } from "./theme/context"
 import { customFontsToLoad } from "./theme/typography"
 import { loadDateFnsLocale } from "./utils/formatDate"
-import * as storage from "./utils/storage"
+import * as storage from "./utils/LocalStorage"
 import Toast from 'react-native-toast-message';
 import { Provider } from 'react-redux';
 import { store } from "./redux/Store"

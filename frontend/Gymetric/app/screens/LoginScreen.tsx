@@ -8,12 +8,11 @@ import { TextField, type TextFieldAccessoryProps } from "@/components/TextField"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 import { $styles } from "@/theme/styles"
-import { api } from "@/services/api"
+import { api } from "@/services/Api"
 import { useMMKVString } from "react-native-mmkv"
-import { save, saveString } from "@/utils/storage"
+import { save, saveString } from "@/utils/LocalStorage"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
-import { AutoImage } from "@/components/AutoImage"
 
 export const LoginScreen = () => {
   const authPasswordInput = useRef<TextInput>(null)

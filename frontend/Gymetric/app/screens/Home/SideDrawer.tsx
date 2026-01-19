@@ -10,7 +10,7 @@ import { selectGymInfo, selectLoggedInUser } from '@/redux/state/GymStates';
 import { colors } from '@/theme/colors';
 import { Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons';
 import { Switch } from '@/components/Toggle/Switch';
-import { load, remove } from '@/utils/storage';
+import { load, remove } from '@/utils/LocalStorage';
 import { getInitials } from '@/utils/Helper';
 import { useMMKVString } from 'react-native-mmkv';
 
@@ -39,12 +39,12 @@ const SideDrawer = () => {
                 </View>
             </View>
             <View style={themed($staffView)}>
-                <View style={{ borderRadius: 30, padding: 8, alignSelf: 'flex-start', backgroundColor: colors.palette.primary200, marginRight: 15 }}>
-                    <Octicons name='person' size={30}  color={colors.tint}/>
+                <View style={{ borderRadius: 30, padding: 10, alignSelf: 'flex-start', backgroundColor: colors.palette.primary200, marginRight: 15 }}>
+                    <Octicons name='person' size={35}  color={colors.tint}/>
                 </View>
                 <View>
                     <Text weight='medium' size='md'>{user?.username ?? "Test user"}</Text>
-                    <View style={{ backgroundColor: colors.palette.primary200, alignItems: 'center', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 2, alignSelf: 'flex-start' }}>
+                    <View style={{ backgroundColor: colors.palette.primary200, alignItems: 'center', borderRadius: 10, paddingHorizontal: 10, alignSelf: 'flex-start', marginTop: 5 }}>
                         <Text size='xxs' style={{ color: colors.tint, textTransform: 'capitalize' }}>{user?.role}</Text>
                     </View>
                 </View>
