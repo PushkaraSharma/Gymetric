@@ -49,9 +49,9 @@ const RenewMembership = ({ route }: any) => {
         const response = await api.allMemberships();
         if (response.kind === 'ok') {
             const memberships = response.data.filter((item: any) => item.active).map((item: any) => ({ ...item, label: `${item.planName} - ₹${item.price}` }));
-            const firstMem = memberships?.[0];
-            setSelectedMembership([firstMem]);
-            handleForm('amount', firstMem?.price);
+            const defaultMem = memberships.find((item: any) => item._id === client?.activeMembership?.planId) ?? memberships?.[0];
+            setSelectedMembership([defaultMem]);
+            handleForm('amount', defaultMem?.price);
             setMemberships(memberships);
         }
     };

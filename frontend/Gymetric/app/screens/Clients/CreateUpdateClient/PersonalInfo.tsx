@@ -2,7 +2,6 @@ import { Pressable, View, ViewStyle } from 'react-native'
 import React, { FC } from 'react'
 import { Text } from '@/components/Text'
 import { $styles } from '@/theme/styles'
-import { useAppDispatch } from '@/redux/Hooks'
 import { colors } from '@/theme/colors'
 import { Ionicons } from '@expo/vector-icons'
 import { formatDate } from 'date-fns'
@@ -15,10 +14,11 @@ type Props = {
     handleForm: (field: string, value: any) => void,
     form: ClientFormType,
     setDatePicker: (val: ClientDateType) => void,
-    isUpdate?: boolean
+    isUpdate?: boolean,
+    validNumber: boolean,
 }
 
-const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate }) => {
+const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, validNumber }) => {
     const { themed } = useAppTheme();
 
     return (
@@ -36,6 +36,8 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate }) 
                     placeholder="e.g. John Doe"
                 />
                 <TextField
+                    status={!validNumber ? 'error' : undefined}
+                    helper={!validNumber ? 'Phone number already exists' : undefined}
                     value={form.phoneNumber}
                     onChangeText={(val) => { handleForm('phoneNumber', val) }}
                     containerStyle={themed($textField)}

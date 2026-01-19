@@ -5,7 +5,7 @@ export const startExpiryCheck = () => {
   // Runs every day at 00:00 (Midnight)
   cron.schedule('0 0 * * *', async () => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     console.log('Running Daily Membership Expiry Check...');
 

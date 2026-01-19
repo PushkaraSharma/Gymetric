@@ -147,18 +147,18 @@ const ClientDetails = ({ navigation, route }: any) => {
                                     </View>
                                     <View style={$styles.flexRow}>
                                         <Text>Days Utilised</Text>
-                                        <Text weight='semiBold' style={{ color: colors.tint }}>{`${membershipDays?.used} / ${membershipDays?.total}`} days</Text>
+                                        <Text weight='semiBold' style={{ color: membershipDays?.remain > 0 ? colors.tint : colors.error }}>{`${membershipDays?.used} / ${membershipDays?.total}`} days</Text>
                                     </View>
                                     <View style={{ height: 8, backgroundColor: 'lightgray', borderRadius: 4, marginTop: 5, marginBottom: 15 }}>
-                                        <View style={{ height: 8, width: `${membershipDays.progress * 100}%`, backgroundColor: colors.tint, borderRadius: 4, }}
+                                        <View style={{ height: 8, width: `${membershipDays.progress * 100}%`, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, borderRadius: 4, }}
                                         />
                                     </View>
                                     <View style={[$styles.flexRow, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 10 }]}>
                                         <View>
-                                            <Text weight='medium' style={{ color: colors.textDim }}>{membershipDays?.remain > 0 ? "Expires On" : "Expired On"}</Text>
+                                            <Text weight='medium' style={{ color: membershipDays?.remain > 0 ? colors.textDim : colors.error }}>{membershipDays?.remain > 0 ? "Expires On" : "Expired On"}</Text>
                                             <Text weight='medium' size='md'>{client?.currentEndDate ? formatDate(client?.currentEndDate, 'MMM dd, yyyy') : '-'}</Text>
                                         </View>
-                                        <Button disabled={membershipDays?.used === 0} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: colors.tint, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => {navigate('Renew Membership', {client: client})}} />
+                                        <Button disabled={membershipDays?.used === 0} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => {navigate('Renew Membership', {client: client})}} />
                                     </View>
                                 </View>
                             </View>

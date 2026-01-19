@@ -11,7 +11,7 @@ import { ThemedStyle } from '@/theme/types'
 import { api } from '@/services/Api'
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
-import { selectLoading, setLoading } from '@/redux/state/GymStates'
+import { selectAllClients, selectLoading, setLoading } from '@/redux/state/GymStates'
 import Toast from 'react-native-toast-message'
 import { ClientDateType, ClientFormType, STEPS } from '@/utils/types'
 import PersonalInfo from './CreateUpdateClient/PersonalInfo'
@@ -22,20 +22,32 @@ import MembershipPayment from './ClientMembership/MembershipPayment'
 const CreateClient = () => {
     const dispatch = useAppDispatch();
     const loader = useAppSelector(selectLoading);
+    const allClients = useAppSelector(selectAllClients);
+
     const Steps = ["Personal Info", "Membership", "Payment"] as STEPS[];
     const [currentStep, setCurrentStep] = useState<STEPS>("Personal Info");
     const [form, setForm] = useState<ClientFormType>({ name: '', phoneNumber: '', age: null, birthday: null, gender: 'Male', amount: 0, method: 'Cash', paymentReceived: true, startDate: new Date() });
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
     const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([]);
     const [datePicker, setDatePicker] = useState<ClientDateType>({ visible: false, type: 'startDate' });
+    const [validNumber, setValidNumber] = useState<boolean>(true);
+
+    const alreadyExists = (ph: string) => {
+        return allClients?.some((item) => item.phoneNumber === ph);
+    };
 
     const handleForm = (field: string, value: any) => {
         setForm(prev => ({ ...prev, [field]: value }));
+        if (field === 'phoneNumber' && value.length === 10 && alreadyExists(value)) {
+            setValidNumber(false);
+        } else {
+            setValidNumber(true);
+        }
     };
 
     const validateSteps = () => {
         if (currentStep === 'Personal Info') {
-            return (memberships.length > 0 && !!form.name && form.phoneNumber?.length === 10)
+            return (memberships.length > 0 && !!form.name && form.phoneNumber?.length === 10 && validNumber)
         } else if (currentStep === 'Membership') {
             return true;
         } else {
@@ -106,7 +118,7 @@ const CreateClient = () => {
                 <ScrollView style={{ paddingHorizontal: 15, flex: 1 }}>
                     {
                         currentStep === 'Personal Info' ?
-                            <PersonalInfo handleForm={handleForm} form={form} setDatePicker={setDatePicker} /> :
+                            <PersonalInfo handleForm={handleForm} form={form} setDatePicker={setDatePicker} validNumber={validNumber}/> :
                             currentStep === 'Membership' ?
                                 <SelectMembership memberships={memberships} setSelectedMembership={setSelectedMembership} selectedMembership={selectedMembership} handleForm={handleForm} handleDatePicker={() => { setDatePicker({ visible: true, type: 'startDate' }) }} form={form} />
                                 :
