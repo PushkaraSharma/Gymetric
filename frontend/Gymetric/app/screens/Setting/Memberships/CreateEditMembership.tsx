@@ -69,7 +69,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
 
   return (
     <Screen
-      preset="fixed"
+      preset="auto"
       contentContainerStyle={[$styles.flex1]}
       safeAreaEdges={["bottom"]}
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}

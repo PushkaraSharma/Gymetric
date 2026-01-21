@@ -12,4 +12,6 @@ export const BG_ACTIVITY_COLOR: any = {
     'EXPIRY': colors.errorBackground,
     'PAYMENT': colors.activeBg,
     'ADVANCE_RENEWAL': colors.palette.accent100
-}
+};
+
+export const OTA_VERSION = 0

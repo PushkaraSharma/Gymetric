@@ -11,12 +11,12 @@ import { Ionicons, MaterialCommunityIcons, Octicons } from '@expo/vector-icons'
 import { TextField } from '@/components/TextField'
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo, selectLoading, setGymInfo, setLoading } from '@/redux/state/GymStates'
-import { ThemeProvider } from '@react-navigation/native'
 import { ThemedStyle } from '@/theme/types'
 import { useAppTheme } from '@/theme/context'
 import { api } from '@/services/Api'
 import Toast from 'react-native-toast-message'
 import { goBack } from '@/navigators/navigationUtilities'
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 
 type GymFormType = {
   name: string,
@@ -57,61 +57,63 @@ const BusinessProfile = () => {
     >
       <Header title='Business Profile' backgroundColor='#fff' LeftActionComponent={<HeaderbackButton />} />
       <View style={{ paddingTop: 10, flex: 1 }}>
-        <ScrollView style={{ paddingHorizontal: 15 }}>
-          <View>
-            <View style={[{ alignSelf: 'center', marginVertical: spacing.md, borderRadius: 60, padding: spacing.sm, backgroundColor: colors.tintInactive, borderWidth: 4, borderColor: '#fff' }, $styles.shadow]}>
-              <Image source={require('../../../assets/images/app-icon.png')} style={{ width: 60, height: 60 }} />
+        <KeyboardAvoidingView behavior={Platform.OS == 'ios' ? "padding" : "height"}>
+          <ScrollView style={{ paddingHorizontal: 15 }}>
+            <View>
+              <View style={[{ alignSelf: 'center', marginVertical: spacing.md, borderRadius: 60, padding: spacing.sm, backgroundColor: colors.tintInactive, borderWidth: 4, borderColor: '#fff' }, $styles.shadow]}>
+                <Image source={require('../../../assets/images/app-icon.png')} style={{ width: 60, height: 60 }} />
+              </View>
             </View>
-          </View>
-          <TextField
-            value={form.name}
-            onChangeText={(val) => { handleForm('name', val) }}
-            containerStyle={themed($textField)}
-            autoCapitalize="words"
-            autoCorrect={false}
-            label="Gym Name"
-            placeholder="Enter gym name"
-            RightAccessory={() => <MaterialCommunityIcons name='dumbbell' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
-          />
-          <TextField
-            value={form.contactNumber.toString()}
-            onChangeText={(val) => { handleForm('contactNumber', val) }}
-            containerStyle={themed($textField)}
-            autoCorrect={false}
-            keyboardType='number-pad'
-            label="Phone Number"
-            placeholder="Enter contact number"
-            RightAccessory={() => <MaterialCommunityIcons name='phone' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
-          />
-          <TextField
-            value={form.ownerName}
-            onChangeText={(val) => { handleForm('ownerName', val) }}
-            containerStyle={themed($textField)}
-            autoCorrect={false}
-            label="Owner"
-            placeholder="Enter owner name"
-            RightAccessory={() => <Octicons name='person' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
-          />
-          <TextField
-            value={form.email}
-            onChangeText={(val) => { handleForm('email', val) }}
-            containerStyle={themed($textField)}
-            autoCorrect={false}
-            label="Email"
-            placeholder="Enter email adress"
-            RightAccessory={() => <MaterialCommunityIcons name='email' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
-          />
-          <TextField
-            value={form.address}
-            onChangeText={(val) => { handleForm('address', val) }}
-            containerStyle={themed($textField)}
-            autoCorrect={false}
-            label="Location"
-            multiline
-            placeholder="Enter gym address"
-            RightAccessory={() => <Ionicons name='location-sharp' size={20} color={colors.tintInactive} style={{ marginRight: 10, marginTop: 10 }} />}
-          />
-        </ScrollView>
+            <TextField
+              value={form.name}
+              onChangeText={(val) => { handleForm('name', val) }}
+              containerStyle={themed($textField)}
+              autoCapitalize="words"
+              autoCorrect={false}
+              label="Gym Name"
+              placeholder="Enter gym name"
+              RightAccessory={() => <MaterialCommunityIcons name='dumbbell' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            />
+            <TextField
+              value={form.contactNumber.toString()}
+              onChangeText={(val) => { handleForm('contactNumber', val) }}
+              containerStyle={themed($textField)}
+              autoCorrect={false}
+              keyboardType='number-pad'
+              label="Phone Number"
+              placeholder="Enter contact number"
+              RightAccessory={() => <MaterialCommunityIcons name='phone' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            />
+            <TextField
+              value={form.ownerName}
+              onChangeText={(val) => { handleForm('ownerName', val) }}
+              containerStyle={themed($textField)}
+              autoCorrect={false}
+              label="Owner"
+              placeholder="Enter owner name"
+              RightAccessory={() => <Octicons name='person' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            />
+            <TextField
+              value={form.email}
+              onChangeText={(val) => { handleForm('email', val) }}
+              containerStyle={themed($textField)}
+              autoCorrect={false}
+              label="Email"
+              placeholder="Enter email adress"
+              RightAccessory={() => <MaterialCommunityIcons name='email' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            />
+            <TextField
+              value={form.address}
+              onChangeText={(val) => { handleForm('address', val) }}
+              containerStyle={themed($textField)}
+              autoCorrect={false}
+              label="Location"
+              multiline
+              placeholder="Enter gym address"
+              RightAccessory={() => <Ionicons name='location-sharp' size={20} color={colors.tintInactive} style={{ marginRight: 10, marginTop: 10 }} />}
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
         <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
           <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.background} style={{ marginRight: 10 }} />} onPress={updateGym} />
         </View>

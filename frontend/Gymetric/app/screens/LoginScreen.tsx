@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from "react"
-import { Image, TextInput, TextStyle, View, ViewStyle } from "react-native"
+import { Image, Pressable, TextInput, TextStyle, View, ViewStyle } from "react-native"
 import { Button } from "@/components/Button"
 import { PressableIcon } from "@/components/Icon"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
-import { TextField, type TextFieldAccessoryProps } from "@/components/TextField"
+import { TextField } from "@/components/TextField"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 import { $styles } from "@/theme/styles"
@@ -13,6 +13,9 @@ import { useMMKVString } from "react-native-mmkv"
 import { save, saveString } from "@/utils/LocalStorage"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
+import { Octicons } from "@expo/vector-icons"
+import Constants from 'expo-constants';
+import { OTA_VERSION } from "@/utils/Constanst"
 
 export const LoginScreen = () => {
   const authPasswordInput = useRef<TextInput>(null)
@@ -54,23 +57,7 @@ export const LoginScreen = () => {
     } finally {
       setLoading(false)
     }
-  }
-
-  const PasswordRightAccessory = useMemo(
-    () =>
-      function PasswordRightAccessory(props: TextFieldAccessoryProps) {
-        return (
-          <PressableIcon
-            icon={isAuthPasswordHidden ? "view" : "hidden"}
-            color={colors.palette.neutral800}
-            containerStyle={props.style}
-            size={20}
-            onPress={() => setIsAuthPasswordHidden(!isAuthPasswordHidden)}
-          />
-        )
-      },
-    [isAuthPasswordHidden, colors.palette.neutral800],
-  )
+  };
 
   return (
     <Screen
@@ -111,7 +98,10 @@ export const LoginScreen = () => {
             label="Password"
             placeholder="Enter your password"
             onSubmitEditing={login}
-            RightAccessory={PasswordRightAccessory}
+            RightAccessory={(props) => 
+            <Pressable onPress={() => setIsAuthPasswordHidden(!isAuthPasswordHidden)} style={props.style}>
+            <Octicons name={isAuthPasswordHidden ? 'eye' : 'eye-closed'} size={20} color={colors.palette.neutral800}/>
+          </Pressable>}
             helper={validation.type === 'password' ? validation.msg : undefined}
           />
           <Button
@@ -122,7 +112,7 @@ export const LoginScreen = () => {
             disabled={loading}
           />
         </View>
-        <Text style={{position: 'absolute', bottom: 0, width: '100%', textAlign: 'center', color: '#fff'}} size='xs' weight="semiBold">v0.0.1</Text>
+        <Text style={{position: 'absolute', bottom: 0, width: '100%', textAlign: 'center', color: '#fff'}} size='xs' weight="semiBold">v{Constants.expoConfig?.version}({OTA_VERSION})</Text>
       </View>
       <Image source={require('../../assets/images/gymbg.png')} style={{ position: 'absolute', bottom: -20, opacity: 0.8 }} resizeMode='cover' />
     </Screen>

@@ -52,10 +52,7 @@ const ClientDetails = ({ navigation, route }: any) => {
 
     const callNumber = async (phoneNumber: string) => {
         const url = `tel:${phoneNumber}`
-        const canOpen = await Linking.canOpenURL(url);
-        if (canOpen) {
-            await Linking.openURL(url)
-        }
+        await Linking.openURL(url)
     };
 
     const openWhatsAppChat = async (phoneNumber: string, message = "") => {

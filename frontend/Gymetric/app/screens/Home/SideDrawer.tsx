@@ -9,8 +9,8 @@ import { selectGymInfo } from '@/redux/state/GymStates';
 import { colors } from '@/theme/colors';
 import { MaterialIcons, Octicons } from '@expo/vector-icons';
 import { load, remove } from '@/utils/LocalStorage';
-
-
+import { OTA_VERSION } from '@/utils/Constanst';
+import Constants from 'expo-constants';
 
 const SideDrawer = () => {
     const $drawerInsets = useSafeAreaInsetsStyle(["top"]);
@@ -56,7 +56,7 @@ const SideDrawer = () => {
                     <MaterialIcons name='logout' size={30} color={colors.error} />
                     <Text style={{ marginLeft: 15, color: colors.error }} size='md' >Logout</Text>
                 </Pressable>
-                <Text style={{ color: colors.textDim, marginTop: 20, textAlign: 'center' }} size='xxs'>v1.2.8 • Gymetric Systems</Text>
+                <Text style={{ color: colors.textDim, marginTop: 20, textAlign: 'center' }} size='xxs'>{Constants.expoConfig?.version}({OTA_VERSION})</Text>
             </View>
         </View>
     )
