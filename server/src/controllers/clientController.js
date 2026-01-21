@@ -1,3 +1,4 @@
+import Activity from "../models/Activity.js";
 import Client from "../models/Client.js";
 import Membership from "../models/Memberships.js";
 
@@ -66,6 +67,14 @@ export const addClient = async (request, reply) => {
             balance,
             gymId
         });
+        await Activity.create({
+            gymId: gymId,
+            type: 'ONBOARDING',
+            title: 'New Member Joined',
+            description: `${client.name} joined with a ${plan.planName} plan`,
+            amount: amount,
+            memberId: client._id
+        });
         return reply.status(201).send({ success: true, data: client });
     } catch (error) {
         console.log(error)
@@ -128,9 +137,11 @@ export const getClientStats = async (request, reply) => {
 
 export const renewMembership = async (request, reply) => {
     try {
+        const gymId = request.user.gymId;
         const { id, planId, startDate, amount, method, paymentReceived, remarks } = request.body;
         const client = await Client.findById(id);
         const plan = await Membership.findById(planId);
+        let activityType = 'RENEWAL';
         if (!client || !plan) {
             return reply.status(404).send({ success: false, message: `${!client ? 'Client' : 'Plan'} not found` });
         }
@@ -153,6 +164,7 @@ export const renewMembership = async (request, reply) => {
         // If they have a currently running valid membership
         if (['active'].includes(client.membershipStatus) && client.currentEndDate >= today) { //future membership advance
             client.upcomingMembership = newMembershipData;
+            activityType = 'ADVANCE_RENEWAL';
         } else {
             // They are expired or trial, so this becomes the primary active one
             client.activeMembership = newMembershipData;
@@ -170,8 +182,17 @@ export const renewMembership = async (request, reply) => {
         }
         client.membershipHistory.push(newMembershipData);
         await client.save();
+        await Activity.create({
+            gymId: gymId,
+            type: activityType,
+            title: activityType === 'RENEWAL' ? 'Membership Renewed' : 'Advance Renewal',
+            description: activityType === 'RENEWAL' ? `${client.name} renewed the ${plan.planName} plan` : `${client.name} pre-paid for ${plan.planName} starting on ${newStartDate.toLocaleDateString()}`,
+            amount: amount,
+            memberId: client._id
+        });
         return reply.send({ success: true, client });
     } catch (error) {
+        console.log(error)
         return reply.status(500).send({ success: false, error: error.message });
     }
 };

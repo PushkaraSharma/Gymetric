@@ -10,10 +10,24 @@ import { ClientFormType, MembershipRenewType } from '@/utils/types'
 
 type Props = {
     handleForm: (field: string, value: any) => void,
-    form: ClientFormType | MembershipRenewType
+    form: ClientFormType | MembershipRenewType,
+    selectedMembership: { [key: string]: any }
 }
 
-const MembershipPayment: FC<Props> = ({ form, handleForm }) => {
+const MembershipPayment: FC<Props> = ({ form, handleForm, selectedMembership }) => {
+
+    const getDurationLabel = () => {
+        if (!selectedMembership) return '--'
+        if (selectedMembership?.durationInMonths > 0) {
+            const m = selectedMembership.durationInMonths
+            return m === 1 ? 'month' : `${m} months`
+        }
+        else {
+            const d = selectedMembership.durationInDays
+            return d === 1 ? 'day' : `${d} days`
+        }
+    }
+
     return (
         <View style={{ marginTop: 15 }}>
             <Text preset='heading'>Payment Details</Text>
@@ -29,7 +43,7 @@ const MembershipPayment: FC<Props> = ({ form, handleForm }) => {
                             onChangeText={(val) => { handleForm('amount', Number(val)) }}
                             style={{ fontSize: 36, lineHeight: 44, fontWeight: 'bold' }}
                         />
-                        <Text style={{ alignSelf: 'flex-end', marginLeft: 5 }}>/month</Text>
+                        <Text style={{ marginLeft: 5 }}>/ {getDurationLabel()}</Text>
                     </View>
                 </View>
                 <Text>Select Payment Method</Text>

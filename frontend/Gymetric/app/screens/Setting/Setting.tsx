@@ -10,8 +10,8 @@ import { navigate } from '@/navigators/navigationUtilities'
 
 const Setting = () => {
 
-  const CardWithPrefixIcon = ({ navigateRoute, title, description, icon, noCard }: { navigateRoute: string, title: string, description?: string, icon: JSX.Element, noCard?: boolean }) => (
-    <Pressable style={[!noCard && $styles.card, $styles.flexRow, { padding: spacing.md }]} onPress={() => navigate(navigateRoute)}>
+  const CardWithPrefixIcon = ({ navigateRoute, title, description, icon, noCard, disable }: { navigateRoute: string, title: string, description?: string, icon: JSX.Element, noCard?: boolean, disable?: boolean }) => (
+    <Pressable disabled={disable} style={[!noCard && $styles.card, $styles.flexRow, { padding: spacing.md }]} onPress={() => navigate(navigateRoute)}>
       <View style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '85%' }}>
         <View style={{ padding: 10, borderRadius: 5, backgroundColor: colors.palette.primary100, marginRight: 15 }}>
           {icon}
@@ -40,9 +40,9 @@ const Setting = () => {
       <View>
         <Text preset='subheading'>Support</Text>
         <View style={[$styles.card, { padding: 0 }]}>
-          <CardWithPrefixIcon navigateRoute='Contact Details' title='Help Center' icon={<MaterialIcons name='support-agent' size={25} color={colors.tint} />} noCard />
+          <CardWithPrefixIcon navigateRoute='Contact Details' title='Help Center' icon={<MaterialIcons name='support-agent' size={25} color={colors.tint} />} noCard disable/>
           <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />
-          <CardWithPrefixIcon navigateRoute='Contact Details' title='Terms of Service' icon={<Ionicons name='document-text-outline' size={25} color={colors.tint} />} noCard />
+          <CardWithPrefixIcon navigateRoute='Contact Details' title='Terms of Service' icon={<Ionicons name='document-text-outline' size={25} color={colors.tint} />} noCard disable/>
         </View>
       </View>
     </Screen>

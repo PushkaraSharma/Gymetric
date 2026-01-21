@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import Client from '../models/Client.js';
+import Activity from '../models/Activity.js';
 
 export const startExpiryCheck = () => {
   // Runs every day at 00:00 (Midnight)
@@ -16,14 +17,45 @@ export const startExpiryCheck = () => {
     });
 
     if (clientsToPromote.length > 0) {
+      const promotionActivities = [];
       for (let client of clientsToPromote) {
         // Promote Upcoming to Active
-        client.activeMembership = { ...client.upcomingMembership, status: 'active' };
+        const newPlan = { ...client.upcomingMembership, status: 'active' };
+        client.activeMembership = newPlan;
         client.membershipStatus = 'active';
+        client.currentEndDate = newPlan.endDate;
         client.upcomingMembership = null;
         await client.save();
+        promotionActivities.push({
+          gymId: client?.gymId,
+          type: 'RENEWAL',
+          title: 'Membership Activated',
+          description: `${client.name}'s scheduled plan has started.`,
+          memberId: client._id,
+          date: today
+        })
       }
+      if (promotionActivities.length > 0) await Activity.insertMany(promotionActivities);
       console.log(`Promoted ${clientsToPromote.length} queued memberships.`);
+    }
+
+    // 2. LOG EXPIRIES BEFORE BULK UDATING
+    // We fetch the ones who ARE active/trial but SHOULD BE expired today
+    const clientsExpiring = await Client.find({
+      membershipStatus: { $in: ['active', 'trial'] },
+      currentEndDate: { $lt: today },
+      upcomingMembership: null // Only those who don't have a backup plan
+    });
+    if (clientsExpiring.length > 0) {
+      const expiryActivities = clientsExpiring.map(client => ({
+        gymId: client.gymId,
+        type: 'EXPIRY',
+        title: client.membershipStatus === 'trial' ? 'Trial Expired' : 'Membership Expired',
+        description: `${client.name}'s membership has ended.`,
+        memberId: client._id,
+        date: today
+      }));
+      await Activity.insertMany(expiryActivities);
     }
 
     await Client.bulkWrite([

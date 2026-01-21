@@ -1,18 +1,14 @@
-import { Image, LayoutAnimation, Pressable, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native'
+import { Image, LayoutAnimation, Pressable, StyleSheet, View, ViewStyle } from 'react-native'
 import React, { useCallback } from 'react'
 import { useAppTheme } from '@/theme/context';
 import { ThemedStyle } from '@/theme/types';
 import { useSafeAreaInsetsStyle } from '@/utils/useSafeAreaInsetsStyle';
-import { $styles } from '@/theme/styles';
 import { Text } from '@/components/Text';
 import { useAppSelector } from '@/redux/Hooks';
-import { selectGymInfo, selectLoggedInUser } from '@/redux/state/GymStates';
+import { selectGymInfo } from '@/redux/state/GymStates';
 import { colors } from '@/theme/colors';
-import { Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons';
-import { Switch } from '@/components/Toggle/Switch';
+import { MaterialIcons, Octicons } from '@expo/vector-icons';
 import { load, remove } from '@/utils/LocalStorage';
-import { getInitials } from '@/utils/Helper';
-import { useMMKVString } from 'react-native-mmkv';
 
 
 
@@ -29,7 +25,7 @@ const SideDrawer = () => {
 
     return (
         <View style={themed([$drawer, $drawerInsets])}>
-            <View style={[{ flexDirection: 'row', alignItems: 'center', paddingBottom: 25, borderColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20 }]}>
+            <View style={[styles.container]}>
                 <View style={themed($customIconContainer)}>
                     <Image source={require('../../../assets/images/app-icon.png')} resizeMode="stretch" style={{ width: 50, height: 50 }} />
                 </View>
@@ -68,9 +64,11 @@ const SideDrawer = () => {
 
 export default SideDrawer
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({
+    container: { flexDirection: 'row', alignItems: 'center', paddingVertical: 25, borderColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20 }
+})
 
-const $drawer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $drawer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     backgroundColor: colors.background,
     flex: 1,
 })

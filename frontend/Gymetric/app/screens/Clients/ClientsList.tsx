@@ -30,26 +30,29 @@ const ClientsList = () => {
     if (!clients?.length) return [];
     const now = new Date()
     const sevenDaysFromNow = addDays(now, 7);
-    switch (selectedFilter) {
-      case 'Active':
-        return clients.filter((c) => c.membershipStatus === 'active');
-      case 'Expired':
-        return clients.filter((c) => c.membershipStatus === 'expired');
-      case 'Trial':
-        return clients.filter((c) => c.membershipStatus === 'trial');
-      case 'Inactive':
-        return clients.filter((c) => c.membershipStatus === 'cancelled' || c.membershipStatus === 'trial_expired');
-      case 'Expiring Soon':
-        return clients.filter((c) => {
+    const search = searchText.trim().toLowerCase();
+    const searchFiltered = search ? clients.filter((c) => c.name?.toLowerCase().includes(search) || c.phoneNumber?.includes(search)) : clients;
+    return searchFiltered.filter((c) => {
+      switch (selectedFilter) {
+        case 'Active':
+          return c.membershipStatus === 'active';
+        case 'Expired':
+          return c.membershipStatus === 'expired';
+        case 'Trial':
+          return c.membershipStatus === 'trial';
+        case 'Inactive':
+          return c.membershipStatus === 'cancelled' || c.membershipStatus === 'trial_expired';
+        case 'Expiring Soon':
           if (!c.currentEndDate) return false;
           const endDate = parseISO(c.currentEndDate);
           return (c.membershipStatus === 'active' && isAfter(endDate, now) && isBefore(endDate, sevenDaysFromNow));
-        });
-      case 'All Clients':
-      default:
-        return clients;
-    }
-  }, [clients, selectedFilter]);
+        case 'All Clients':
+        default:
+          return true;
+      }
+    });
+
+  }, [clients, selectedFilter, searchText]);
 
 
   const filterChip = (filter: string, index: number) => (

@@ -7,12 +7,13 @@ import authMiddleware from './src/middleware/authenticate.js';
 import { connectDB } from './src/config/connect.js';
 import { PORT } from './src/config/config.js';
 import { dashboardRoutes } from './src/routes/dashboard.js';
-import { startExpiryCheck } from './src/services/expiryCron.js';
+// import { startExpiryCheck } from './src/services/expiryCron.js';
 import { gymRoutes } from './src/routes/gym.js';
+import { systemRoutes } from './src/routes/system.js';
 
 const start = async() => {
     await connectDB(process.env.MONGO_URI);
-    startExpiryCheck();
+    // startExpiryCheck();
 
     const app = fastify();
     app.register(authMiddleware);
@@ -21,6 +22,7 @@ const start = async() => {
     app.register(membershipRoutes, {prefix: '/api/membership'});
     app.register(dashboardRoutes, {prefix: '/api/dashboard'});
     app.register(gymRoutes, {prefix: '/api/gym'});
+    app.register(systemRoutes, {prefix: '/api/system'});
     app.listen({port: PORT, host: '0.0.0.0'}, (err, addr) => {
         if(err){
             console.log(err)

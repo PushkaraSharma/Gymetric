@@ -18,7 +18,13 @@ import PersonalInfo from './CreateUpdateClient/PersonalInfo'
 import OnBoardingStepsHeader from '@/components/OnBoardingStepsHeader'
 import SelectMembership from './ClientMembership/SelectMembership'
 import MembershipPayment from './ClientMembership/MembershipPayment'
-
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withTiming,
+    runOnJS,
+} from 'react-native-reanimated'
+import { DEVICE_WIDTH } from '@/utils/Constanst'
 const CreateClient = () => {
     const dispatch = useAppDispatch();
     const loader = useAppSelector(selectLoading);
@@ -31,6 +37,23 @@ const CreateClient = () => {
     const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([]);
     const [datePicker, setDatePicker] = useState<ClientDateType>({ visible: false, type: 'startDate' });
     const [validNumber, setValidNumber] = useState<boolean>(true);
+
+    const translateX = useSharedValue(0)
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: translateX.value }],
+    }));
+
+    const animateStep = (direction: 'next' | 'prev') => {
+        translateX.value = withTiming(
+            direction === 'next' ? -DEVICE_WIDTH : DEVICE_WIDTH,
+            { duration: 150 },
+            () => {
+                translateX.value = direction === 'next' ? DEVICE_WIDTH : -DEVICE_WIDTH
+                translateX.value = withTiming(0, { duration: 150 })
+            }
+        )
+    }
 
     const alreadyExists = (ph: string) => {
         return allClients?.some((item) => item.phoneNumber === ph);
@@ -56,6 +79,7 @@ const CreateClient = () => {
     };
 
     const moveStep = (direction: "next" | "prev") => {
+        animateStep(direction);
         setCurrentStep((prevStep) => {
             const currentIndex = Steps.indexOf(prevStep)
             if (direction === "next") {
@@ -115,16 +139,18 @@ const CreateClient = () => {
             />
             <View style={{ flex: 1 }}>
                 <OnBoardingStepsHeader moveStep={moveStep} currentStep={currentStep} steps={Steps} />
-                <ScrollView style={{ paddingHorizontal: 15, flex: 1 }}>
-                    {
-                        currentStep === 'Personal Info' ?
-                            <PersonalInfo handleForm={handleForm} form={form} setDatePicker={setDatePicker} validNumber={validNumber}/> :
-                            currentStep === 'Membership' ?
-                                <SelectMembership memberships={memberships} setSelectedMembership={setSelectedMembership} selectedMembership={selectedMembership} handleForm={handleForm} handleDatePicker={() => { setDatePicker({ visible: true, type: 'startDate' }) }} form={form} />
-                                :
-                                <MembershipPayment handleForm={handleForm} form={form} />
-                    }
-                </ScrollView>
+                <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+                    <ScrollView style={{ paddingHorizontal: 15, flex: 1 }}>
+                        {
+                            currentStep === 'Personal Info' ?
+                                <PersonalInfo handleForm={handleForm} form={form} setDatePicker={setDatePicker} validNumber={validNumber} /> :
+                                currentStep === 'Membership' ?
+                                    <SelectMembership memberships={memberships} setSelectedMembership={setSelectedMembership} selectedMembership={selectedMembership} handleForm={handleForm} handleDatePicker={() => { setDatePicker({ visible: true, type: 'startDate' }) }} form={form} />
+                                    :
+                                    <MembershipPayment handleForm={handleForm} form={form} selectedMembership={selectedMembership?.[0]}/>
+                        }
+                    </ScrollView>
+                </Animated.View>
                 <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
                     <Button disabled={!validateSteps()} disabledStyle={{ opacity: 0.4 }} text={currentStep === 'Payment' ? (loader ? 'Finishing...' : 'Finish Setup') : 'Next Step'} preset="reversed" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.background} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleCreate() : moveStep('next') }} />
                 </View>
@@ -136,26 +162,6 @@ const CreateClient = () => {
 export default CreateClient
 
 const styles = StyleSheet.create({})
-
-
-
-const $membershipItem: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-    ...$styles.flexRow,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    paddingVertical: spacing.xs
-})
-
-const $cardHeader: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-    flexDirection: 'row',
-    padding: spacing.lg,
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.palette.neutral250,
-    borderTopEndRadius: 5,
-    borderTopStartRadius: 5,
-})
 
 
 
