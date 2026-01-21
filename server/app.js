@@ -7,15 +7,15 @@ import authMiddleware from './src/middleware/authenticate.js';
 import { connectDB } from './src/config/connect.js';
 import { PORT } from './src/config/config.js';
 import { dashboardRoutes } from './src/routes/dashboard.js';
-// import { startExpiryCheck } from './src/services/expiryCron.js';
 import { gymRoutes } from './src/routes/gym.js';
 import { systemRoutes } from './src/routes/system.js';
+import "./instrument.js";
+import * as Sentry from '@sentry/node';
 
 const start = async() => {
     await connectDB(process.env.MONGO_URI);
-    // startExpiryCheck();
-
     const app = fastify();
+    Sentry.setupFastifyErrorHandler(app);
     app.register(authMiddleware);
     app.register(authRoutes, {prefix: '/api/auth'});
     app.register(clientRoutes, {prefix: '/api/client'});
@@ -30,6 +30,9 @@ const start = async() => {
             console.log("Gymetric server is running")
         }
     });
+    app.get("/debug-sentry-iu", function mainHandler(req, res) {
+  throw new Error("My first Sentrykh wkeihfi  error!");
+});
 };
 
 start();
