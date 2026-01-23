@@ -56,8 +56,7 @@ const BusinessProfile = () => {
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
       <Header title='Business Profile' backgroundColor='#fff' LeftActionComponent={<HeaderbackButton />} />
-      <View style={{ paddingTop: 10, flex: 1 }}>
-        <KeyboardAvoidingView behavior={Platform.OS == 'ios' ? "padding" : "height"}>
+      <View style={{ flex: 1 }}>
           <ScrollView style={{ paddingHorizontal: 15 }}>
             <View>
               <View style={[{ alignSelf: 'center', marginVertical: spacing.md, borderRadius: 60, padding: spacing.sm, backgroundColor: colors.tintInactive, borderWidth: 4, borderColor: '#fff' }, $styles.shadow]}>
@@ -113,7 +112,6 @@ const BusinessProfile = () => {
               RightAccessory={() => <Ionicons name='location-sharp' size={20} color={colors.tintInactive} style={{ marginRight: 10, marginTop: 10 }} />}
             />
           </ScrollView>
-        </KeyboardAvoidingView>
         <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
           <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.background} style={{ marginRight: 10 }} />} onPress={updateGym} />
         </View>

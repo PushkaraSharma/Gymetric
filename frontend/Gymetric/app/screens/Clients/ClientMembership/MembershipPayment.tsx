@@ -6,11 +6,11 @@ import { spacing } from '@/theme/spacing'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { colors } from '@/theme/colors'
 import { Switch } from '@/components/Toggle/Switch'
-import { ClientFormType, MembershipRenewType } from '@/utils/types'
+import { ClientOnBoardingType, MembershipRenewType } from '@/utils/types'
 
 type Props = {
     handleForm: (field: string, value: any) => void,
-    form: ClientFormType | MembershipRenewType,
+    form: ClientOnBoardingType | MembershipRenewType,
     selectedMembership: { [key: string]: any }
 }
 

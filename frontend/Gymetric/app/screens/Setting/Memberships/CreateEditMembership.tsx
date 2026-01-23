@@ -19,13 +19,16 @@ import { goBack } from '@/navigators/navigationUtilities'
 import { Switch } from '@/components/Toggle/Switch'
 import { Checkbox } from '@/components/Toggle/Checkbox'
 import { Text } from '@/components/Text'
+import { Radio } from '@/components/Toggle/Radio'
 
 type MembershipType = {
   planName: string,
   description: string,
   price: number,
   isTrial: boolean,
-  active: boolean
+  active: boolean,
+  planType: 'indivisual' | 'couple' | 'group',
+  membersAllowed: number
 }
 
 const CreateEditMembership = ({ navigation, route }: any) => {
@@ -33,18 +36,24 @@ const CreateEditMembership = ({ navigation, route }: any) => {
   const dispatch = useAppDispatch();
   const membership = route?.params?.membership;
   const loading = useAppSelector(selectLoading);
-  const [form, setForm] = useState<MembershipType>({ planName: membership?.planName ?? '', description: membership?.description ?? '', price: Number(membership?.price ?? 0), isTrial: membership?.isTrial ?? false, active: membership?.active ?? true });
+  const [form, setForm] = useState<MembershipType>({ planName: membership?.planName ?? '', description: membership?.description ?? '', price: Number(membership?.price ?? 0), isTrial: membership?.isTrial ?? false, active: membership?.active ?? true, planType: membership?.planType ?? 'indivisual', membersAllowed: membership?.membersAllowed ?? 1 });
   const [duration, setDuration] = useState<string>((membership?.durationInDays || membership?.durationInMonths || 0).toString());
   const [durationType, setDurationType] = useState<'Months' | 'Days'>(membership?.durationInDays ? 'Days' : 'Months');
 
   const handleForm = (field: string, value: any) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm(prev => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'planType' && value !== 'group') {
+        updated.membersAllowed = value === 'individual' ? 1 : 2;
+      }
+      return updated;
+    });
   };
-
   const validate = () => {
     let msg = '';
     if (!form.planName) msg = 'Please enter name of membership';
     else if (Number(duration) === 0) msg = 'Please enter duration of membership';
+    else if (form.planType === 'group' && form.membersAllowed <= 1) msg = 'Please enter more than 1 person for group plan';
     if (msg) {
       Toast.show({ type: 'error', text1: msg });
       return false;
@@ -69,14 +78,14 @@ const CreateEditMembership = ({ navigation, route }: any) => {
 
   return (
     <Screen
-      preset="auto"
+      preset="fixed"
       contentContainerStyle={[$styles.flex1]}
       safeAreaEdges={["bottom"]}
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
       <Header title={`${membership ? 'Update' : 'Create'} Membership`} backgroundColor='#fff' LeftActionComponent={<HeaderbackButton />} />
-      <View style={{ paddingTop: 10, flex: 1 }}>
-        <ScrollView style={{ paddingHorizontal: 15 }}>
+      <View style={{ flex: 1 }}>
+        <ScrollView style={{ paddingHorizontal: 15, paddingTop: 10 }}>
           <TextField
             value={form.planName}
             onChangeText={(val) => { handleForm('planName', val) }}
@@ -94,6 +103,29 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             placeholder="Description (Optional)"
             multiline
           />
+          <View style={{ marginBottom: 20 }}>
+            <Text preset='formLabel'>Plan Type</Text>
+            <View style={[$styles.flexRow, { marginTop: 10 }]}>
+              {
+                ['Indivisual', 'Couple', 'Group'].map((type: string, index: number) => (
+                  <Pressable key={index} style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => { handleForm('planType', type.toLowerCase()) }}>
+                    <Radio value={form.planType === type?.toLowerCase()} onValueChange={(val) => { val && handleForm('planType', type.toLowerCase()) }} />
+                    <Text style={{ marginLeft: 5 }}>{type}</Text>
+                  </Pressable>
+                ))
+              }
+            </View>
+            {form.planType === 'group' &&
+              <TextField
+                value={form.membersAllowed.toString()}
+                onChangeText={(val) => { handleForm('membersAllowed', Number(val)) }}
+                containerStyle={[{ marginTop: 15 }]}
+                autoCorrect={false}
+                keyboardType='number-pad'
+                placeholder="Enter maximum allowed members"
+              />
+            }
+          </View>
           <TextField
             value={form.price.toString()}
             onChangeText={(val) => { handleForm('price', Number(val)) }}
