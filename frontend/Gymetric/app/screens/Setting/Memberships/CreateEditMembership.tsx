@@ -28,7 +28,8 @@ type MembershipType = {
   isTrial: boolean,
   active: boolean,
   planType: 'indivisual' | 'couple' | 'group',
-  membersAllowed: number
+  membersAllowed: number,
+  index: number
 }
 
 const CreateEditMembership = ({ navigation, route }: any) => {
@@ -36,7 +37,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
   const dispatch = useAppDispatch();
   const membership = route?.params?.membership;
   const loading = useAppSelector(selectLoading);
-  const [form, setForm] = useState<MembershipType>({ planName: membership?.planName ?? '', description: membership?.description ?? '', price: Number(membership?.price ?? 0), isTrial: membership?.isTrial ?? false, active: membership?.active ?? true, planType: membership?.planType ?? 'indivisual', membersAllowed: membership?.membersAllowed ?? 1 });
+  const [form, setForm] = useState<MembershipType>({ planName: membership?.planName ?? '', description: membership?.description ?? '', price: Number(membership?.price ?? 0), isTrial: membership?.isTrial ?? false, active: membership?.active ?? true, planType: membership?.planType ?? 'indivisual', membersAllowed: membership?.membersAllowed ?? 1, index: membership?.index ?? 0 });
   const [duration, setDuration] = useState<string>((membership?.durationInDays || membership?.durationInMonths || 0).toString());
   const [durationType, setDurationType] = useState<'Months' | 'Days'>(membership?.durationInDays ? 'Days' : 'Months');
 
@@ -163,6 +164,15 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             autoCorrect={false}
             keyboardType='number-pad'
             placeholder="Enter duration length (e.g. 12)"
+          />
+            <TextField
+            label='Order Index'
+            value={form.index.toString()}
+            onChangeText={(val) => { handleForm('index', Number(val)) }}
+            containerStyle={themed($textField)}
+            autoCorrect={false}
+            keyboardType='number-pad'
+            placeholder="Enter index for sort order"
           />
         </ScrollView>
         <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>

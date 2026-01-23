@@ -23,7 +23,7 @@ const calculateExpiry = (startDate, months, days) => {
 export const getAllClients = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const clients = await Client.find({ gymId }).select('name phoneNumber membershipStatus activeMembership').populate({path: 'activeMembership', select: 'endDate planName'}).sort({ name: 1 });
+        const clients = await Client.find({ gymId }).select('name phoneNumber gender membershipStatus activeMembership').populate({path: 'activeMembership', select: 'endDate planName'}).sort({ name: 1 });
         return reply.status(200).send({ success: true, data: clients });
     } catch (error) {
         return reply.status(500).send({ success: false, error: error.message });

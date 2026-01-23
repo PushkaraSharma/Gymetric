@@ -37,7 +37,6 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
         // @ts-ignore
         setForm(prev => {
             if (!prev.dependents) return prev;
-
             const updatedDependents = [...prev.dependents];
             updatedDependents[index] = { ...updatedDependents[index], [field]: value };
             return { ...prev, dependents: updatedDependents };
@@ -47,6 +46,19 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
         } else {
             setDuplicateNo('');
         }
+    };
+
+    const updateExistingDependent = (index: number, action: 'add' | 'delete', item?: any) => {
+        // @ts-ignore
+        setForm(prev => {
+            const updatedDependents = [...prev.dependents];
+            if (action === 'delete') {
+                updatedDependents.splice(index, 1);
+            } else if (item) {
+                updatedDependents[index] = { clientId: item._id, name: item.name, phoneNumber: item?.phoneNumber, gender: item.gender };
+            }
+            return { ...prev, dependents: updatedDependents };
+        })
     };
 
     return (
@@ -108,7 +120,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                                             </View>
                                             <View style={{ flex: 1 }}>
                                                 <Text preset={'formLabel'}>{form?.primaryDetails?.name}</Text>
-                                                <Text size='xs' style={{ color: colors.textDim }} numberOfLines={1}>Main Account Holder</Text>
+                                                <Text size='xs' style={{ color: colors.textDim }} numberOfLines={1}>Main Account Holder ({form.primaryDetails?.gender})</Text>
                                             </View>
                                         </View>
                                         <Entypo name='lock' size={20} color={colors.tintInactive} />
@@ -117,7 +129,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                                 <View style={{ marginBottom: 15 }}>
                                     <Text size='xs' style={{ color: colors.textDim, marginBottom: 10 }}>Dependents</Text>
                                     {
-                                        form.dependents?.map((dependent, index) => <DependentCard key={index} item={dependent} index={index} updateDependent={updateDependent} duplicateNo={duplicateNo}/>)
+                                        form.dependents?.map((dependent, index) => <DependentCard key={index} item={dependent} index={index} updateDependent={updateDependent} duplicateNo={duplicateNo} updateExistingDependent={updateExistingDependent} />)
                                     }
                                     {form.dependents.length < selectedMembership?.[0]?.membersAllowed - 1 &&
                                         <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderRadius: 5, borderStyle: 'dashed', borderColor: colors.textDim, padding: 10 }} onPress={addMember}>

@@ -77,10 +77,13 @@ const CreateClient = () => {
     };
 
     const moveStep = (direction: "next" | "prev") => {
-        if (currentStep === 'Membership') {
+        if (currentStep === 'Membership' && direction === 'next') {
             const invalidDependent = form.dependents.find(dep => !dep.name?.trim() || !(dep.phoneNumber.length === 10));
             if (invalidDependent) {
                 Toast.show({ type: 'error', text1: 'Incomplete depedent details' });
+                return;
+            } else if(selectedMembership?.[0]?.planType === 'couple' && (form.primaryDetails.gender === form.dependents?.[0]?.gender)){
+                Toast.show({ type: 'error', text1: 'For Couple plan gender cannot be same' });
                 return;
             }
         }

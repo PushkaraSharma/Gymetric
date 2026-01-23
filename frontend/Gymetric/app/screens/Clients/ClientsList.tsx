@@ -16,6 +16,7 @@ import { navigate } from '@/navigators/navigationUtilities'
 import { useFocusEffect } from '@react-navigation/native'
 import { addDays, isAfter, isBefore, parseISO, } from 'date-fns';
 import { getInitials } from '@/utils/Helper'
+import ProfileInitialLogo from '@/components/ProfileInitialLogo'
 
 const ClientsList = () => {
   const { themed } = useAppTheme();
@@ -70,12 +71,10 @@ const ClientsList = () => {
   const RenderItem = ({ item, index }: any) => (
     <Pressable style={[themed($item), $styles.flexRow]} onPress={() => { navigate('Client Profile', { data: item }) }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <View style={themed({ backgroundColor: colors.palette.primary100, borderRadius: 25, marginRight: 15, width: 50, height: 50, alignItems: 'center', justifyContent: 'center' })}>
-          <Text style={themed({ color: colors.palette.primary500 })} size='md'>{getInitials(item.name)}</Text>
-        </View>
+        <ProfileInitialLogo name={item.name}/>
         <View>
           <Text weight='medium' size='md'>{item.name}</Text>
-          <Text weight='light'>{item.phoneNumber}</Text>
+          <Text size='xs'>{item.phoneNumber}</Text>
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -161,12 +160,6 @@ const $chip: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: 5,
   alignItems: 'center',
   justifyContent: 'center'
-})
-
-const $divider: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-  height: StyleSheet.hairlineWidth,
-  backgroundColor: colors.border,
-  marginVertical: 5
 })
 
 const $item: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
