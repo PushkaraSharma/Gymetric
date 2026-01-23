@@ -16,7 +16,7 @@ import cors from '@fastify/cors';
 const start = async () => {
     await connectDB(process.env.MONGO_URI);
 
-    const app = fastify({ logger: true });
+    const app = fastify({ });
     app.register(cors, { origin: true });
 
     Sentry.setupFastifyErrorHandler(app);
