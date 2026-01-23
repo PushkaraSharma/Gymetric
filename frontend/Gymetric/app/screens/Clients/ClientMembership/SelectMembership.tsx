@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View, ViewStyle } from 'react-native'
-import React, { FC } from 'react'
+import React, { FC, useState } from 'react'
 import { Text } from '@/components/Text';
 import { SelectField } from '@/components/SelectField';
 import { spacing } from '@/theme/spacing';
@@ -11,6 +11,7 @@ import { Entypo, Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons';
 import { formatDate } from 'date-fns';
 import { ClientOnBoardingType } from '@/utils/types';
 import DependentCard from './DependentCard';
+import { alreadyExists } from '@/utils/Helper';
 
 type Props = {
     memberships: { [key: string]: any }[],
@@ -19,10 +20,12 @@ type Props = {
     handleForm: (field: string, value: any) => void,
     handleDatePicker: () => void,
     form: ClientOnBoardingType,
-    setForm: (val: ClientOnBoardingType) => void
+    setForm: (val: ClientOnBoardingType) => void,
+    duplicateNo: string,
+    setDuplicateNo: (val: string) => void
 }
 
-const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership, memberships, handleDatePicker, handleForm, form, setForm }) => {
+const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership, memberships, handleDatePicker, handleForm, form, setForm, duplicateNo, setDuplicateNo }) => {
     const { themed } = useAppTheme();
 
     const addMember = () => {
@@ -39,6 +42,11 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
             updatedDependents[index] = { ...updatedDependents[index], [field]: value };
             return { ...prev, dependents: updatedDependents };
         });
+        if (field === 'phoneNumber' && value.length === 10 && (value === form.primaryDetails.phoneNumber || alreadyExists(value))) {
+            setDuplicateNo(index.toString());
+        } else {
+            setDuplicateNo('');
+        }
     };
 
     return (
@@ -89,7 +97,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                             <View>
                                 <View style={[$styles.flexRow, { marginBottom: 10 }]}>
                                     <Text preset='subheading'>Group Members</Text>
-                                    <Text size='xxs' weight='medium' style={{ borderRadius: 10, backgroundColor: colors.palette.primary100, color: colors.tint, paddingHorizontal: 5, paddingVertical: 2 }}>{form.dependents.length + 1}/{memberships?.[0]?.membersAllowed} Slots Filled</Text>
+                                    <Text size='xxs' weight='medium' style={styles.slotText}>{form.dependents.length + 1}/{selectedMembership?.[0]?.membersAllowed} Slots Filled</Text>
                                 </View>
                                 <View style={{ marginBottom: 10 }}>
                                     <Text size='xs' style={{ color: colors.textDim }}>Primary Payer</Text>
@@ -109,7 +117,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                                 <View style={{ marginBottom: 15 }}>
                                     <Text size='xs' style={{ color: colors.textDim, marginBottom: 10 }}>Dependents</Text>
                                     {
-                                        form.dependents?.map((dependent, index) => <DependentCard key={index} item={dependent} index={index} updateDependent={updateDependent} />)
+                                        form.dependents?.map((dependent, index) => <DependentCard key={index} item={dependent} index={index} updateDependent={updateDependent} duplicateNo={duplicateNo}/>)
                                     }
                                     {form.dependents.length < selectedMembership?.[0]?.membersAllowed - 1 &&
                                         <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderRadius: 5, borderStyle: 'dashed', borderColor: colors.textDim, padding: 10 }} onPress={addMember}>
@@ -139,7 +147,8 @@ export default SelectMembership
 const styles = StyleSheet.create({
     clientAdded: { padding: 10, borderColor: colors.tint, borderRadius: 5, borderWidth: 1, backgroundColor: colors.palette.primary100 },
     row: { flexDirection: 'row', alignItems: 'center' },
-    dependentIcon: { padding: 10, borderRadius: 20, backgroundColor: '#fff', alignSelf: 'flex-start', marginRight: 15 }
+    dependentIcon: { padding: 10, borderRadius: 20, backgroundColor: '#fff', alignSelf: 'flex-start', marginRight: 15 },
+    slotText: { borderRadius: 10, backgroundColor: colors.palette.primary100, color: colors.tint, paddingHorizontal: 5, paddingVertical: 2 }
 })
 
 const $cardHeader: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({

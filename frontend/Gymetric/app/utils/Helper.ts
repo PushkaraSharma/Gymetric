@@ -1,3 +1,4 @@
+import { store } from "@/redux/Store";
 import { getHours } from "date-fns";
 import { Linking } from "react-native";
 
@@ -19,4 +20,9 @@ export const getGreeting = (date = new Date()) => {
   if (hour >= 12 && hour < 17) return "Good Afternoon"
   if (hour >= 17 && hour < 21) return "Good Evening"
   return "Good Night"
+};
+
+export const alreadyExists = (ph: string) => {
+  const allClients = store.getState().GymStates.allClients;
+  return allClients?.some((item) => item.phoneNumber === ph);
 };

@@ -9,10 +9,11 @@ import { StyleSheet, View } from "react-native";
 type AddMemberCardProps = {
     item: any;
     index: number;
-    updateDependent: (index: number, field: string, value: string) => void;
+    updateDependent: (index: number, field: string, value: string) => void,
+    duplicateNo: string
 };
 
-const DependentCard = ({ item, index, updateDependent }: AddMemberCardProps) => (
+const DependentCard = ({ item, index, updateDependent, duplicateNo }: AddMemberCardProps) => (
     <View style={[$styles.card, { padding: spacing.md, marginVertical: 0, marginBottom: 10 }]} key={index}>
         <View style={[$styles.flexRow, { marginBottom: 10 }]}>
             <Text weight='medium'>Dependent {index + 1}</Text>
@@ -45,6 +46,8 @@ const DependentCard = ({ item, index, updateDependent }: AddMemberCardProps) => 
                     <View style={styles.row}>
                         <View style={{ width: '49%' }}>
                             <TextField
+                                status={duplicateNo === index.toString() ? 'error' : undefined}
+                                helper={duplicateNo === index.toString() ? 'Phone number already exists' : undefined}
                                 value={item?.phoneNumber}
                                 onChangeText={(val) => { updateDependent(index, 'phoneNumber', val) }}
                                 containerStyle={{ marginBottom: spacing.sm }}

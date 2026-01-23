@@ -18,16 +18,13 @@ import PersonalInfo from './CreateUpdateClient/PersonalInfo'
 import OnBoardingStepsHeader from '@/components/OnBoardingStepsHeader'
 import SelectMembership from './ClientMembership/SelectMembership'
 import MembershipPayment from './ClientMembership/MembershipPayment'
-import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withTiming,
-} from 'react-native-reanimated'
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated'
 import { DEVICE_WIDTH } from '@/utils/Constanst'
+import { alreadyExists } from '@/utils/Helper'
+
 const CreateClient = () => {
     const dispatch = useAppDispatch();
     const loader = useAppSelector(selectLoading);
-    const allClients = useAppSelector(selectAllClients);
 
     const Steps = ["Personal Info", "Membership", "Payment"] as STEPS[];
     const [currentStep, setCurrentStep] = useState<STEPS>("Personal Info");
@@ -36,8 +33,9 @@ const CreateClient = () => {
     const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([]);
     const [datePicker, setDatePicker] = useState<ClientDateType>({ visible: false, type: 'startDate' });
     const [validNumber, setValidNumber] = useState<boolean>(true);
+    const [duplicateNo, setDuplicateNo] = useState<string>('');
 
-    const translateX = useSharedValue(0)
+    const translateX = useSharedValue(0);
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: translateX.value }],
@@ -54,15 +52,11 @@ const CreateClient = () => {
         )
     }
 
-    const alreadyExists = (ph: string) => {
-        return allClients?.some((item) => item.phoneNumber === ph);
-    };
-
     const validateSteps = () => {
         if (currentStep === 'Personal Info') {
             return (memberships.length > 0 && !!form.primaryDetails?.name && form.primaryDetails?.phoneNumber?.length === 10 && validNumber)
         } else if (currentStep === 'Membership') {
-            return !(form.dependents.length + 1 < selectedMembership?.[0]?.membersAllowed);
+            return !duplicateNo && !(form.dependents.length + 1 < selectedMembership?.[0]?.membersAllowed);
         } else {
             return true;
         }
@@ -156,7 +150,8 @@ const CreateClient = () => {
                             currentStep === 'Personal Info' ?
                                 <PersonalInfo handleForm={(field: string, value: any) => { handleForm(field, value, 'primaryDetails') }} form={form.primaryDetails} setDatePicker={setDatePicker} validNumber={validNumber} /> :
                                 currentStep === 'Membership' ?
-                                    <SelectMembership setForm={setForm} memberships={memberships} setSelectedMembership={setSelectedMembership} selectedMembership={selectedMembership} handleForm={handleForm} handleDatePicker={() => { setDatePicker({ visible: true, type: 'startDate' }) }} form={form} />
+                                    <SelectMembership setForm={setForm} memberships={memberships} setSelectedMembership={setSelectedMembership} selectedMembership={selectedMembership} handleForm={handleForm} handleDatePicker={() => { setDatePicker({ visible: true, type: 'startDate' }) }} form={form}
+                                        duplicateNo={duplicateNo} setDuplicateNo={setDuplicateNo} />
                                     :
                                     <MembershipPayment handleForm={handleForm} form={form} selectedMembership={selectedMembership?.[0]} />
                         }
