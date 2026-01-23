@@ -23,73 +23,12 @@ const calculateExpiry = (startDate, months, days) => {
 export const getAllClients = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const clients = await Client.find({ gymId }).select('name phoneNumber gender membershipStatus activeMembership').populate({path: 'activeMembership', select: 'endDate planName'}).sort({ name: 1 });
+        const clients = await Client.find({ gymId }).select('name phoneNumber gender membershipStatus activeMembership').populate({ path: 'activeMembership', select: 'endDate planName' }).sort({ name: 1 });
         return reply.status(200).send({ success: true, data: clients });
     } catch (error) {
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
-
-// export const addClient = async (request, reply) => {
-//     try {
-//         //{
-//     //     primaryDetails: {name, age, phoneNumber, birthday, age, gender},
-//     //      dependants: [{name, phoneNumber, gender, age, OR maybe CONTAINS clinetId}],
-//     //       planId, method, paymentReceived, amount
-//     //     
-//     //      
-//     // }
-//         const gymId = request.user.gymId;
-//         const { name, phoneNumber, age, birthday, gender, planId, method, paymentReceived, startDate, amount,  } = request.body;
-//         const plan = await Membership.findById(planId);
-//         if (!plan) {
-//             return reply.status(404).send({ success: false, error: "Membership not found" });
-//         }
-//         const today = new Date();
-//         today.setHours(0, 0, 0, 0);
-//         const customStartDate = startDate ? new Date(startDate) : new Date();
-//         const endDate = calculateExpiry(customStartDate, plan.durationInMonths, plan.durationInDays);
-//         const comparisonStartDate = new Date(customStartDate);
-//         comparisonStartDate.setHours(0, 0, 0, 0);
-//         const status = comparisonStartDate > today ? 'future' : plan.isTrial ? 'trial' : 'active';
-//         let payments = [];
-//         let balance = 0;
-//         if (paymentReceived) {
-//             payments.push({ amount, method, date: customStartDate });
-//         } else {
-//             balance = amount;
-//         }
-//         //since this is create API -> possibilities : new plan (either trial or not) starts today or in future.
-//         const planDetails = { planId, planName: plan.planName, startDate: customStartDate, endDate }
-//         const client = await Client.create({
-//             name,
-//             phoneNumber,
-//             age,
-//             birthday,
-//             gender,
-//             membershipStatus: status,
-//             currentEndDate: endDate,
-//             activeMembership: planDetails,
-//             membershipHistory: [planDetails],
-//             paymentHistory: payments,
-//             balance,
-//             gymId
-//         });
-//         await Activity.create({
-//             gymId: gymId,
-//             type: 'ONBOARDING',
-//             title: 'New Member Joined',
-//             description: `${client.name} joined with a ${plan.planName} plan`,
-//             amount: amount,
-//             memberId: client._id
-//         });
-//         return reply.status(201).send({ success: true, data: client });
-//     } catch (error) {
-//         console.log(error)
-//         return reply.status(500).send({ success: false, error: error.message });
-//     }
-// };
-
 
 export const onBoarding = async (request, reply) => {
     try {
@@ -101,6 +40,7 @@ export const onBoarding = async (request, reply) => {
         }
 
         //date setup
+        console.log('from forntend : ', startDate)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const customStartDate = startDate ? new Date(startDate) : new Date();
@@ -168,7 +108,7 @@ export const onBoarding = async (request, reply) => {
             balance = amount;
         }
 
-        primaryClient.activeMembers = newAssignedMembership._id;
+        primaryClient.activeMembership = newAssignedMembership._id;
         primaryClient.balance = balance;
         if (paymentReceived) {
             primaryClient.paymentHistory.push(...paymentEntry);
@@ -218,7 +158,10 @@ export const getClientById = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
         const { id } = request.query;
-        const client = await Client.findOne({ _id: id, gymId });
+        const client = await Client.findOne({ _id: id, gymId }).populate({
+            path: 'activeMembership',
+            select: 'startDate endDate status planName'
+        })
         if (!client) {
             return reply.status(404).send({ success: false, error: "Client not found" });
         }

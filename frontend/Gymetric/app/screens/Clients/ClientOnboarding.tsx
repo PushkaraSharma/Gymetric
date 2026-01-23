@@ -20,7 +20,7 @@ import SelectMembership from './ClientMembership/SelectMembership'
 import MembershipPayment from './ClientMembership/MembershipPayment'
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated'
 import { DEVICE_WIDTH } from '@/utils/Constanst'
-import { alreadyExists } from '@/utils/Helper'
+import { alreadyExists, getLocalDateString } from '@/utils/Helper'
 
 const CreateClient = () => {
     const dispatch = useAppDispatch();
@@ -35,6 +35,7 @@ const CreateClient = () => {
     const [validNumber, setValidNumber] = useState<boolean>(true);
     const [duplicateNo, setDuplicateNo] = useState<string>('');
 
+    console.log(new Date())
     const translateX = useSharedValue(0);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -114,7 +115,7 @@ const CreateClient = () => {
 
     const handleCreate = async () => {
         dispatch(setLoading({ loading: true }));
-        const body = { ...form, startDate: form.startDate?.toISOString().split('T')[0], planId: selectedMembership?.[0]?._id };
+        const body = { ...form, startDate: getLocalDateString(form.startDate), planId: selectedMembership?.[0]?._id };
         const response = await api.createClient(body);
         dispatch(setLoading({ loading: false }));
         if (response.kind == 'ok') {

@@ -53,6 +53,7 @@ const ClientDetails = ({ navigation, route }: any) => {
     const callNumber = async (phoneNumber: string) => {
         const url = `tel:${phoneNumber}`
         await Linking.openURL(url)
+
     };
 
     const openWhatsAppChat = async (phoneNumber: string, message = "") => {
@@ -153,7 +154,7 @@ const ClientDetails = ({ navigation, route }: any) => {
                                     <View style={[$styles.flexRow, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 10 }]}>
                                         <View>
                                             <Text weight='medium' style={{ color: membershipDays?.remain > 0 ? colors.textDim : colors.error }}>{membershipDays?.remain > 0 ? "Expires On" : "Expired On"}</Text>
-                                            <Text weight='medium' size='md'>{client?.currentEndDate ? formatDate(client?.currentEndDate, 'MMM dd, yyyy') : '-'}</Text>
+                                            <Text weight='medium' size='md'>{client?.activeMembership?.endDate ? formatDate(client?.activeMembership?.endDate, 'MMM dd, yyyy') : '-'}</Text>
                                         </View>
                                         <Button disabled={membershipDays?.used === 0} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => {navigate('Renew Membership', {client: client})}} />
                                     </View>
