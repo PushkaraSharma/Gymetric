@@ -60,62 +60,64 @@ export const LoginScreen = () => {
   };
 
   return (
-    <Screen
-      preset="fixed"
-      contentContainerStyle={themed($screenContentContainer)}
-      safeAreaEdges={["top"]}
-    >
-      <View style={{ flex: 1, zIndex: 2 }}>
-        <View style={$styles.card}>
-          <View style={themed($customIconContainer)}>
-            <Image source={require('../../assets/images/app-icon.png')} resizeMode="stretch" style={{ width: 70, height: 70 }} />
+    <>
+      <Screen
+        preset="fixed"
+        contentContainerStyle={themed($screenContentContainer)}
+        safeAreaEdges={["top"]}
+      >
+        <View style={{ flex: 1 }}>
+          <View style={$styles.card}>
+            <View style={themed($customIconContainer)}>
+              <Image source={require('../../assets/images/app-icon.png')} resizeMode="stretch" style={{ width: 70, height: 70 }} />
+            </View>
+            <Text tx="loginScreen:appName" preset="heading" style={themed($appName)} />
+            <Text preset="subheading" style={themed($enterDetails)}>Welcome back, please login to continue</Text>
+            <TextField
+              status={validation.type === 'username' ? 'error' : undefined}
+              value={username}
+              onChangeText={setUsername}
+              containerStyle={themed($textField)}
+              autoCapitalize="none"
+              autoCorrect={false}
+              helper={validation.type === 'username' ? validation.msg : undefined}
+              keyboardType="email-address"
+              label="Username"
+              placeholder="Enter your username"
+              onSubmitEditing={() => authPasswordInput.current?.focus()}
+            />
+            <TextField
+              status={validation.type === 'password' ? 'error' : undefined}
+              ref={authPasswordInput}
+              value={password}
+              onChangeText={setPassword}
+              containerStyle={themed($textField)}
+              autoCapitalize="none"
+              autoComplete="password"
+              autoCorrect={false}
+              secureTextEntry={isAuthPasswordHidden}
+              label="Password"
+              placeholder="Enter your password"
+              onSubmitEditing={login}
+              RightAccessory={(props) =>
+                <Pressable onPress={() => setIsAuthPasswordHidden(!isAuthPasswordHidden)} style={props.style}>
+                  <Octicons name={isAuthPasswordHidden ? 'eye' : 'eye-closed'} size={20} color={colors.palette.neutral800} />
+                </Pressable>}
+              helper={validation.type === 'password' ? validation.msg : undefined}
+            />
+            <Button
+              text={loading ? "Logging in..." : "Tap to log in!"}
+              style={themed($tapButton)}
+              preset="reversed"
+              onPress={login}
+              disabled={loading}
+            />
           </View>
-          <Text tx="loginScreen:appName" preset="heading" style={themed($appName)} />
-          <Text preset="subheading" style={themed($enterDetails)}>Welcome back, please login to continue</Text>
-          <TextField
-            status={validation.type === 'username' ? 'error' : undefined}
-            value={username}
-            onChangeText={setUsername}
-            containerStyle={themed($textField)}
-            autoCapitalize="none"
-            autoCorrect={false}
-            helper={validation.type === 'username' ? validation.msg : undefined}
-            keyboardType="email-address"
-            label="Username"
-            placeholder="Enter your username"
-            onSubmitEditing={() => authPasswordInput.current?.focus()}
-          />
-          <TextField
-            status={validation.type === 'password' ? 'error' : undefined}
-            ref={authPasswordInput}
-            value={password}
-            onChangeText={setPassword}
-            containerStyle={themed($textField)}
-            autoCapitalize="none"
-            autoComplete="password"
-            autoCorrect={false}
-            secureTextEntry={isAuthPasswordHidden}
-            label="Password"
-            placeholder="Enter your password"
-            onSubmitEditing={login}
-            RightAccessory={(props) => 
-            <Pressable onPress={() => setIsAuthPasswordHidden(!isAuthPasswordHidden)} style={props.style}>
-            <Octicons name={isAuthPasswordHidden ? 'eye' : 'eye-closed'} size={20} color={colors.palette.neutral800}/>
-          </Pressable>}
-            helper={validation.type === 'password' ? validation.msg : undefined}
-          />
-          <Button
-            text={loading ? "Logging in..." : "Tap to log in!"}
-            style={themed($tapButton)}
-            preset="reversed"
-            onPress={login}
-            disabled={loading}
-          />
         </View>
-        <Text style={{position: 'absolute', bottom: 0, width: '100%', textAlign: 'center', color: '#fff'}} size='xs' weight="semiBold">v{Constants.expoConfig?.version} ({OTA_VERSION})</Text>
-      </View>
-      <Image source={require('../../assets/images/gymbg.png')} style={{ position: 'absolute', bottom: -20, opacity: 0.8 }} resizeMode='cover' />
-    </Screen>
+      </Screen>
+      <Text style={{ width: '100%', textAlign: 'center', color: '#fff', paddingBottom: 20, zIndex: 2 }} size='xs' weight="semiBold">v{Constants.expoConfig?.version} ({OTA_VERSION})</Text>
+      <Image source={require('../../assets/images/gymbg.png')} style={{ position: 'absolute', bottom: -20, left: -20, opacity: 0.8 }} resizeMode='cover' />
+    </>
   )
 }
 
@@ -130,7 +132,8 @@ const $screenContentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: spacing.xxl,
   paddingHorizontal: spacing.lg,
   flex: 1,
-  justifyContent: 'flex-start'
+  justifyContent: 'flex-start',
+  zIndex: 2
 })
 
 const $appName: ThemedStyle<TextStyle> = ({ spacing }) => ({

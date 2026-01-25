@@ -14,4 +14,4 @@ export const BG_ACTIVITY_COLOR: any = {
     'ADVANCE_RENEWAL': colors.palette.accent100
 };
 
-export const OTA_VERSION = 0
+export const OTA_VERSION = 1

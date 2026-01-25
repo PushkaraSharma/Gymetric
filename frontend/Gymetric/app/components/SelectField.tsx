@@ -102,7 +102,7 @@ export const SelectField = forwardRef(function SelectField(
 
       <BottomSheetModal
         ref={sheet}
-        snapPoints={["25%", "50%"]}
+        snapPoints={["50%", "75%"]}
         index={0}
         stackBehavior="replace"
         enableDynamicSizing={false}
