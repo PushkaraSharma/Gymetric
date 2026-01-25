@@ -1,3 +1,3 @@
 export default {
-  API_URL: "https://PROD/v1/",
+  API_URL: "https://gymetric.onrender.com",
 }

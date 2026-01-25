@@ -30,3 +30,18 @@ Logic: Membership Expiry & Status
 2. Condition 1: If endDate < today → Change Status to "Expired" and deny entry.
 3. Condition 2: If endDate > today AND isTrial is true → Status is "Trial".
 4. Condition 3: If endDate > today AND isTrial is false → Status is "Active".
+
+
+
+{
+  "planId": "PLAN_ID_123",
+  "totalAmount": 5000,
+  "primaryMember": {
+    "name": "John Doe",
+    "phone": "9876543210"
+  },
+  "dependents": [
+    { "name": "Jane Doe", "phone": "9876543211", "isExisting": false },
+    { "clientId": "EXISTING_ID_456", "isExisting": true }
+  ]
+}

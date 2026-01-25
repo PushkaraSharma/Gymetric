@@ -2,12 +2,13 @@
   "name": "Gymetric",
   "slug": "Gymetric",
   "scheme": "gymetric",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "orientation": "portrait",
   "userInterfaceStyle": "automatic",
   "icon": "./assets/images/app-icon.png",
   "updates": {
-    "fallbackToCacheTimeout": 0
+    "fallbackToCacheTimeout": 0,
+    "url": "https://u.expo.dev/2e469ab5-5d58-49e3-afe3-b245dfa7d3c7"
   },
   "newArchEnabled": true,
   "jsEngine": "hermes",
@@ -16,17 +17,30 @@
   ],
   "android": {
     "icon": "./assets/images/app-icon.png",
-    "package": "com.gymetric",
+    "package": "com.indieroots.gymetric",
     "allowBackup": false,
     "edgeToEdgeEnabled": true
   },
   "ios": {
     "icon": "./assets/images/app-icon.png",
     "supportsTablet": true,
-    "bundleIdentifier": "com.gymetric",
+    "bundleIdentifier": "com.indieroots.gymetric",
     "infoPlist": {
       "LSApplicationQueriesSchemes": [
-        "whatsapp", "tel"
+        "whatsapp",
+        "tel",
+        "whatsapp",
+        "tel"
+      ]
+    },
+    "privacyManifests": {
+      "NSPrivacyAccessedAPITypes": [
+        {
+          "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+          "NSPrivacyAccessedAPITypeReasons": [
+            "CA92.1"
+          ]
+        }
       ]
     }
   },
@@ -37,7 +51,7 @@
     [
       "expo-splash-screen",
       {
-        "image": "./assets/images/app-icon.png",
+        "image": "./assets/images/splash-icon.png",
         "imageWidth": 300,
         "resizeMode": "contain",
         "backgroundColor": "#191015"
@@ -60,6 +74,12 @@
   "extra": {
     "ignite": {
       "version": "11.4.0"
+    },
+    "eas": {
+      "projectId": "2e469ab5-5d58-49e3-afe3-b245dfa7d3c7"
     }
+  },
+  "runtimeVersion": {
+    "policy": "appVersion"
   }
 }

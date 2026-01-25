@@ -13,32 +13,30 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectAllClients, selectLoading, setLoading } from '@/redux/state/GymStates'
 import Toast from 'react-native-toast-message'
-import { ClientDateType, ClientFormType, STEPS } from '@/utils/types'
+import { ClientDateType, ClientOnBoardingType, STEPS } from '@/utils/types'
 import PersonalInfo from './CreateUpdateClient/PersonalInfo'
 import OnBoardingStepsHeader from '@/components/OnBoardingStepsHeader'
 import SelectMembership from './ClientMembership/SelectMembership'
 import MembershipPayment from './ClientMembership/MembershipPayment'
-import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withTiming,
-    runOnJS,
-} from 'react-native-reanimated'
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated'
 import { DEVICE_WIDTH } from '@/utils/Constanst'
+import { alreadyExists } from '@/utils/Helper'
+import { format } from 'date-fns'
+
 const CreateClient = () => {
     const dispatch = useAppDispatch();
     const loader = useAppSelector(selectLoading);
-    const allClients = useAppSelector(selectAllClients);
 
     const Steps = ["Personal Info", "Membership", "Payment"] as STEPS[];
     const [currentStep, setCurrentStep] = useState<STEPS>("Personal Info");
-    const [form, setForm] = useState<ClientFormType>({ name: '', phoneNumber: '', age: null, birthday: null, gender: 'Male', amount: 0, method: 'Cash', paymentReceived: true, startDate: new Date() });
+    const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { name: '', phoneNumber: '', age: null, birthday: null, gender: 'Male' }, dependents: [], amount: 0, method: 'Cash', paymentReceived: true, startDate: new Date() });
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
     const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([]);
     const [datePicker, setDatePicker] = useState<ClientDateType>({ visible: false, type: 'startDate' });
     const [validNumber, setValidNumber] = useState<boolean>(true);
+    const [duplicateNo, setDuplicateNo] = useState<string>('');
 
-    const translateX = useSharedValue(0)
+    const translateX = useSharedValue(0);
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: translateX.value }],
@@ -55,12 +53,23 @@ const CreateClient = () => {
         )
     }
 
-    const alreadyExists = (ph: string) => {
-        return allClients?.some((item) => item.phoneNumber === ph);
+    const validateSteps = () => {
+        if (currentStep === 'Personal Info') {
+            return (memberships.length > 0 && !!form.primaryDetails?.name && form.primaryDetails?.phoneNumber?.length === 10 && validNumber)
+        } else if (currentStep === 'Membership') {
+            return !duplicateNo && !(form.dependents.length + 1 < selectedMembership?.[0]?.membersAllowed);
+        } else {
+            return true;
+        }
     };
 
-    const handleForm = (field: string, value: any) => {
-        setForm(prev => ({ ...prev, [field]: value }));
+    const handleForm = (field: string, value: any, scope: 'root' | 'primaryDetails' = 'root') => {
+        setForm(prev => {
+            if (scope === 'primaryDetails') {
+                return { ...prev, primaryDetails: { ...prev.primaryDetails, [field]: value } };
+            }
+            return { ...prev, [field]: value };
+        });
         if (field === 'phoneNumber' && value.length === 10 && alreadyExists(value)) {
             setValidNumber(false);
         } else {
@@ -68,17 +77,17 @@ const CreateClient = () => {
         }
     };
 
-    const validateSteps = () => {
-        if (currentStep === 'Personal Info') {
-            return (memberships.length > 0 && !!form.name && form.phoneNumber?.length === 10 && validNumber)
-        } else if (currentStep === 'Membership') {
-            return true;
-        } else {
-            return true;
-        }
-    };
-
     const moveStep = (direction: "next" | "prev") => {
+        if (currentStep === 'Membership' && direction === 'next') {
+            const invalidDependent = form.dependents.find(dep => !dep.name?.trim() || !(dep.phoneNumber.length === 10));
+            if (invalidDependent) {
+                Toast.show({ type: 'error', text1: 'Incomplete depedent details' });
+                return;
+            } else if(selectedMembership?.[0]?.planType === 'couple' && (form.primaryDetails.gender === form.dependents?.[0]?.gender)){
+                Toast.show({ type: 'error', text1: 'For Couple plan gender cannot be same' });
+                return;
+            }
+        }
         animateStep(direction);
         setCurrentStep((prevStep) => {
             const currentIndex = Steps.indexOf(prevStep)
@@ -106,7 +115,7 @@ const CreateClient = () => {
 
     const handleCreate = async () => {
         dispatch(setLoading({ loading: true }));
-        const body = { ...form, startDate: form.startDate?.toISOString().split('T')[0], planId: selectedMembership?.[0]?._id };
+        const body = { ...form, startDate: format(form.startDate, 'yyyy-MM-dd'), planId: selectedMembership?.[0]?._id };
         const response = await api.createClient(body);
         dispatch(setLoading({ loading: false }));
         if (response.kind == 'ok') {
@@ -121,7 +130,7 @@ const CreateClient = () => {
 
     return (
         <Screen
-            preset="fixed"
+            preset={Platform.OS === 'android' ? "auto" : 'fixed'}
             contentContainerStyle={[$styles.flex1]}
             safeAreaEdges={["bottom"]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
@@ -132,7 +141,7 @@ const CreateClient = () => {
                 minimumDate={datePicker.type === 'startDate' ? new Date() : new Date('1900-01-01')}
                 date={datePicker.type === 'birthday' ? new Date() : form.startDate ?? new Date()}
                 onConfirm={async (date) => {
-                    handleForm(datePicker.type, date);
+                    handleForm(datePicker.type, date, datePicker.type === 'birthday' ? 'primaryDetails' : 'root');
                     setDatePicker({ visible: false, type: 'startDate' });
                 }}
                 onCancel={() => setDatePicker({ visible: false, type: 'startDate' })}
@@ -143,11 +152,12 @@ const CreateClient = () => {
                     <ScrollView style={{ paddingHorizontal: 15, flex: 1 }}>
                         {
                             currentStep === 'Personal Info' ?
-                                <PersonalInfo handleForm={handleForm} form={form} setDatePicker={setDatePicker} validNumber={validNumber} /> :
+                                <PersonalInfo handleForm={(field: string, value: any) => { handleForm(field, value, 'primaryDetails') }} form={form.primaryDetails} setDatePicker={setDatePicker} validNumber={validNumber} /> :
                                 currentStep === 'Membership' ?
-                                    <SelectMembership memberships={memberships} setSelectedMembership={setSelectedMembership} selectedMembership={selectedMembership} handleForm={handleForm} handleDatePicker={() => { setDatePicker({ visible: true, type: 'startDate' }) }} form={form} />
+                                    <SelectMembership setForm={setForm} memberships={memberships} setSelectedMembership={setSelectedMembership} selectedMembership={selectedMembership} handleForm={handleForm} handleDatePicker={() => { setDatePicker({ visible: true, type: 'startDate' }) }} form={form}
+                                        duplicateNo={duplicateNo} setDuplicateNo={setDuplicateNo} />
                                     :
-                                    <MembershipPayment handleForm={handleForm} form={form} selectedMembership={selectedMembership?.[0]}/>
+                                    <MembershipPayment handleForm={handleForm} form={form} selectedMembership={selectedMembership?.[0]} />
                         }
                     </ScrollView>
                 </Animated.View>

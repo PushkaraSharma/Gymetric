@@ -6,13 +6,13 @@ import { colors } from '@/theme/colors'
 import { Ionicons } from '@expo/vector-icons'
 import { formatDate } from 'date-fns'
 import { TextField } from '@/components/TextField'
-import { ClientDateType, ClientFormType } from '@/utils/types'
+import { ClientDateType, ClientDetailsType } from '@/utils/types'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 
 type Props = {
     handleForm: (field: string, value: any) => void,
-    form: ClientFormType,
+    form: ClientDetailsType,
     setDatePicker: (val: ClientDateType) => void,
     isUpdate?: boolean,
     validNumber: boolean,

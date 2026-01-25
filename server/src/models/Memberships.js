@@ -6,9 +6,12 @@ const MembershipSchema = new mongoose.Schema({
     durationInMonths: {type: Number, default: 0}, //used for motn wise membership renewal
     price: { type: Number, required: true },
     isTrial: { type: Boolean, default: false },
+    planType: {type: String, enum: ['indivisual', 'couple', 'group'], default: 'indivisual'},
+    membersAllowed: {type: Number, default: 1},
     gymId: {type: mongoose.Schema.Types.ObjectId, ref: 'Gym', required: true},
     active: Boolean,
-    description: String
+    description: String,
+    index: {type: Number, default: 0}
 });
 
 export default mongoose.models.Memberships || mongoose.model('Memberships', MembershipSchema);

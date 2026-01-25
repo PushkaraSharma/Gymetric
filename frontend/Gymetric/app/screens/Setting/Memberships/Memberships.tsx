@@ -51,7 +51,7 @@ const Memberships = () => {
 
     return (
         <Screen
-            preset="fixed"
+            preset="auto"
             safeAreaEdges={["bottom"]}
             contentContainerStyle={[$styles.flex1]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}

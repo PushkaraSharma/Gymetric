@@ -18,6 +18,7 @@ import CreateEditMembership from "@/screens/Setting/Memberships/CreateEditMember
 import BusinessProfile from "@/screens/Setting/BusinessProfile"
 import ContactDetails from "@/screens/Setting/ContactDetails"
 import RenewMembership from "@/screens/Clients/ClientMembership/RenewMembership"
+import SearchClient from "@/screens/Clients/SearchClient"
 
 const exitRoutes = Config.exitRoutes
 
@@ -46,6 +47,7 @@ const AppStack = () => {
             <Stack.Screen name="Client Profile" component={ClientDetails} />
             <Stack.Screen name="Update Basic Information" component={UpdateClientbasicInfo} />
             <Stack.Screen name="Renew Membership" component={RenewMembership}/>
+            <Stack.Screen name="Search Client" component={SearchClient} options={{presentation: 'fullScreenModal'}}/>
           </Stack.Group>
           <Stack.Group>
             <Stack.Group>

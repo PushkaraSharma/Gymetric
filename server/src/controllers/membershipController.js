@@ -3,9 +3,10 @@ import Memberships from "../models/Memberships.js";
 export const getAllMemberships = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const memberships = await Memberships.find({ gymId });
+        const memberships = await Memberships.find({ gymId }).sort({index: 1});
         return reply.status(200).send({ success: true, data: memberships });
     } catch (error) {
+        console.log(error)
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
@@ -13,9 +14,9 @@ export const getAllMemberships = async (request, reply) => {
 export const addMembership = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const { planName, durationInDays,durationInMonths, price, isTrial, description, active } = request.body;
+        const { planName, durationInDays,durationInMonths, price, isTrial, description, active, planType, membersAllowed, index } = request.body;
         const membership = await Memberships.create({
-            planName, durationInDays, durationInMonths, price, isTrial, active, gymId, description
+            planName, durationInDays, durationInMonths, price, isTrial, active, gymId, description, planType, membersAllowed
         })
         return reply.status(201).send({ success: true, data: membership });
     } catch (error) {

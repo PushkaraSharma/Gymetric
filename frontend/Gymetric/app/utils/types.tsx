@@ -1,13 +1,21 @@
-export type ClientFormType = {
+export type ClientDetailsType = {
+    id?: number
     name: string,
     phoneNumber: string,
-    age: number | null,
-    birthday: Date | null,
+    age?: number | null,
+    birthday?: Date | null,
     gender: string,
-    amount?: number,
-    method?: string,
-    paymentReceived?: boolean,
-    startDate?: Date
+}
+
+type DependentType = {name: string, phoneNumber: string, gender: string, id?: number}
+
+export type ClientOnBoardingType = {
+    primaryDetails: ClientDetailsType,
+    dependents: DependentType[]
+    amount: number,
+    method: string,
+    paymentReceived: boolean,
+    startDate: Date
 }
 
 export type MembershipRenewType = {
@@ -15,7 +23,8 @@ export type MembershipRenewType = {
     amount: number,
     method: string,
     paymentReceived: boolean,
-    startDate: Date
+    startDate: Date,
+    dependents: DependentType[]
 }
 
 export type ClientDateType = { visible: boolean, type: 'birthday' | 'startDate' };
