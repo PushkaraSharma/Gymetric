@@ -2,10 +2,10 @@ import Activity from "../models/Activity.js";
 import AssignedMembership from "../models/AssignedMembership.js";
 import Client from "../models/Client.js";
 import Membership from "../models/Memberships.js";
+import { formatDDMMYYYY, parseDateToLocalMidNight } from "../utils/Helper.js";
 
 const calculateExpiry = (startDate, months, days) => {
     let date = new Date(startDate);
-    date.setHours(0, 0, 0, 0);
     if (Number(months) > 0) {
         // 1. Move to the same day next month (e.g., Jan 15 -> Feb 15)
         date.setMonth(date.getMonth() + Number(months));
@@ -40,15 +40,11 @@ export const onBoarding = async (request, reply) => {
         }
 
         //date setup
-        console.log('from forntend : ', startDate)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const customStartDate = startDate ? new Date(startDate) : new Date();
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const customStartDate = startDate ? parseDateToLocalMidNight(startDate) : today;
         const endDate = calculateExpiry(customStartDate, plan.durationInMonths, plan.durationInDays);
-        const comparisonStartDate = new Date(customStartDate);
-        comparisonStartDate.setHours(0, 0, 0, 0);
-
-        const membershipStatus = comparisonStartDate > today ? 'future' : plan.isTrial ? 'trial' : 'active';
+        const membershipStatus = customStartDate > today ? 'future' : plan.isTrial ? 'trial' : 'active';
 
         //Create Primary Client
         const primaryClient = await Client.create({
@@ -160,8 +156,16 @@ export const getClientById = async (request, reply) => {
         const { id } = request.query;
         const client = await Client.findOne({ _id: id, gymId }).populate({
             path: 'activeMembership',
-            select: 'startDate endDate status planName'
-        })
+            select: 'startDate endDate status planName primaryMemberId',
+            populate: {
+                path: 'primaryMemberId',
+                select: 'name'
+            }
+        }).populate({
+            path: 'upcomingMembership',
+            select: 'startDate planName'
+        });
+
         if (!client) {
             return reply.status(404).send({ success: false, error: "Client not found" });
         }
@@ -254,7 +258,7 @@ export const getClientStats = async (request, reply) => {
 export const renewMembership = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const { id, planId, startDate, amount, method, paymentReceived, remarks, dependents } = request.body;
+        const { id, planId, startDate, amount, method, paymentReceived, dependents } = request.body;
         const primaryClient = await Client.findById(id);
         const plan = await Membership.findById(planId);
         let activityType = 'RENEWAL';
@@ -263,16 +267,14 @@ export const renewMembership = async (request, reply) => {
             return reply.status(404).send({ success: false, message: `${!primaryClient ? 'Client' : 'Plan'} not found` });
         }
 
-        const newStartDate = new Date(startDate);
-        newStartDate.setHours(0, 0, 0, 0);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
+         const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const newStartDate = parseDateToLocalMidNight(startDate);
         const newEndDate = calculateExpiry(newStartDate, plan.durationInMonths, plan.durationInDays);
-        const status = newStartDate > today ? 'Future' : 'Active';
+        const status = newStartDate > today ? 'future' : 'active';
 
         //2. create renewMembership
-        const renewedMembership = await UnifiedMembership.create({
+        const renewedMembership = await AssignedMembership.create({
             gymId,
             primaryMemberId: primaryClient._id,
             memberIds: [primaryClient._id], // Start with primary
@@ -294,8 +296,8 @@ export const renewMembership = async (request, reply) => {
             }
             if (depClient) {
                 depClient.role = 'dependent';
-                if (status === 'Active') {
-                    depClient.membershipStatus = status;
+                depClient.membershipStatus = status;
+                if (status === 'active') {
                     depClient.activeMembership = renewedMembership._id;
                 } else {
                     depClient.upcomingMembership = renewedMembership._id;
@@ -309,8 +311,8 @@ export const renewMembership = async (request, reply) => {
         await renewedMembership.save();
 
         //4. update status of primary client
-        if (status === 'Active') {
-            primaryClient.membershipStatus = 'Active';
+        if (status === 'active') {
+            primaryClient.membershipStatus = 'active';
             primaryClient.activeMembership = renewedMembership._id;
         } else {
             activityType = 'ADVANCE_RENEWAL';
@@ -331,7 +333,7 @@ export const renewMembership = async (request, reply) => {
             gymId: gymId,
             type: activityType,
             title: activityType === 'RENEWAL' ? 'Membership Renewed' : 'Advance Renewal',
-            description: activityType === 'RENEWAL' ? `${primaryClient.name} renewed the ${plan.planName} plan` : `${primaryClient.name} pre-paid for ${plan.planName} starting on ${newStartDate.toLocaleDateString()}`,
+            description: activityType === 'RENEWAL' ? `${primaryClient.name} renewed the ${plan.planName} plan` : `${primaryClient.name} pre-paid for ${plan.planName} starting on ${formatDDMMYYYY(newStartDate)}`,
             amount: amount,
             memberId: primaryClient._id
         });

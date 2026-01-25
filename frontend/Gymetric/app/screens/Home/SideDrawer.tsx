@@ -56,7 +56,7 @@ const SideDrawer = () => {
                     <MaterialIcons name='logout' size={30} color={colors.error} />
                     <Text style={{ marginLeft: 15, color: colors.error }} size='md' >Logout</Text>
                 </Pressable>
-                <Text style={{ color: colors.textDim, marginTop: 20, textAlign: 'center' }} size='xxs'>{Constants.expoConfig?.version}({OTA_VERSION})</Text>
+                <Text style={{ color: colors.textDim, marginTop: 20, textAlign: 'center' }} size='xxs'>{Constants.expoConfig?.version} ({OTA_VERSION})</Text>
             </View>
         </View>
     )

@@ -112,7 +112,7 @@ export const LoginScreen = () => {
             disabled={loading}
           />
         </View>
-        <Text style={{position: 'absolute', bottom: 0, width: '100%', textAlign: 'center', color: '#fff'}} size='xs' weight="semiBold">v{Constants.expoConfig?.version}({OTA_VERSION})</Text>
+        <Text style={{position: 'absolute', bottom: 0, width: '100%', textAlign: 'center', color: '#fff'}} size='xs' weight="semiBold">v{Constants.expoConfig?.version} ({OTA_VERSION})</Text>
       </View>
       <Image source={require('../../assets/images/gymbg.png')} style={{ position: 'absolute', bottom: -20, opacity: 0.8 }} resizeMode='cover' />
     </Screen>

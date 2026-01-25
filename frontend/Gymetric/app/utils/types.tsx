@@ -1,14 +1,17 @@
 export type ClientDetailsType = {
+    id?: number
     name: string,
     phoneNumber: string,
-    age: number | null,
-    birthday: Date | null,
+    age?: number | null,
+    birthday?: Date | null,
     gender: string,
 }
 
+type DependentType = {name: string, phoneNumber: string, gender: string, id?: number}
+
 export type ClientOnBoardingType = {
     primaryDetails: ClientDetailsType,
-    dependents: {name: string, phoneNumber: string, gender: string, id?: number}[]
+    dependents: DependentType[]
     amount: number,
     method: string,
     paymentReceived: boolean,
@@ -21,7 +24,7 @@ export type MembershipRenewType = {
     method: string,
     paymentReceived: boolean,
     startDate: Date,
-    dependents: {name: string, phoneNumber: string, gender: string}[]
+    dependents: DependentType[]
 }
 
 export type ClientDateType = { visible: boolean, type: 'birthday' | 'startDate' };

@@ -78,7 +78,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                         containerStyle={{ marginBottom: spacing.lg }}
                     />
                     {
-                        selectedMembership?.[0].planType === 'indivisual' ?
+                        selectedMembership?.[0]?.planType === 'indivisual' ?
                             <View style={[$styles.card, { padding: 0 }]}>
                                 <View style={themed($cardHeader)}>
                                     <View style={themed({ backgroundColor: colors.palette.primary100, padding: 8, borderRadius: 20 })}>

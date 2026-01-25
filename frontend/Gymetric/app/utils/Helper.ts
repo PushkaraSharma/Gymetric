@@ -1,6 +1,8 @@
 import { store } from "@/redux/Store";
 import { getHours } from "date-fns";
 import { Linking } from "react-native";
+import { ClientOnBoardingType } from "./types";
+import Toast from "react-native-toast-message";
 
 export const sleep = (ms: number) =>
   new Promise(resolve => setTimeout(resolve, ms));
@@ -27,9 +29,14 @@ export const alreadyExists = (ph: string) => {
   return allClients?.some((item) => item.phoneNumber === ph);
 };
 
-export const getLocalDateString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+export const validateNextStep = (form: ClientOnBoardingType, selectedMembership: { [key: string]: any }[]) => {
+  const invalidDependent = form.dependents.find(dep => !dep.name?.trim() || !(dep.phoneNumber.length === 10));
+  if (invalidDependent) {
+    Toast.show({ type: 'error', text1: 'Incomplete depedent details' });
+    return false;
+  } else if (selectedMembership?.[0]?.planType === 'couple' && (form.primaryDetails.gender === form.dependents?.[0]?.gender)) {
+    Toast.show({ type: 'error', text1: 'For Couple plan gender cannot be same' });
+    return false;
+  }
+  return true;
 };
