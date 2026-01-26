@@ -2,21 +2,21 @@ import Activity from "../models/Activity.js";
 import AssignedMembership from "../models/AssignedMembership.js";
 import Client from "../models/Client.js";
 import Membership from "../models/Memberships.js";
-import { formatDDMMYYYY, parseDateToLocalMidNight } from "../utils/Helper.js";
+import { formatDDMMYYYY, parseDateToUTCMidnight } from "../utils/Helper.js";
 
 const calculateExpiry = (startDate, months, days) => {
     let date = new Date(startDate);
     if (Number(months) > 0) {
         // 1. Move to the same day next month (e.g., Jan 15 -> Feb 15)
-        date.setMonth(date.getMonth() + Number(months));
+        date.setUTCMonth(date.getUTCMonth() + Number(months));
         // 2. Subtract 1 day so it ends on the "Eve" (Feb 15 -> Feb 14)
-        date.setDate(date.getDate() - 1);
+        date.setUTCDate(date.getUTCDate() - 1);
     } else {
         // For trials (e.g., 3-day trial starting Jan 15 ends Jan 17)
-        date.setDate(date.getDate() + (Number(days) - 1));
+        date.setUTCDate(date.getUTCDate() + (Number(days) - 1));
     }
     // Set to 11:59:59 PM so they have access all through the 14th
-    date.setHours(23, 59, 59, 999);
+    date.setUTCHours(23, 59, 59, 999);
     return date;
 };
 
@@ -41,8 +41,9 @@ export const onBoarding = async (request, reply) => {
 
         //date setup
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const customStartDate = startDate ? parseDateToLocalMidNight(startDate) : today;
+        const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+        const customStartDate = startDate ? parseDateToUTCMidnight(startDate) : today;
         const endDate = calculateExpiry(customStartDate, plan.durationInMonths, plan.durationInDays);
         const membershipStatus = customStartDate > today ? 'future' : plan.isTrial ? 'trial' : 'active';
         //Create Primary Client
@@ -204,9 +205,9 @@ export const renewMembership = async (request, reply) => {
             return reply.status(404).send({ success: false, message: `${!primaryClient ? 'Client' : 'Plan'} not found` });
         }
 
-         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const newStartDate = parseDateToLocalMidNight(startDate);
+        const now = new Date();
+        const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        const newStartDate = parseDateToUTCMidnight(startDate);
         const newEndDate = calculateExpiry(newStartDate, plan.durationInMonths, plan.durationInDays);
         const status = newStartDate > today ? 'future' : 'active';
 
