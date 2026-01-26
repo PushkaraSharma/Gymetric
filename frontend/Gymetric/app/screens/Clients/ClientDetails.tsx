@@ -1,18 +1,18 @@
 import { Image, Platform, Pressable, ScrollView, StyleSheet, View, Linking } from 'react-native'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Header } from '@/components/Header'
 import { useAppTheme } from '@/theme/context'
 import { useAppDispatch } from '@/redux/Hooks'
-import { goBack, navigate } from '@/navigators/navigationUtilities'
-import { Feather, FontAwesome5, Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons'
+import { navigate } from '@/navigators/navigationUtilities'
+import { Feather, Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons'
 import { spacing } from '@/theme/spacing'
 import { colors } from '@/theme/colors'
 import { setLoading } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { Text } from '@/components/Text'
-import { differenceInCalendarDays, isAfter, formatDate } from 'date-fns';
+import { differenceInCalendarDays, formatDate, startOfDay, parseISO } from 'date-fns';
 import { Button } from '@/components/Button'
 import HeaderbackButton from '@/components/HeaderbackButton'
 import { useFocusEffect } from '@react-navigation/native'
@@ -25,16 +25,22 @@ const ClientDetails = ({ navigation, route }: any) => {
     const dispatch = useAppDispatch();
 
     const [client, setClient] = useState<{ [key: string]: any } | null>(null);
-    const [membershipDays, setMembershipDays] = useState<{ total: number, remain: number, used: number, progress: number }>({ total: 0, remain: 0, used: 0, progress: 0 })
+    const [membershipDays, setMembershipDays] = useState<{ total: number, remain: number, used: number, progress: number, endDate: string }>({ total: 0, remain: 0, used: 0, progress: 0, endDate: '-' })
     const [tab, setTab] = useState<'Memberships' | 'Payments'>('Memberships');
 
-    const getDaysProgress = (start: Date, end: Date) => {
-        const today = new Date();
-        const total = differenceInCalendarDays(end, start) + 1;
-        const remain = isAfter(today, end) ? 0 : differenceInCalendarDays(end, today);
+    const getDaysProgress = (startStr: string, endStr: string) => {
+        // 1. Force everything to "Local" start-of-day by ignoring the 'Z'
+        // We treat "2026-01-26" as Jan 26 regardless of where the user is.
+        const start = startOfDay(parseISO(startStr.split('T')[0]));
+        const end = startOfDay(parseISO(endStr.split('T')[0]));
+        // 2. Get today's local date (India time) and strip the time
+        const today = startOfDay(new Date());
+        const total = differenceInCalendarDays(end, start) + 1; // (Feb 25 - Jan 26) + 1 = 31
+        // Use Math.max to ensure we don't get negative days if membership hasn't started
+        const remain = differenceInCalendarDays(end, today) < 0 ? 0 : differenceInCalendarDays(end, today);
         const used = total - remain;
         const progress = used / total;
-        setMembershipDays({ total, remain, used, progress });
+        setMembershipDays({ total, remain, used, progress: Math.min(Math.max(progress, 0), 1), endDate: formatDate(end, 'MMM dd, yyyy') });
     };
 
     const clientInfo = async () => {
@@ -159,9 +165,9 @@ const ClientDetails = ({ navigation, route }: any) => {
                                         <View style={[$styles.flexRow, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 10 }]}>
                                             <View>
                                                 <Text weight='medium' style={{ color: membershipDays?.remain > 0 ? colors.textDim : colors.error }}>{membershipDays?.remain > 0 ? "Expires On" : "Expired On"}</Text>
-                                                <Text weight='medium' size='md'>{client?.activeMembership?.endDate ? formatDate(client?.activeMembership?.endDate, 'MMM dd, yyyy') : '-'}</Text>
+                                                <Text weight='medium' size='md'>{membershipDays?.endDate}</Text>
                                             </View>
-                                            <Button disabled={membershipDays?.used === 0} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => {client?.upcomingMembership ? Toast.show({type: 'error', text1: 'Client already have upcoming plan'}) : navigate('Renew Membership', { client: client }) }} />
+                                            <Button disabled={membershipDays?.used === 0} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => { client?.upcomingMembership ? Toast.show({ type: 'error', text1: 'Client already have upcoming plan' }) : navigate('Renew Membership', { client: client }) }} />
                                         </View>
                                     </View>
                                 </View> :

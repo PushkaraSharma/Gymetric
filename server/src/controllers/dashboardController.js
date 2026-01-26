@@ -1,6 +1,7 @@
 import Activity from "../models/Activity.js";
 import Client from "../models/Client.js";
 import mongoose from "mongoose";
+import { addUtcDays, utcStartOfDay, utcStartOfMonth } from "../utils/Helper.js";
 
 const calculateTrend = (current, previous) => {
     if (!previous || previous === 0) return null;
@@ -10,17 +11,17 @@ const calculateTrend = (current, previous) => {
 export const getDashboardSummary = async (request, reply) => {
     try {
         const { gymId } = request.user;
-        const today = new Date();
+        const today = utcStartOfDay();
         // Current Month (MTD)
-        const startOfCurrent = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const startOfCurrent = utcStartOfMonth(today);
 
         // Previous Month (MTD) - e.g., if today is Jan 19, this is Dec 1 to Dec 19
-        const startOfLast = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const endOfLastMTD = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+        const startOfLast = utcStartOfMonth(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1)));
+
+        const endOfLastMTD = addUtcDays(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, today.getUTCDate())), 0);
 
         // Snapshot - Exactly 30 days ago
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(today.getDate() - 30);
+        const thirtyDaysAgo = addUtcDays(today, -30);
 
         const [totalClients, activeCount, activeCount30DaysAgo, expiringSoon, revenueCurrent, revenueLastMTD, newlyJoinedCurrent, newlyJoinedLastMTD, recentActivities] = await Promise.all([
             // Total Lifetime Clients
@@ -40,7 +41,7 @@ export const getDashboardSummary = async (request, reply) => {
             Client.countDocuments({
                 gymId,
                 membershipStatus: 'active',
-                currentEndDate: { $gte: today, $lte: new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000) },
+                currentEndDate: { $gte: today, $lte: addUtcDays(today, 7) },
                 upcomingMembership: null
             }),
 
@@ -77,7 +78,7 @@ export const getDashboardSummary = async (request, reply) => {
             }),
 
             //fetch recent activities
-            Activity.find({gymId}).sort({date: -1}).limit(10).lean()
+            Activity.find({ gymId }).sort({ date: -1 }).limit(10).lean()
         ]);
 
         const revCurrentVal = revenueCurrent[0]?.total || 0;

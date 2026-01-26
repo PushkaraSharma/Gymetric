@@ -7,7 +7,16 @@ export const formatDDMMYYYY = (date) => {
     return `${day}-${month}-${year}`;
 };
 
-export const parseDateToLocalMidNight = (startDate) => {
-    const [y, m, d] = startDate.split('-').map(Number);
-    return new Date(y, m - 1, d);
+export const parseDateToUTCMidnight = (startDate) => {
+  const [y, m, d] = startDate.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
 };
+
+export const utcStartOfDay = (d = new Date()) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+
+export const utcStartOfMonth = (d = new Date()) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+
+export const addUtcDays = (d, days) =>
+  new Date(d.getTime() + days * 24 * 60 * 60 * 1000);

@@ -10,8 +10,7 @@ export const performExpiryChecks = async (request, reply) => {
         }
 
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
+        const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
         console.log('Running Daily Membership Expiry Check...');
 
         // REFINED STEP 1: PROMOTE ANY INDIVIDUAL WHO HAS AN UPCOMING PLAN STARTING TODAY
