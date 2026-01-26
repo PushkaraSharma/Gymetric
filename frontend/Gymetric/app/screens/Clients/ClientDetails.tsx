@@ -30,13 +30,8 @@ const ClientDetails = ({ navigation, route }: any) => {
 
     const getDaysProgress = (start: Date, end: Date) => {
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const startDate = new Date(start);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(end);
-        endDate.setHours(0, 0, 0, 0);
-        const total = differenceInCalendarDays(endDate, startDate) + 1;
-        const remain = isAfter(today, endDate) ? 0 : differenceInCalendarDays(endDate, today);
+        const total = differenceInCalendarDays(end, start) + 1;
+        const remain = isAfter(today, end) ? 0 : differenceInCalendarDays(end, today);
         const used = total - remain;
         const progress = used / total;
         setMembershipDays({ total, remain, used, progress });
