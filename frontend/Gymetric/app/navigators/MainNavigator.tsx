@@ -1,4 +1,4 @@
-import { ActivityIndicator, TextStyle, View, ViewStyle } from "react-native"
+import { TextStyle, ViewStyle } from "react-native"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAppTheme } from "@/theme/context"
@@ -7,8 +7,6 @@ import Home from "@/screens/Home/Home"
 import ClientsList from "@/screens/Clients/ClientsList"
 import Setting from "@/screens/Setting/Setting"
 import { Octicons } from '@expo/vector-icons'
-import { useAppSelector } from "@/redux/Hooks"
-import { selectLoading } from "@/redux/state/GymStates"
 import { useEffect } from "react"
 import { api } from "@/services/Api"
 
@@ -17,7 +15,6 @@ const Tab = createBottomTabNavigator();
 export function MainNavigator() {
     const { bottom } = useSafeAreaInsets()
     const { themed, theme: { colors } } = useAppTheme()
-    const isLoading = useAppSelector(selectLoading);
 
     useEffect(() => {
         api.gymInfo(); //later will move to initial fetch
@@ -25,7 +22,6 @@ export function MainNavigator() {
     }, []);
 
     return (
-        <>
             <Tab.Navigator
                 screenOptions={{
                     headerShown: false,
@@ -69,12 +65,6 @@ export function MainNavigator() {
                     }}
                 />
             </Tab.Navigator>
-            {isLoading &&
-                <View style={themed($isLoading)}>
-                    <ActivityIndicator />
-                </View>
-            }
-        </>
     )
 }
 
@@ -92,16 +82,4 @@ const $tabBarLabel: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
     fontFamily: typography.primary.medium,
     lineHeight: 16,
     color: colors.text,
-})
-
-const $isLoading: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    opacity: 0.5,
-    backgroundColor: 'black',
-    justifyContent: 'center',
-    alignItems: 'center'
 })

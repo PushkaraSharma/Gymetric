@@ -45,7 +45,6 @@ export const onBoarding = async (request, reply) => {
         const customStartDate = startDate ? parseDateToLocalMidNight(startDate) : today;
         const endDate = calculateExpiry(customStartDate, plan.durationInMonths, plan.durationInDays);
         const membershipStatus = customStartDate > today ? 'future' : plan.isTrial ? 'trial' : 'active';
-
         //Create Primary Client
         const primaryClient = await Client.create({
             ...primaryDetails,
@@ -192,68 +191,6 @@ export const getClientStats = async (request, reply) => {
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
-
-// export const renewMembership = async (request, reply) => {
-//     try {
-//         const gymId = request.user.gymId;
-//         const { id, planId, startDate, amount, method, paymentReceived, remarks } = request.body;
-//         const client = await Client.findById(id);
-//         const plan = await Membership.findById(planId);
-//         let activityType = 'RENEWAL';
-//         if (!client || !plan) {
-//             return reply.status(404).send({ success: false, message: `${!client ? 'Client' : 'Plan'} not found` });
-//         }
-//         const newStartDate = new Date(startDate);
-//         newStartDate.setHours(0, 0, 0, 0);
-//         const today = new Date();
-//         today.setHours(0, 0, 0, 0);
-
-//         const newEndDate = calculateExpiry(newStartDate, plan.durationInMonths, plan.durationInDays);
-
-//         const newMembershipData = {
-//             planId: plan._id,
-//             planName: plan.planName,
-//             startDate: newStartDate,
-//             endDate: newEndDate,
-//             amount: amount,
-//             status: newStartDate > today ? 'future' : 'active'
-//         };
-
-//         // If they have a currently running valid membership
-//         if (['active'].includes(client.membershipStatus) && client.currentEndDate >= today) { //future membership advance
-//             client.upcomingMembership = newMembershipData;
-//             activityType = 'ADVANCE_RENEWAL';
-//         } else {
-//             // They are expired or trial, so this becomes the primary active one
-//             client.activeMembership = newMembershipData;
-//             client.membershipStatus = newMembershipData.status;
-//         }
-
-//         // ALWAYS update the currentEndDate to the furthest date
-//         // This ensures the Cron Job doesn't expire them prematurely
-//         client.currentEndDate = newEndDate;
-
-//         if (paymentReceived) {
-//             client.paymentHistory.push({ amount, method, date: today, remarks: remarks || "Plan Renewal" });
-//         } else {
-//             client.balance += amount;
-//         }
-//         client.membershipHistory.push(newMembershipData);
-//         await client.save();
-//         await Activity.create({
-//             gymId: gymId,
-//             type: activityType,
-//             title: activityType === 'RENEWAL' ? 'Membership Renewed' : 'Advance Renewal',
-//             description: activityType === 'RENEWAL' ? `${client.name} renewed the ${plan.planName} plan` : `${client.name} pre-paid for ${plan.planName} starting on ${newStartDate.toLocaleDateString()}`,
-//             amount: amount,
-//             memberId: client._id
-//         });
-//         return reply.send({ success: true, client });
-//     } catch (error) {
-//         console.log(error)
-//         return reply.status(500).send({ success: false, error: error.message });
-//     }
-// };
 
 export const renewMembership = async (request, reply) => {
     try {
