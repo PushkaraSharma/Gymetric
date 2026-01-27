@@ -10,8 +10,10 @@ export const performExpiryChecks = async (request, reply) => {
         }
 
         const now = new Date();
-        const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-        console.log('Running Daily Membership Expiry Check...');
+        const istNow = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+        const today = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()));
+        request.log.info('Running Daily Membership Expiry Check...', today);
+        console.log('Running Daily Membership Expiry Check...', today);
 
         // REFINED STEP 1: PROMOTE ANY INDIVIDUAL WHO HAS AN UPCOMING PLAN STARTING TODAY
         const clientsReadyForPromotion = await Client.find({
@@ -60,11 +62,12 @@ export const performExpiryChecks = async (request, reply) => {
                     { _id: { $in: memb.memberIds } },
                     { $set: { membershipStatus: newStatus } }
                 );
+                const primaryMember = await Client.findById(memb.primaryMemberId).select('name');
                 await Activity.create({
                     gymId: memb.gymId,
                     type: 'EXPIRY',
                     title: newStatus === 'trial_expired' ? 'Trial Ended' : 'Membership Expired',
-                    description: `Group membership led by member ID ${memb.primaryMemberId} has ended.`,
+                    description: memb.planType === 'group' ? `Group membership led by ${primaryMember} has ended.` : `Membership of ${primaryMember} has ended`,
                     memberId: memb.primaryMemberId
                 });
             }
@@ -85,7 +88,6 @@ export const performExpiryChecks = async (request, reply) => {
                 { $set: { membershipStatus: 'active' } }
             );
         }
-        console.log('Expiry check completed.');
         return reply.status(200).send({ success: true, data: { message: 'Cron job executed' } });
     } catch (error) {
         console.log(error)
