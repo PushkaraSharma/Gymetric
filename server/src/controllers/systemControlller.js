@@ -62,7 +62,7 @@ export const performExpiryChecks = async (request, reply) => {
                     { _id: { $in: memb.memberIds } },
                     { $set: { membershipStatus: newStatus } }
                 );
-                const primaryMember = await Client.findById(memb.primaryMemberId).select('name');
+                const primaryMember = await Client.findById(memb.primaryMemberId).select('name')?.name;
                 await Activity.create({
                     gymId: memb.gymId,
                     type: 'EXPIRY',

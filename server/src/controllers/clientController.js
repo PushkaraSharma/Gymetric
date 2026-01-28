@@ -2,7 +2,9 @@ import Activity from "../models/Activity.js";
 import AssignedMembership from "../models/AssignedMembership.js";
 import Client from "../models/Client.js";
 import Membership from "../models/Memberships.js";
-import { formatDDMMYYYY, parseDateToUTCMidnight } from "../utils/Helper.js";
+import { sendWhatsAppTemplate } from "../services/Whatsapp.js";
+import { formatDateDDMonYYY, formatDDMMYYYY, parseDateToUTCMidnight, textParam } from "../utils/Helper.js";
+import Gym from "../models/Gym.js";
 
 const calculateExpiry = (startDate, months, days) => {
     let date = new Date(startDate);
@@ -122,6 +124,11 @@ export const onBoarding = async (request, reply) => {
             amount: paymentReceived ? amount : 0,
             memberId: primaryClient._id
         });
+
+        const gymInfo = await Gym.findOne({ _id: gymId });
+        // const settings = await Settings.findOne({gymId});
+        const params = [primaryClient.name, gymInfo.name, formatDateDDMonYYY(customStartDate), formatDateDDMonYYY(endDate)];
+        sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "onboarding", params, process.env.WHATSAPP_IMAGE_ID);
         return reply.status(201).send({ success: true, data: primaryClient });
     } catch (error) {
         console.log(error)
@@ -275,6 +282,9 @@ export const renewMembership = async (request, reply) => {
             amount: amount,
             memberId: primaryClient._id
         });
+        // const gymInfo = await Gym.findOne({ _id: gymId });
+        // const params = [textParam(primaryClient.name), textParam(gymInfo.name), textParam(formatDateDDMonYYY(customStartDate)), textParam(formatDateDDMonYYY(endDate))];
+        // sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "onboarding", params);
         return reply.send({ success: true, primaryClient });
     } catch (error) {
         console.log(error)
