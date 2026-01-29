@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const sendWhatsAppTemplate = async (to, templateName, bodyParams = [], whatsapp) => {
+export const sendWhatsAppTemplate = async (to: string, templateName: string, bodyParams: any[] = [], whatsapp: any) => {
     try {
         const url = `https://graph.facebook.com/v22.0/${whatsapp?.phoneNumberId}/messages`;
         const components = [];
@@ -38,7 +38,7 @@ export const sendWhatsAppTemplate = async (to, templateName, bodyParams = [], wh
             headers: { Authorization: `Bearer ${whatsapp?.accessToken}` }
         });
         return response.data;
-    } catch (error) {
+    } catch (error: any) {
         console.error("WhatsApp Error:", error.response?.data || error.message);
     }
 };

@@ -1,53 +1,52 @@
+import { FastifyRequest, FastifyReply } from 'fastify';
 import Client from '../models/Client.js';
 import Activity from '../models/Activity.js';
 import AssignedMembership from "../models/AssignedMembership.js";
+import { getISTMidnightToday } from "../utils/timeUtils.js";
 
-export const performExpiryChecks = async (request, reply) => {
+export const performExpiryChecks = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const { secret } = request.body;
+        const { secret } = request.body as { secret: string };
         if (secret !== process.env.CRON_SECRET) {
             return reply.status(401).send({ success: false, message: 'Unauthorized' });
         }
 
-        const now = new Date();
-        const istNow = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-        const today = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()));
-        request.log.info('Running Daily Membership Expiry Check...', today);
+        const today = getISTMidnightToday();
         console.log('Running Daily Membership Expiry Check...', today);
 
-        // REFINED STEP 1: PROMOTE ANY INDIVIDUAL WHO HAS AN UPCOMING PLAN STARTING TODAY
+        // STEP 1: PROMOTE UPCOMING MEMBERSHIPS STARTING TODAY
+        // We find all clients who have an upcoming membership that starts today or earlier
         const clientsReadyForPromotion = await Client.find({
             upcomingMembership: { $ne: null },
-            membershipStatus: { $in: ['expired', 'active'] } // We can also check if their current membership is expiring today
-        });
+            membershipStatus: { $in: ['expired', 'active', 'future'] }
+        }).populate('upcomingMembership');
 
         for (const client of clientsReadyForPromotion) {
-            const upcomingMemb = await AssignedMembership.findById(client.upcomingMembership);
+            const upcomingMemb: any = client.upcomingMembership;
             if (upcomingMemb && new Date(upcomingMemb.startDate) <= today) {
-                // 1. Promote the Membership Document to Active (if not already done by another member)
+                // 1. Promote Membership to Active
                 upcomingMemb.status = 'active';
                 await upcomingMemb.save();
 
                 // 2. Promote the Client
                 client.activeMembership = upcomingMemb._id;
                 client.membershipStatus = 'active';
-                client.upcomingMembership = null;
+                client.upcomingMembership = undefined;
                 await client.save();
 
                 await Activity.create({
                     gymId: client.gymId,
                     type: 'RENEWAL',
                     title: 'Membership Activated',
-                    description: client.role === 'primary'
-                        ? `${client.name}'s renewed ${upcomingMemb.planName} plan is now active.`
-                        : `${client.name}'s membership has been activated via ${upcomingMemb.planName}.`,
+                    description: `${client.name}'s plan ${upcomingMemb.planName} is now active.`,
                     memberId: client._id,
                     date: today
                 });
             }
         }
 
-        // 2. HANDLE PURE EXPIRIES (No Upcoming Plan)
+        // STEP 2: HANDLE EXPIRIES
+        // Find memberships that ended before today and are still marked 'active' or 'trial'
         const membershipsToExpire = await AssignedMembership.find({
             endDate: { $lt: today },
             status: { $in: ['active', 'trial'] }
@@ -56,41 +55,33 @@ export const performExpiryChecks = async (request, reply) => {
         if (membershipsToExpire.length > 0) {
             for (const memb of membershipsToExpire) {
                 const newStatus = memb.status === 'trial' ? 'trial_expired' : 'expired';
+
+                // Update Membership Status
                 memb.status = newStatus;
                 await memb.save();
+
+                // Update all members belonging to this membership
                 await Client.updateMany(
                     { _id: { $in: memb.memberIds } },
                     { $set: { membershipStatus: newStatus } }
                 );
-                const primaryMember = await Client.findById(memb.primaryMemberId).select('name')?.name;
+
+                // Log Activity
+                const primaryMember = await Client.findById(memb.primaryMemberId).select('name');
                 await Activity.create({
                     gymId: memb.gymId,
                     type: 'EXPIRY',
                     title: newStatus === 'trial_expired' ? 'Trial Ended' : 'Membership Expired',
-                    description: memb.planType === 'group' ? `Group membership led by ${primaryMember} has ended.` : `Membership of ${primaryMember} has ended`,
-                    memberId: memb.primaryMemberId
+                    description: `Membership for ${primaryMember?.name || 'Member'} has ended.`,
+                    memberId: memb.primaryMemberId,
+                    date: today
                 });
             }
         }
 
-        // 3. WAKE UP "FUTURE" MEMBERSHIPS STARTING TODAY
-        const startingToday = await AssignedMembership.find({
-            startDate: { $lte: today },
-            status: 'future'
-        });
-
-        for (const memb of startingToday) {
-            memb.status = 'active';
-            await memb.save();
-
-            await Client.updateMany(
-                { _id: { $in: memb.memberIds } },
-                { $set: { membershipStatus: 'active' } }
-            );
-        }
-        return reply.status(200).send({ success: true, data: { message: 'Cron job executed' } });
-    } catch (error) {
-        console.log(error)
+        return reply.status(200).send({ success: true, data: { message: 'Expiry check completed successfully' } });
+    } catch (error: any) {
+        console.error('CRON Error:', error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
