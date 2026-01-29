@@ -29,11 +29,8 @@ const ClientDetails = ({ navigation, route }: any) => {
     const [tab, setTab] = useState<'Memberships' | 'Payments'>('Memberships');
 
     const getDaysProgress = (startStr: string, endStr: string) => {
-        // 1. Force everything to "Local" start-of-day by ignoring the 'Z'
-        // We treat "2026-01-26" as Jan 26 regardless of where the user is.
-        const start = startOfDay(parseISO(startStr.split('T')[0]));
-        const end = startOfDay(parseISO(endStr.split('T')[0]));
-        // 2. Get today's local date (India time) and strip the time
+        const start = startOfDay(startStr);
+        const end = startOfDay(endStr);
         const today = startOfDay(new Date());
         const total = differenceInCalendarDays(end, start) + 1; // (Feb 25 - Jan 26) + 1 = 31
         // Use Math.max to ensure we don't get negative days if membership hasn't started

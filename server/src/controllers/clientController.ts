@@ -129,7 +129,7 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
 
         // 4. Update Primary Client with membership link and balances
         let balance = paymentReceived ? 0 : amount;
-        primaryClient.activeMembership = membershipStatus === 'active' ? newAssignedMembership._id : undefined;
+        primaryClient.activeMembership = ['active', 'trial'].includes(membershipStatus) ? newAssignedMembership._id : undefined;
         primaryClient.upcomingMembership = membershipStatus === 'future' ? newAssignedMembership._id : undefined;
         primaryClient.balance = balance;
 
