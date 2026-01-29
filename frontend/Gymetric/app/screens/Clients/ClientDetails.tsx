@@ -16,7 +16,7 @@ import { differenceInCalendarDays, formatDate, startOfDay, parseISO } from 'date
 import { Button } from '@/components/Button'
 import HeaderbackButton from '@/components/HeaderbackButton'
 import { useFocusEffect } from '@react-navigation/native'
-import { DEVICE_HEIGHT } from '@/utils/Constanst'
+import { DEVICE_HEIGHT } from '@/utils/Constants'
 import NoDataFound from '@/components/NoDataFound'
 import Toast from 'react-native-toast-message'
 
@@ -72,7 +72,7 @@ const ClientDetails = ({ navigation, route }: any) => {
     const RenderPayment = (payment: any, index: number) => (
         <View key={index} style={[$styles.card, $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ backgroundColor: colors.palette.accent100, padding: 8, borderRadius: 5, marginRight: 15 }}>
+                <View style={{ backgroundColor: colors.palette.indigo100, padding: 8, borderRadius: 5, marginRight: 15 }}>
                     <Ionicons name='receipt' size={20} color={colors.tint} />
                 </View>
                 <View>
@@ -112,7 +112,7 @@ const ClientDetails = ({ navigation, route }: any) => {
                     </View>
                     <Text weight='semiBold' size='xl'>{client?.name}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={themed({ marginRight: 15, backgroundColor: client?.membershipStatus === 'active' ? colors.activeBg : client?.membershipStatus === 'trial' ? colors.palette.accent200 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 })}>
+                        <View style={themed({ marginRight: 15, backgroundColor: client?.membershipStatus === 'active' ? colors.activeBg : client?.membershipStatus === 'trial' ? colors.palette.indigo200 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 })}>
                             <Text size='xs' weight='medium' style={themed({ color: client?.membershipStatus === 'active' ? colors.activeTxt : client?.membershipStatus === 'trial' ? colors.tint : colors.error, textTransform: 'capitalize' })}>{client?.membershipStatus}</Text>
                         </View>
                         <Text size='xs' style={{ color: colors.textDim }}>Member since {client ? formatDate(client?.createdAt, 'MMM yyyy') : '-'}</Text>
@@ -189,6 +189,6 @@ const ClientDetails = ({ navigation, route }: any) => {
 export default ClientDetails
 
 const styles = StyleSheet.create({
-    actionBtn: { width: '45%', minHeight: 45, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10 },
-    dependentPill: { borderRadius: 10, backgroundColor: colors.palette.primary100, paddingHorizontal: 5, paddingVertical: 2, position: 'absolute', zIndex: 1, right: 10, top: 10, borderWidth: 0.5, borderColor: colors.tint }
+    actionBtn: { width: '45%', minHeight: 45, borderWidth: 1, borderRadius: 10 },
+    dependentPill: { borderRadius: 10, backgroundColor: colors.palette.indigo100, paddingHorizontal: 5, paddingVertical: 2, position: 'absolute', zIndex: 1, right: 10, top: 10, borderWidth: 0.5, borderColor: colors.tint }
 })

@@ -1,90 +1,48 @@
-import { Platform, Pressable, ScrollView, TextStyle, View, ViewStyle } from 'react-native'
-import React, { JSX, useCallback, useEffect, useMemo, useState } from 'react'
+import { Platform, Pressable, ScrollView, TextStyle, View, ViewStyle, TouchableOpacity } from 'react-native'
+import React, { JSX, useCallback, useMemo, useState } from 'react'
 import { Drawer } from "react-native-drawer-layout"
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Text } from "@/components/Text"
-import { AntDesign, Feather, FontAwesome5, Ionicons, Octicons } from '@expo/vector-icons'
-import { colors } from '@/theme/colors'
-import { spacing } from '@/theme/spacing'
+import {
+    Users,
+    Activity as ActivityIconLucide,
+    TrendingUp,
+    Wallet,
+    Clock,
+    RefreshCw,
+    UserPlus,
+    AlertCircle,
+    Plus,
+    Menu
+} from 'lucide-react-native'
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo, setLoading } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { navigate } from '@/navigators/navigationUtilities'
 import { useFocusEffect } from '@react-navigation/native'
 import SideDrawer from './SideDrawer'
-import { DrawerIconButton } from '@/components/DrawerIconButton'
 import { getGreeting } from '@/utils/Helper'
-import { BG_ACTIVITY_COLOR } from '@/utils/Constanst'
 import { formatDistanceToNow } from 'date-fns'
+import { MotiView } from 'moti'
 
 const Home = () => {
-    const { themed } = useAppTheme();
+    const { themed, theme: { colors, spacing, typography } } = useAppTheme();
     const dispatch = useAppDispatch();
     const gymInfo = useAppSelector(selectGymInfo);
     const [open, setOpen] = useState(false);
     const [summary, setSummary] = useState<{ [key: string]: any } | null>(null);
     const greeting = useMemo(() => getGreeting(), []);
 
-    const ActivityIcon: {[key: string]: JSX.Element} = {
-        'ONBOARDING' : <Octicons name='person-add' size={20} color={colors.activeTxt}/>,
-        'RENEWAL': <Feather name='refresh-cw' size={20} color={colors.tint}/>, 
-        'EXPIRY': <Ionicons name='warning' size={20} color={colors.error}/> ,
-        'PAYMENT': <Ionicons name='cash' size={20} color={colors.activeTxt}/> , 
-        'ADVANCE_RENEWAL': <Feather name='refresh-cw' size={20} color={colors.tint}/>
+    const ActivityIcons: { [key: string]: JSX.Element } = {
+        'ONBOARDING': <UserPlus size={20} color={colors.success} />,
+        'RENEWAL': <RefreshCw size={20} color={colors.primary} />,
+        'EXPIRY': <AlertCircle size={20} color={colors.error} />,
+        'PAYMENT': <Wallet size={20} color={colors.success} />,
+        'ADVANCE_RENEWAL': <RefreshCw size={20} color={colors.primary} />
     };
-
-    const toggleDrawer = useCallback(() => {
-        if (!open) {
-            setOpen(true)
-        } else {
-            setOpen(false)
-        }
-    }, [open]);
-
-    const growthLabel = (value: string, warning: boolean = false, bgColor?: any) => (
-        <View style={[themed($growthLabel), warning && { backgroundColor: colors.errorBackground }, bgColor && { backgroundColor: bgColor }]}>
-            {!warning && <AntDesign name='rise' color={bgColor ? colors.tint : colors.activeTxt} size={15} />}
-            <Text size='xxs' style={{ paddingLeft: 5, color: bgColor ? colors.tint : warning ? colors.error : colors.activeTxt }}>{value == null ? '--' : `${value}${warning ? '' : ' %'}`}</Text>
-        </View>
-    )
-
-    const DashboardCard = (label: string, value: number, trendValue: string | null, trendLabel: string | null, warning: boolean, icon: JSX.Element,) => {
-        return <View style={[$styles.card, { width: '48%', padding: spacing.md }]}>
-            <View style={$styles.flexRow}>
-                <Text>{label}{label === 'Expiring' && <Text size='xxs' style={{ color: colors.textDim }}> 7 days</Text>}</Text>
-                {icon}
-            </View>
-            <Text preset='heading' style={{ marginBottom: 5 }}>{value}</Text>
-            {(trendLabel || warning) && <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {growthLabel(trendValue!, warning)}
-                <Text size='xxs' style={{ color: colors.textDim, marginLeft: 5 }}>{trendLabel}</Text>
-            </View>
-            }
-        </View>
-    };
-
-    const ActivityCard = ({ item }: { item: any }) => (
-        <View style={[$styles.card, $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ backgroundColor: BG_ACTIVITY_COLOR[item?.type], padding: 8, borderRadius: 5, marginRight: 15 }}>
-                    {ActivityIcon[item?.type]}
-                </View>
-                <View style={{ flex: 1 }}>
-                    <View style={$styles.flexRow}>
-                        <Text weight='medium'>{item?.title}</Text>
-                        <Text size='xxs' style={{ color: colors.textDim }}>{formatDistanceToNow(item?.createdAt, {addSuffix: true}).replace("minutes", "min").replace("minute", "min")}</Text>
-                    </View>
-                    <View style={$styles.flexRow}>
-                        <Text style={{ color: colors.textDim, maxWidth: item?.amount ? '80%' : '100%' }} size='xs'>{item?.description}</Text>
-                        {!!item?.amount && <Text>₹{item?.amount}</Text>}
-                    </View>
-                </View>
-            </View>
-        </View>
-    );
 
     const loadData = async () => {
         dispatch(setLoading({ loading: true }));
@@ -101,119 +59,378 @@ const Home = () => {
         }, [])
     );
 
+    const StatCard = ({ label, value, trend, icon, color, isLarge = false }: any) => (
+        <View style={[themed($statCard), isLarge && { width: '100%', marginBottom: 16 }]}>
+            <View style={$statHeader}>
+                <View style={[themed($iconContainer), { backgroundColor: color + '15' }]}>
+                    {icon}
+                </View>
+                {trend && (
+                    <View style={[themed($trendBadge), { backgroundColor: colors.successBackground }]}>
+                        <TrendingUp size={12} color={colors.success} />
+                        <Text size="xxs" style={themed({ color: colors.success, marginLeft: 4 })}>{trend}%</Text>
+                    </View>
+                )}
+            </View>
+            <Text style={themed($statValue)}>{value}</Text>
+            <Text style={themed($statLabel)}>{label}</Text>
+        </View>
+    );
+
+    const ActivityCard = ({ item }: { item: any }) => (
+        <MotiView
+            from={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={themed($activityCard)}
+        >
+            <View style={themed($activityIconWrapper)}>
+                {ActivityIcons[item?.type] || <ActivityIconLucide size={20} color={colors.primary} />}
+            </View>
+            <View style={$activityContent}>
+                <View style={$activityTopRow}>
+                    <Text style={themed($activityTitle)}>{item?.title}</Text>
+                    <Text style={themed($activityTime)}>{formatDistanceToNow(new Date(item?.createdAt), { addSuffix: true })}</Text>
+                </View>
+                <Text style={themed($activityDesc)} numberOfLines={1}>{item?.description}</Text>
+                {item?.amount && (
+                    <Text style={themed($activityAmount)}>₹{item?.amount}</Text>
+                )}
+            </View>
+        </MotiView>
+    );
+
     return (
         <Drawer
             open={open}
             onOpen={() => setOpen(true)}
             onClose={() => setOpen(false)}
-            drawerType="back"
-            drawerPosition={'left'}
+            drawerType="slide"
             renderDrawerContent={() => <SideDrawer />}
         >
             <Screen
-                preset="fixed"
+                preset="auto"
+                ScrollViewProps={{ showsVerticalScrollIndicator: false }}
                 safeAreaEdges={["top"]}
-                contentContainerStyle={$styles.flex1}
-                {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
+                backgroundColor={colors.background}
             >
-                <DrawerIconButton onPress={toggleDrawer} />
-                <ScrollView style={{ paddingHorizontal: 15 }} showsVerticalScrollIndicator={false}>
-                    <View>
-                        <Text preset="heading" style={{}}>Dashboard</Text>
-                        <Text preset='formHelper' style={themed({ color: colors.textDim })}>{greeting}, {gymInfo?.ownerName} 👋</Text>
+                <View style={themed($header)}>
+                    <Pressable onPress={() => { setOpen(!open) }} style={themed($menuBtn)}>
+                        <Menu size={24} color={colors.text} />
+                    </Pressable>
+                    <View style={$headerText}>
+                        <Text style={themed($greeting)}>{greeting},</Text>
+                        <Text style={themed($ownerName)}>{gymInfo?.ownerName || 'Admin'}</Text>
                     </View>
-                    <View style={[$styles.flexRow, { alignItems: 'stretch' }]}>
-                        {DashboardCard('Total Clients', summary?.totalClients ?? 0, null, '', false,
-                            <View style={{ backgroundColor: colors.palette.primary100, padding: 5, borderRadius: 20 }}>
-                                <Ionicons name='people' size={20} color={colors.palette.primary500} />
+                </View>
+
+                <View style={themed($content)}>
+                    <View style={$revenueCardContainer}>
+                        <MotiView
+                            from={{ opacity: 0, translateY: 10 }}
+                            animate={{ opacity: 1, translateY: 0 }}
+                            style={themed($revenueCard)}
+                        >
+                            <View style={$revenueHeader}>
+                                <Text style={themed($revenueLabel)}>Revenue this month</Text>
+                                <Wallet size={24} color={colors.white} opacity={0.8} />
                             </View>
-                        )}
-                        {DashboardCard('Active', summary?.activeMembers?.value ?? 0, summary?.activeMembers?.trend, summary?.activeMembers?.comparisonText, false,
-                            <View style={{ backgroundColor: colors.activeBg, padding: 5, borderRadius: 20 }}>
-                                <FontAwesome5 name='running' size={20} color={colors.activeTxt} />
+                            <Text size='xl' style={themed($revenueValue)} numberOfLines={1}>
+                                ₹{summary?.revenueThisMonth?.value ?? 0}
+                            </Text>
+                            <View style={$revenueFooter}>
+                                <View style={themed($revenueTrend)}>
+                                    <TrendingUp size={14} color={colors.white} />
+                                    <Text style={themed($revenueTrendText)} size="xs">
+                                        +{summary?.revenueThisMonth?.trend || 0}% from last month
+                                    </Text>
+                                </View>
                             </View>
-                        )}
+                        </MotiView>
                     </View>
-                    <View style={[$styles.card, themed($mainCard)]}>
-                        <View style={[$styles.flexRow, { alignItems: 'flex-start' }]}>
-                            <View>
-                                <Text style={themed($textColor)}>Revenue this month</Text>
-                                <Text preset='heading' style={themed({ color: colors.background })}>₹{summary?.revenueThisMonth?.value ?? 0}</Text>
-                            </View>
-                            <View style={themed({ backgroundColor: '#ffffff47', padding: 8, borderRadius: 20 })}>
-                                <Ionicons name='cash' size={25} color={'#fff'} />
-                            </View>
-                        </View>
-                        <View style={[$styles.flexRow, { marginTop: 15 }]}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                {growthLabel(summary?.revenueThisMonth?.trend, false, '#fff')}
-                                <Text size='xxs' style={{ color: colors.background, marginLeft: 5 }}>{summary?.revenueThisMonth?.comparisonText}</Text>
-                            </View>
-                            <Text style={themed({ color: colors.background, marginLeft: 10 })} size='xs'>Target: ₹--</Text>
-                        </View>
+
+                    <View style={$statsGrid}>
+                        <StatCard
+                            label="Total Members"
+                            value={summary?.totalClients ?? 0}
+                            icon={<Users size={20} color={colors.primary} />}
+                            color={colors.primary}
+                        />
+                        <StatCard
+                            label="Active Now"
+                            value={summary?.activeMembers?.value ?? 0}
+                            trend={summary?.activeMembers?.trend}
+                            icon={<ActivityIconLucide size={20} color={colors.success} />}
+                            color={colors.success}
+                        />
                     </View>
-                    <View style={[$styles.flexRow]}>
-                        {DashboardCard('New Joinees', summary?.newlyJoinedThisMonth?.value, summary?.newlyJoinedThisMonth?.trend, summary?.newlyJoinedThisMonth?.comparisonText, false,
-                            <View style={{ backgroundColor: colors.palette.primary100, padding: 5, borderRadius: 20 }}>
-                                <Ionicons name='people' size={20} color={colors.palette.primary500} />
-                            </View>
-                        )}
-                        {DashboardCard('Expiring', summary?.expiringIn7Days ?? 0, 'Renewals needed', null, true,
-                            <View style={{ backgroundColor: colors.errorBackground, padding: 5, borderRadius: 20 }}>
-                                <Ionicons name='warning' size={20} color={colors.error} />
-                            </View>
-                        )}
+
+                    <View style={$statsGrid}>
+                        <StatCard
+                            label="Expiring Soon (7 Days)"
+                            value={summary?.expiringIn7Days ?? 0}
+                            icon={<Clock size={20} color={colors.error} />}
+                            color={colors.error}
+                        />
+                        <StatCard
+                            label="New Joinees"
+                            value={summary?.newlyJoinedThisMonth?.value ?? 0}
+                            icon={<UserPlus size={20} color={colors.palette.indigo500} />}
+                            color={colors.palette.indigo500}
+                        />
                     </View>
-                    <View style={{ marginTop: 10 }}>
-                        <Text preset='subheading'>Recent Activity</Text>
-                        {
-                            summary?.activities.map((activity: any, index: number) => <ActivityCard item={activity} key={index} />)
-                        }
+
+                    <View style={$sectionHeader}>
+                        <Text style={themed($sectionTitle)}>Recent Activity</Text>
+                        <TouchableOpacity onPress={loadData}>
+                            <RefreshCw size={16} color={colors.primary} />
+                        </TouchableOpacity>
                     </View>
-                </ScrollView>
-                <Pressable style={themed($addBtn)} onPress={() => { navigate('Add Client') }}>
-                    <Ionicons name='add' size={30} color={colors.background} />
-                </Pressable>
+
+                    <View style={$activityList}>
+                        {summary?.activities?.map((activity: any, index: number) => (
+                            <ActivityCard item={activity} key={index} />
+                        ))}
+                    </View>
+                </View>
             </Screen>
+
+            <Pressable
+                style={themed($fab)}
+                onPress={() => navigate('Add Client')}
+            >
+                <Plus size={28} color={colors.background} />
+            </Pressable>
         </Drawer>
     )
 }
 
 export default Home
 
-const $addBtn: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    backgroundColor: colors.tint,
-    position: 'absolute',
-    right: 20,
-    bottom: 0,
-    borderRadius: 30,
-    padding: 10,
-    elevation: 1,
-    shadowOffset: {
-        width: 0,
-        height: 1,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 2,
-    shadowColor: '#000',
-    marginBottom: 5
-
-})
-
-const $growthLabel: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    backgroundColor: colors.activeBg,
-    paddingVertical: spacing.xxs,
-    paddingHorizontal: spacing.xs,
-    borderRadius: 5,
-    alignSelf: 'flex-start',
+const $header: ThemedStyle<ViewStyle> = ({ spacing }) => ({
     flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
 })
 
-const $mainCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    backgroundColor: colors.palette.primary500,
-    padding: spacing.md
+const $menuBtn: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
 })
 
-const $textColor: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-    color: colors.background
+const $headerText: ViewStyle = {
+    flex: 1,
+    marginLeft: 16,
+}
+
+const $greeting: ThemedStyle<TextStyle> = ({ colors }) => ({
+    fontSize: 14,
+    color: colors.textDim,
+})
+
+const $ownerName: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
+    fontFamily: typography.secondary.bold,
+    fontSize: 18,
+    color: colors.text,
+})
+
+const $content: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+    paddingHorizontal: spacing.md,
+    paddingBottom: 100,
+})
+
+const $revenueCardContainer: ViewStyle = {
+    marginVertical: 16,
+}
+
+const $revenueCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    backgroundColor: colors.palette.indigo600,
+    borderRadius: 24,
+    padding: spacing.md,
+    shadowColor: colors.palette.indigo600,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
+})
+
+const $revenueHeader: ViewStyle = {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+}
+
+const $revenueLabel: TextStyle = {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+}
+
+const $revenueValue: ThemedStyle<TextStyle> = ({ typography }) => ({
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontFamily: typography.secondary.bold,
+    marginBottom: 16,
+})
+
+const $revenueFooter: ViewStyle = {
+    flexDirection: 'row',
+    alignItems: 'center',
+}
+
+const $revenueTrend: ViewStyle = {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+}
+
+const $revenueTrendText: ThemedStyle<TextStyle> = ({ typography }) => ({
+    color: '#FFFFFF',
+    marginLeft: 4,
+    fontFamily: typography.primary.medium,
+})
+
+const $statsGrid: ViewStyle = {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+}
+
+const $statCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    backgroundColor: colors.surface,
+    width: '48%',
+    borderRadius: 20,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+})
+
+const $statHeader: ViewStyle = {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+}
+
+const $iconContainer: ViewStyle = {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+}
+
+const $trendBadge: ViewStyle = {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+}
+
+const $statValue: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
+    fontSize: 24,
+    fontFamily: typography.secondary.bold,
+    color: colors.text,
+    marginBottom: 4,
+})
+
+const $statLabel: ThemedStyle<TextStyle> = ({ colors }) => ({
+    fontSize: 12,
+    color: colors.textDim,
+})
+
+const $sectionHeader: ViewStyle = {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 16,
+}
+
+const $sectionTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
+    fontFamily: typography.secondary.bold,
+    fontSize: 20,
+    color: colors.text,
+})
+
+const $activityList: ViewStyle = {
+    marginBottom: 20,
+}
+
+const $activityCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+})
+
+const $activityIconWrapper: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+})
+
+const $activityContent: ViewStyle = {
+    flex: 1,
+}
+
+const $activityTopRow: ViewStyle = {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+}
+
+const $activityTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
+    fontFamily: typography.primary.semiBold,
+    fontSize: 14,
+    color: colors.text,
+})
+
+const $activityTime: ThemedStyle<TextStyle> = ({ colors }) => ({
+    fontSize: 10,
+    color: colors.textDim,
+})
+
+const $activityDesc: ThemedStyle<TextStyle> = ({ colors }) => ({
+    fontSize: 12,
+    color: colors.textDim,
+})
+
+const $activityAmount: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
+    fontSize: 14,
+    fontFamily: typography.primary.bold,
+    color: colors.text,
+    marginTop: 4,
+})
+
+const $fab: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
 })

@@ -22,7 +22,7 @@ const DependentCard = ({ item, index, updateDependent, duplicateNo, updateExisti
         <View style={[$styles.card, { padding: spacing.md, marginVertical: 0, marginBottom: 10 }]} key={index}>
             <View style={[$styles.flexRow, { marginBottom: 10 }]}>
                 <Text weight='medium'>Dependent {index + 1}</Text>
-                <Pressable style={styles.row} onPress={() => {navigate('Search Client', {handleSelect: updateExistingDependent, index: index})}}>
+                <Pressable style={styles.row} onPress={() => { navigate('Search Client', { handleSelect: updateExistingDependent, index: index }) }}>
                     <Text size='xs' style={{ color: colors.tint, marginRight: 5 }}>Add Existing</Text>
                     <Ionicons name='add-circle-outline' size={20} color={colors.tint} />
                 </Pressable>
@@ -33,11 +33,11 @@ const DependentCard = ({ item, index, updateDependent, duplicateNo, updateExisti
                         <View style={styles.row}>
                             <Octicons name='person-add' size={15} color={colors.tint} style={styles.dependentIcon} />
                             <View>
-                                <Text style={{ color: colors.tint }} size='xs'>{item?.name}  <Text size='xs' style={{color: colors.textDim}}>({item?.gender})</Text></Text>
+                                <Text style={{ color: colors.tint }} size='xs'>{item?.name}  <Text size='xs' style={{ color: colors.textDim }}>({item?.gender})</Text></Text>
                                 <Text size='xxs' style={{ color: colors.textDim }}>{item?.phoneNumber}</Text>
                             </View>
                         </View>
-                        <Ionicons name='close' size={20} color={colors.textDim} onPress={() => {updateExistingDependent(index, 'delete')}} />
+                        <Ionicons name='close' size={20} color={colors.textDim} onPress={() => { updateExistingDependent(index, 'delete') }} />
                     </View> :
                     <View>
                         <TextField
@@ -48,7 +48,7 @@ const DependentCard = ({ item, index, updateDependent, duplicateNo, updateExisti
                             autoCorrect={false}
                             placeholder="Full Name"
                         />
-                        <View style={[$styles.flexRow, {alignItems: 'flex-start'}]}>
+                        <View style={[$styles.flexRow, { alignItems: 'flex-start' }]}>
                             <View style={{ width: '48%' }}>
                                 <TextField
                                     status={duplicateNo === index.toString() ? 'error' : undefined}
@@ -66,7 +66,7 @@ const DependentCard = ({ item, index, updateDependent, duplicateNo, updateExisti
                             <View style={{ width: '48%' }}>
                                 <SelectField
                                     placeholder="Gender"
-                                    value={[{label: item?.gender}]}
+                                    value={[{ label: item?.gender }]}
                                     onSelect={(val) => { updateDependent(index, 'gender', val?.[0]?.label) }}
                                     options={[{ label: 'Male' }, { label: 'Female' }, { label: 'Others' }]}
                                     multiple={false}
@@ -82,7 +82,7 @@ const DependentCard = ({ item, index, updateDependent, duplicateNo, updateExisti
 };
 
 const styles = StyleSheet.create({
-    clientAdded: { padding: 10, borderColor: colors.tint, borderRadius: 5, borderWidth: 1, backgroundColor: colors.palette.primary100 },
+    clientAdded: { padding: 10, borderColor: colors.tint, borderRadius: 5, borderWidth: 1, backgroundColor: colors.palette.indigo100 },
     row: { flexDirection: 'row', alignItems: 'center' },
     dependentIcon: { padding: 10, borderRadius: 20, backgroundColor: '#fff', alignSelf: 'flex-start', marginRight: 15 }
 });

@@ -18,8 +18,8 @@ type Props = {
 const OnBoardingStepsHeader: FC<Props> = ({ steps, currentStep, moveStep, renew }) => {
     const { themed } = useAppTheme();
 
-    const ProgressStep = ({ label, isCompleted, isActive, index}: { label: string, isCompleted: boolean, isActive: boolean, index: number }) => (
-        <View style={{ flex: 1, marginRight: steps.length-1==index ? 0 : 10 }}>
+    const ProgressStep = ({ label, isCompleted, isActive, index }: { label: string, isCompleted: boolean, isActive: boolean, index: number }) => (
+        <View style={{ flex: 1, marginRight: steps.length - 1 == index ? 0 : 10 }}>
             <View style={{ height: 5, borderRadius: 10, backgroundColor: isCompleted || isActive ? colors.tint : colors.tintInactive, marginBottom: 6 }} />
             <Text style={{ textAlign: "center", color: isActive ? colors.tint : colors.tintInactive }}>
                 {label}
@@ -41,7 +41,7 @@ const OnBoardingStepsHeader: FC<Props> = ({ steps, currentStep, moveStep, renew 
                     const isCompleted = index < currentIndex
                     const isActive = index === currentIndex
                     return (
-                        <ProgressStep key={step} label={step} isCompleted={isCompleted} isActive={isActive} index={index}/>
+                        <ProgressStep key={step} label={step} isCompleted={isCompleted} isActive={isActive} index={index} />
                     )
                 })}
             </View>

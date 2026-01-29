@@ -1,7 +1,6 @@
-import { useMemo, useRef, useState } from "react"
-import { Image, Pressable, TextInput, TextStyle, View, ViewStyle } from "react-native"
+import { useRef, useState } from "react"
+import { Image, ImageStyle, Pressable, TextInput, TextStyle, View, ViewStyle } from "react-native"
 import { Button } from "@/components/Button"
-import { PressableIcon } from "@/components/Icon"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { TextField } from "@/components/TextField"
@@ -13,142 +12,205 @@ import { useMMKVString } from "react-native-mmkv"
 import { save, saveString } from "@/utils/LocalStorage"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
-import { Octicons } from "@expo/vector-icons"
+import { Eye, EyeOff } from "lucide-react-native"
 import Constants from 'expo-constants';
-import { OTA_VERSION } from "@/utils/Constanst"
+import { OTA_VERSION } from "@/utils/Constants"
+import { MotiView } from "moti"
 
 export const LoginScreen = () => {
-  const authPasswordInput = useRef<TextInput>(null)
-  const dispatch = useAppDispatch();
-
-  const [isAuthPasswordHidden, setIsAuthPasswordHidden] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [username, setUsername] = useMMKVString("username");
-  const [password, setPassword] = useState("");
-  const [validation, setValidation] = useState<{ type: 'username' | 'password' | null, msg: string }>({ type: null, msg: '' });
-
   const { themed, theme: { colors } } = useAppTheme()
+  const dispatch = useAppDispatch()
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-  const login = async () => {
-    setValidation({ type: null, msg: "" })
-    if (!username) {
-      setValidation({ type: "username", msg: "Username can't be blank" })
+  const passwordInput = useRef<TextInput>(null)
+
+  const handleLogin = async () => {
+    if (!username || !password) {
+      setError("Please enter both username and password")
       return
     }
-    if (!password) {
-      setValidation({ type: "password", msg: "Password can't be blank" })
-      return
-    }
+
+    setIsLoading(true)
+    setError("")
+
     try {
-      setLoading(true)
-      const res = await api.loginAPI(username, password)
-      if (res.kind === "ok") {
-        saveString("authToken", res.data.token);
-        save("userData", res.data);
-        api.setAuthToken(res.data.token)
-        setUsername("");
-        setPassword("");
-        dispatch(setLoggedInUser({ loggedInUser: res.data }));
-        return
+      const response = await api.loginAPI(username, password)
+      if (response.kind === "ok") {
+        const token = response.data.token
+        saveString("authToken", token);
+        save("userData", response.data)
+        api.setAuthToken(token)
+        dispatch(setLoggedInUser(response.data))
+      } else {
+        setError("Invalid credentials. Please try again.")
       }
-      setValidation({ type: "password", msg: res.message ?? "Invalid credentials" })
     } catch (e) {
-      setValidation({ type: "password", msg: "Something went wrong. Please try again." })
+      setError("Something went wrong. Please check your connection.")
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
-    <>
-      <Screen
-        preset="fixed"
-        contentContainerStyle={themed($screenContentContainer)}
-        safeAreaEdges={["top"]}
+    <Screen
+      preset="scroll"
+      contentContainerStyle={themed($screenContentContainer)}
+      safeAreaEdges={["top", "bottom"]}
+      backgroundColor={colors.background}
+    >
+      <MotiView
+        from={{ opacity: 0, translateY: 20 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 800 }}
+        style={themed($loginCard)}
       >
-        <View style={{ flex: 1 }}>
-          <View style={$styles.card}>
-            <View style={themed($customIconContainer)}>
-              <Image source={require('../../assets/images/app-icon.png')} resizeMode="stretch" style={{ width: 70, height: 70 }} />
-            </View>
-            <Text tx="loginScreen:appName" preset="heading" style={themed($appName)} />
-            <Text preset="subheading" style={themed($enterDetails)}>Welcome back, please login to continue</Text>
-            <TextField
-              status={validation.type === 'username' ? 'error' : undefined}
-              value={username}
-              onChangeText={setUsername}
-              containerStyle={themed($textField)}
-              autoCapitalize="none"
-              autoCorrect={false}
-              helper={validation.type === 'username' ? validation.msg : undefined}
-              keyboardType="email-address"
-              label="Username"
-              placeholder="Enter your username"
-              onSubmitEditing={() => authPasswordInput.current?.focus()}
-            />
-            <TextField
-              status={validation.type === 'password' ? 'error' : undefined}
-              ref={authPasswordInput}
-              value={password}
-              onChangeText={setPassword}
-              containerStyle={themed($textField)}
-              autoCapitalize="none"
-              autoComplete="password"
-              autoCorrect={false}
-              secureTextEntry={isAuthPasswordHidden}
-              label="Password"
-              placeholder="Enter your password"
-              onSubmitEditing={login}
-              RightAccessory={(props) =>
-                <Pressable onPress={() => setIsAuthPasswordHidden(!isAuthPasswordHidden)} style={props.style}>
-                  <Octicons name={isAuthPasswordHidden ? 'eye' : 'eye-closed'} size={20} color={colors.palette.neutral800} />
-                </Pressable>}
-              helper={validation.type === 'password' ? validation.msg : undefined}
-            />
-            <Button
-              text={loading ? "Logging in..." : "Tap to log in!"}
-              style={themed($tapButton)}
-              preset="reversed"
-              onPress={login}
-              disabled={loading}
-            />
-          </View>
+        <View style={themed($logoContainer)}>
+          <Image
+            source={require('../../assets/images/app-icon.png')}
+            resizeMode="contain"
+            style={$logo}
+          />
         </View>
-      </Screen>
-      <Text style={{ width: '100%', textAlign: 'center', color: '#fff', paddingBottom: 20, zIndex: 2 }} size='xs' weight="semiBold">v{Constants.expoConfig?.version} ({OTA_VERSION})</Text>
-      <Image source={require('../../assets/images/gymbg.png')} style={{ position: 'absolute', bottom: -20, left: -20, opacity: 0.8 }} resizeMode='cover' />
-    </>
+
+        <View style={$headerTextContainer}>
+          <Text preset="heading">Gymetric</Text>
+          <Text
+            preset="subheading"
+            text="Welcome Back"
+            style={themed($welcomeTitle)}
+          />
+          <Text
+            preset="subheading"
+            text="Login to manage your gym memberships"
+            style={themed($welcomeSubtitle)}
+          />
+        </View>
+
+        <View style={$formContainer}>
+          <TextField
+            value={username}
+            onChangeText={setUsername}
+            containerStyle={themed($textField)}
+            label="Username"
+            placeholder="Enter your username"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordInput.current?.focus()}
+          />
+
+          <TextField
+            ref={passwordInput}
+            value={password}
+            onChangeText={setPassword}
+            containerStyle={themed($textField)}
+            label="Password"
+            placeholder="Enter your password"
+            secureTextEntry={!isPasswordVisible}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
+            RightAccessory={() => (
+              <Pressable onPress={() => setIsPasswordVisible(!isPasswordVisible)} style={{ paddingRight: 12 }}>
+                {isPasswordVisible ? (
+                  <EyeOff size={20} color={colors.textDim} />
+                ) : (
+                  <Eye size={20} color={colors.textDim} />
+                )}
+              </Pressable>
+            )}
+          />
+
+          {error ? <Text style={{ color: colors.error, marginBottom: 16, textAlign: 'center' }} size="xs">{error}</Text> : null}
+
+          <Button
+            testID="login-button"
+            text="Login"
+            preset="dark"
+            style={themed($tapButton)}
+            onPress={handleLogin}
+            disabled={isLoading}
+          />
+        </View>
+
+        <View style={$footer}>
+          <Text style={themed($versionText)}>
+            v{Constants.expoConfig?.version} ({OTA_VERSION})
+          </Text>
+        </View>
+      </MotiView>
+    </Screen>
   )
 }
 
-const $customIconContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.palette.neutral200,
-  padding: spacing.xs,
-  borderRadius: 50,
-  alignSelf: 'center',
-})
-
 const $screenContentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingVertical: spacing.xxl,
+  flexGrow: 1,
   paddingHorizontal: spacing.lg,
-  flex: 1,
-  justifyContent: 'flex-start',
-  zIndex: 2
+  justifyContent: 'center',
 })
 
-const $appName: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  marginBottom: spacing.sm,
-  alignSelf: 'center'
+const $loginCard: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+  backgroundColor: colors.surface,
+  padding: spacing.xl,
+  borderRadius: 24,
+  shadowColor: colors.palette.slate900,
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.05,
+  shadowRadius: 12,
+  elevation: 2,
 })
 
-const $enterDetails: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  marginBottom: spacing.lg,
+const $logoContainer: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+  marginBottom: spacing.md,
+  alignItems: 'center',
+  justifyContent: 'center',
 })
+
+const $logo: ImageStyle = {
+  width: 80,
+  height: 80,
+}
+
+const $headerTextContainer: ViewStyle = {
+  alignItems: 'center',
+  marginBottom: 32,
+}
+
+const $welcomeTitle: ThemedStyle<TextStyle> = ({ typography }) => ({
+  fontFamily: typography.secondary.bold,
+  marginVertical: 8,
+})
+
+const $welcomeSubtitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  textAlign: 'center',
+})
+
+const $formContainer: ViewStyle = {
+  width: '100%',
+}
 
 const $textField: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginBottom: spacing.lg,
+  marginBottom: spacing.md,
 })
 
 const $tapButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginTop: spacing.xs,
+  marginTop: spacing.md,
+})
+
+const $footer: ViewStyle = {
+  marginTop: 32,
+  alignItems: 'center',
+}
+
+const $versionText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
 })

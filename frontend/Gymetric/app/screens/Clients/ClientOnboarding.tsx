@@ -19,7 +19,7 @@ import OnBoardingStepsHeader from '@/components/OnBoardingStepsHeader'
 import SelectMembership from './ClientMembership/SelectMembership'
 import MembershipPayment from './ClientMembership/MembershipPayment'
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated'
-import { DEVICE_WIDTH } from '@/utils/Constanst'
+import { DEVICE_WIDTH } from '@/utils/Constants'
 import { alreadyExists } from '@/utils/Helper'
 import { format } from 'date-fns'
 

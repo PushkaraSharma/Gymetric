@@ -81,7 +81,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                         selectedMembership?.[0]?.planType === 'indivisual' ?
                             <View style={[$styles.card, { padding: 0 }]}>
                                 <View style={themed($cardHeader)}>
-                                    <View style={themed({ backgroundColor: colors.palette.primary100, padding: 8, borderRadius: 20 })}>
+                                    <View style={themed({ backgroundColor: colors.palette.indigo100, padding: 8, borderRadius: 20 })}>
                                         <MaterialIcons name='card-membership' size={25} color={colors.tint} />
                                     </View>
                                     <View style={{ marginLeft: 15 }}>
@@ -115,7 +115,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                                     <Text size='xs' style={{ color: colors.textDim }}>Primary Payer</Text>
                                     <View style={[$styles.card, $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs }]}>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '85%' }}>
-                                            <View style={{ padding: 10, borderRadius: 20, backgroundColor: colors.palette.primary100, marginRight: 15 }}>
+                                            <View style={{ padding: 10, borderRadius: 20, backgroundColor: colors.palette.indigo100, marginRight: 15 }}>
                                                 <Octicons name='person' size={20} color={colors.tint} />
                                             </View>
                                             <View style={{ flex: 1 }}>
@@ -142,7 +142,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
 
                     <View style={[$styles.flexRow, { marginBottom: 15, marginTop: 10 }]}>
                         <Text weight='medium'>Start Date</Text>
-                        <Pressable style={{ width: '60%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, padding: 8, borderWidth: 1, borderColor: colors.palette.neutral400, borderRadius: 5, backgroundColor: colors.palette.neutral100 }} onPress={handleDatePicker}>
+                        <Pressable style={{ width: '60%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, padding: 10, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.surface }} onPress={handleDatePicker}>
                             <Text style={{ color: form.startDate ? '#000' : colors.textDim }}>{form.startDate ? formatDate(form.startDate, 'dd/MM/yyyy') : 'dd/mm/yyyy'}</Text>
                             <Ionicons name='calendar-outline' size={20} color={colors.textDim} />
                         </Pressable>
@@ -157,10 +157,8 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
 export default SelectMembership
 
 const styles = StyleSheet.create({
-    clientAdded: { padding: 10, borderColor: colors.tint, borderRadius: 5, borderWidth: 1, backgroundColor: colors.palette.primary100 },
     row: { flexDirection: 'row', alignItems: 'center' },
-    dependentIcon: { padding: 10, borderRadius: 20, backgroundColor: '#fff', alignSelf: 'flex-start', marginRight: 15 },
-    slotText: { borderRadius: 10, backgroundColor: colors.palette.primary100, color: colors.tint, paddingHorizontal: 5, paddingVertical: 2 }
+    slotText: { borderRadius: 10, backgroundColor: colors.palette.indigo100, color: colors.tint, paddingHorizontal: 5, paddingVertical: 2 }
 })
 
 const $cardHeader: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
@@ -169,9 +167,9 @@ const $cardHeader: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
     alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    backgroundColor: colors.palette.neutral250,
-    borderTopEndRadius: 5,
-    borderTopStartRadius: 5,
+    backgroundColor: colors.palette.slate200,
+    borderTopEndRadius: 12,
+    borderTopStartRadius: 12,
 })
 
 const $membershipItem: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({

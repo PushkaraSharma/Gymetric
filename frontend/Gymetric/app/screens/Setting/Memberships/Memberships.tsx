@@ -1,4 +1,5 @@
-import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { Platform, Pressable, ScrollView, StyleSheet, View, ViewStyle } from 'react-native'
+import { ThemedStyle } from '@/theme/types'
 import React, { useCallback, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
@@ -14,18 +15,23 @@ import { useAppDispatch } from '@/redux/Hooks'
 import { setLoading } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { useFocusEffect } from '@react-navigation/native'
-import { DEVICE_HEIGHT } from '@/utils/Constanst'
+import { DEVICE_HEIGHT } from '@/utils/Constants'
 import NoDataFound from '@/components/NoDataFound'
+import { useAppTheme } from '@/theme/context'
 
 const Memberships = () => {
     const dispatch = useAppDispatch();
+    const { theme: { colors, spacing }, themed } = useAppTheme()
+
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
 
     const MembershipCards = ({ item }: { item: any }) => (
-        <Pressable style={[$styles.card, $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs, opacity: item.active ? 1 : 0.5 }]} onPress={() => navigate('Create Edit Membership', { membership: item })}>
+        <Pressable style={[themed($styles.card), $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs, opacity: item.active ? 1 : 0.5 }]} onPress={() => navigate('Create Edit Membership', { membership: item })}>
             <View style={{ flex: 1, maxWidth: '85%' }}>
                 <Text preset={'formLabel'}>{item.planName}</Text>
-                <Text size='xxs' style={styles.daysPill}>{item.durationInDays ? `${item.durationInDays} Days` : `${item.durationInMonths} Months`}</Text>
+                <View style={{ marginTop: 5, borderRadius: 6, backgroundColor: colors.palette.slate100, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2 }}>
+                    <Text size='xxs' style={{ color: colors.textDim }}>{item.durationInDays ? `${item.durationInDays} Days` : `${item.durationInMonths} Months`}</Text>
+                </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text preset='subheading' style={{ color: colors.tint, marginRight: 15 }}>₹{item.price}</Text>
@@ -51,15 +57,15 @@ const Memberships = () => {
 
     return (
         <Screen
-            preset="auto"
+            preset="fixed"
             safeAreaEdges={["bottom"]}
             contentContainerStyle={[$styles.flex1]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
-            <Header title='Memberships' backgroundColor='#fff' LeftActionComponent={<HeaderbackButton />} />
+            <Header title='Memberships' backgroundColor={colors.surface} LeftActionComponent={<HeaderbackButton />} />
             <View style={{ paddingTop: 10, flex: 1 }}>
                 <ScrollView style={{ paddingHorizontal: 15, }}>
-                    <Text>Manage your gym's subscription plans</Text>
+                    <Text style={{ marginBottom: 10 }}>Manage your gym's subscription plans</Text>
                     {
                         memberships.length > 0 ?
                             memberships.map((mem: any, index: number) => <MembershipCards key={index} item={mem} />) :
@@ -68,7 +74,7 @@ const Memberships = () => {
                             </View>
                     }
                 </ScrollView>
-                <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
+                <View style={themed($footer)}>
                     <Button text={'Add New Membership'} preset="reversed" LeftAccessory={() => <FontAwesome6 name='circle-plus' size={20} color={colors.background} style={{ marginRight: 10 }} />} onPress={() => { navigate('Create Edit Membership') }} />
                 </View>
             </View>
@@ -78,6 +84,8 @@ const Memberships = () => {
 
 export default Memberships
 
-const styles = StyleSheet.create({
-    daysPill: { marginTop: 5, borderRadius: 5, color: colors.textDim, alignSelf: 'flex-start', paddingHorizontal: 5, paddingVertical: 2, backgroundColor: colors.palette.lightgray }
+const $footer: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+    borderTopWidth: 1,
+    padding: spacing.md,
+    borderColor: colors.border,
 })

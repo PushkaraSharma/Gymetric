@@ -36,6 +36,7 @@ import { Provider } from 'react-redux';
 import { store } from "./redux/Store"
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useToastConfig } from "./components/ToastConfig"
 
 export const NAVIGATION_PERSISTENCE_KEY = "NAVIGATION_STATE"
 
@@ -58,6 +59,17 @@ const config = {
       },
     },
   },
+}
+
+function ToastApp() {
+  const toastConfig = useToastConfig()
+  return (
+    <Toast
+      config={toastConfig}
+      topOffset={initialWindowMetrics?.insets.top ?? 40}
+      visibilityTime={2000}
+    />
+  )
 }
 
 /**
@@ -109,7 +121,7 @@ export function App() {
                   initialState={initialNavigationState}
                   onStateChange={onNavigationStateChange}
                 />
-                <Toast topOffset={initialWindowMetrics?.insets.top}/>
+                <ToastApp />
               </BottomSheetModalProvider>
             </ThemeProvider>
           </Provider>

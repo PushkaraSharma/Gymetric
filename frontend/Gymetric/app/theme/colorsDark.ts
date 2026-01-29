@@ -1,60 +1,74 @@
 const palette = {
-  neutral900: "#FFFFFF",
-  neutral800: "#F4F2F1",
-  neutral700: "#D7CEC9",
-  neutral600: "#B6ACA6",
-  neutral500: "#978F8A",
-  neutral400: "#564E4A",
-  neutral300: "#3C3836",
-  neutral250: '',
-  neutral200: "#191015",
-  neutral100: "#000000",
+  // Slate Scale (Dark Mode)
+  slate50: "#F8FAFC",
+  slate100: "#F1F5F9",
+  slate200: "#E2E8F0",
+  slate300: "#CBD5E1",
+  slate400: "#94A3B8",
+  slate500: "#64748B",
+  slate600: "#475569",
+  slate700: "#334155",
+  slate800: "#1E293B",
+  slate900: "#0F172A",
+  slate950: "#020617",
 
-  primary600: "#F4E0D9",
-  primary500: "#E8C1B4",
-  primary400: "#DDA28E",
-  primary300: "#D28468",
-  primary200: "#C76542",
-  primary100: "#A54F31",
+  // Indigo Primary (Lighter for Dark mode)
+  indigo300: "#A5B4FC",
+  indigo400: "#818CF8",
+  indigo500: "#6366F1",
+  indigo600: "#4F46E5",
 
-  secondary500: "#DCDDE9",
-  secondary400: "#BCC0D6",
-  secondary300: "#9196B9",
-  secondary200: "#626894",
-  secondary100: "#41476E",
+  // Success Emerald
+  emerald400: "#34D399",
+  emerald900: "#064E3B",
 
-  accent500: "#FFEED4",
-  accent400: "#FFE1B2",
-  accent300: "#FDD495",
-  accent200: "#FBC878",
-  accent100: "#FFBB50",
+  // Error Rose
+  rose400: "#FB7185",
+  rose900: "#4C0519",
 
-  angry100: "#F2D6CD",
-  angry500: "#C03403",
-
-  overlay20: "rgba(25, 16, 21, 0.2)",
-  overlay50: "rgba(25, 16, 21, 0.5)",
-
-  activeTxt: '#DCFCE7',
-  activeBg: '#166534',
-
-    lightgray: '#F5F5F5'
-
+  white: "#FFFFFF",
+  black: "#000000",
 } as const
 
 export const colors = {
   palette,
   transparent: "rgba(0, 0, 0, 0)",
-  text: palette.neutral800,
-  textDim: palette.neutral600,
-  background: palette.neutral200,
-  border: palette.neutral400,
-  tint: palette.primary500,
-  tintInactive: palette.neutral300,
-  separator: palette.neutral300,
-  error: palette.angry500,
-  errorBackground: palette.angry100,
 
-  activeBg: palette.activeTxt,
-  activeTxt: palette.activeBg
+  /**
+   * Semantic Colors
+   */
+  text: palette.slate50,
+  textDim: palette.slate400,
+  textContrast: palette.white,
+
+  background: palette.slate950,
+  surface: palette.slate900,
+
+  border: palette.slate800,
+  borderStrong: palette.slate700,
+
+  primary: palette.indigo400,
+  primaryBackground: palette.slate800,
+
+  tint: palette.indigo400,
+  tintInactive: palette.slate600,
+
+  cta: palette.white,
+  ctaBackground: palette.slate800,
+
+  error: palette.rose400,
+  errorBackground: palette.rose900,
+
+  black: palette.black,
+  white: palette.white,
+
+  success: palette.emerald400,
+  successBackground: palette.emerald900,
+
+  // Compatibility
+  activeBg: palette.emerald900,
+  activeTxt: palette.emerald400,
+  lightgray: palette.slate800,
+  separator: palette.slate800,
+  angry500: palette.rose400,
 } as const

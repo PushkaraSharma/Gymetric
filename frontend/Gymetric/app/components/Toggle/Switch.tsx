@@ -85,33 +85,31 @@ function SwitchInput(props: SwitchInputProps) {
     (v) => typeof v === "number",
   )
 
-  const offBackgroundColor = [
-    disabled && colors.palette.neutral400,
-    status === "error" && colors.errorBackground,
-    colors.palette.neutral300,
-  ].filter(Boolean)[0]
+  const offBackgroundColor =
+    (disabled && colors.palette.slate400) ||
+    (status === "error" && colors.errorBackground) ||
+    colors.palette.slate300
 
-  const onBackgroundColor = [
-    disabled && colors.transparent,
-    status === "error" && colors.errorBackground,
-    colors.palette.secondary500,
-  ].filter(Boolean)[0]
+  const onBackgroundColor =
+    (disabled && colors.transparent) ||
+    (status === "error" && colors.errorBackground) ||
+    colors.primary
 
   const knobBackgroundColor = (function () {
     if (on) {
-      return [
-        $detailStyleOverride?.backgroundColor,
-        status === "error" && colors.error,
-        disabled && colors.palette.neutral600,
-        colors.palette.neutral100,
-      ].filter(Boolean)[0]
+      return (
+        $detailStyleOverride?.backgroundColor ||
+        (status === "error" && colors.error) ||
+        (disabled && colors.palette.slate500) ||
+        colors.white
+      )
     } else {
-      return [
-        $innerStyleOverride?.backgroundColor,
-        disabled && colors.palette.neutral600,
-        status === "error" && colors.error,
-        colors.palette.neutral200,
-      ].filter(Boolean)[0]
+      return (
+        $innerStyleOverride?.backgroundColor ||
+        (disabled && colors.palette.slate500) ||
+        (status === "error" && colors.error) ||
+        colors.white
+      )
     }
   })()
 
@@ -191,10 +189,10 @@ function SwitchAccessibilityLabel(props: SwitchInputProps & { role: "on" | "off"
   ]
 
   const color = (function () {
-    if (disabled) return colors.palette.neutral600
+    if (disabled) return colors.palette.slate500
     if (status === "error") return colors.error
-    if (!on) return innerStyle?.backgroundColor || colors.palette.secondary500
-    return detailStyle?.backgroundColor || colors.palette.neutral100
+    if (!on) return innerStyle?.backgroundColor || colors.primary
+    return detailStyle?.backgroundColor || colors.white
   })()
 
   return (
@@ -211,10 +209,7 @@ function SwitchAccessibilityLabel(props: SwitchInputProps & { role: "on" | "off"
       )}
 
       {accessibilityMode === "icon" && shouldLabelBeVisible && (
-        <Image
-          style={[$switchAccessibilityIcon, { tintColor: color }]}
-          source={role === "off" ? iconRegistry.hidden : iconRegistry.view}
-        />
+        <View />
       )}
     </View>
   )
