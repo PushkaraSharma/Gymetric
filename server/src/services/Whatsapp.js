@@ -1,16 +1,16 @@
 import axios from 'axios';
 
-export const sendWhatsAppTemplate = async (to, templateName, bodyParams = [], headerImageId = null) => {
+export const sendWhatsAppTemplate = async (to, templateName, bodyParams = [], whatsapp) => {
     try {
-        const url = `https://graph.facebook.com/v22.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+        const url = `https://graph.facebook.com/v22.0/${whatsapp?.phoneNumberId}/messages`;
         const components = [];
-        if (headerImageId) {
+        if (whatsapp?.headerImageId) {
             components.push({
                 type: "header",
                 parameters: [
                     {
                         type: "image",
-                        image: { id: headerImageId }
+                        image: { id: whatsapp?.headerImageId }
                     }
                 ]
             });
@@ -35,7 +35,7 @@ export const sendWhatsAppTemplate = async (to, templateName, bodyParams = [], he
             }
         };
         const response = await axios.post(url, data, {
-            headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` }
+            headers: { Authorization: `Bearer ${whatsapp?.accessToken}` }
         });
         return response.data;
     } catch (error) {

@@ -5,7 +5,8 @@ const SettingsSchema = new mongoose.Schema({
     whatsapp: {
         accessToken: { type: String, required: true },
         phoneNumberId: { type: String, required: true },
-        isActive: { type: Boolean, default: false }
+        active: { type: Boolean, default: false },
+        headerImageId: { type: String, required: false },
     },
 }, { timestamps: true });
 

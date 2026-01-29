@@ -12,6 +12,7 @@ import { systemRoutes } from './src/routes/system.js';
 import "./instrument.js";
 import * as Sentry from '@sentry/node';
 import cors from '@fastify/cors';
+import { settingRoutes } from './src/routes/settings.js';
 
 const start = async () => {
     await connectDB(process.env.MONGO_URI);
@@ -28,6 +29,8 @@ const start = async () => {
     app.register(dashboardRoutes, { prefix: '/api/dashboard' });
     app.register(gymRoutes, { prefix: '/api/gym' });
     app.register(systemRoutes, { prefix: '/api/system' });
+        app.register(settingRoutes, { prefix: '/api/settings' });
+
 
     app.setErrorHandler((error, request, reply) => {
         Sentry.captureException(error);

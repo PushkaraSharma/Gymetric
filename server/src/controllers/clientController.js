@@ -5,6 +5,7 @@ import Membership from "../models/Memberships.js";
 import { sendWhatsAppTemplate } from "../services/Whatsapp.js";
 import { formatDateDDMonYYY, formatDDMMYYYY, parseDateToUTCMidnight, textParam } from "../utils/Helper.js";
 import Gym from "../models/Gym.js";
+import Settings from "../models/Settings.js";
 
 const calculateExpiry = (startDate, months, days) => {
     let date = new Date(startDate);
@@ -126,9 +127,11 @@ export const onBoarding = async (request, reply) => {
         });
 
         const gymInfo = await Gym.findOne({ _id: gymId });
-        // const settings = await Settings.findOne({gymId});
-        const params = [primaryClient.name, gymInfo.name, formatDateDDMonYYY(customStartDate), formatDateDDMonYYY(endDate)];
-        sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "onboarding", params, process.env.WHATSAPP_IMAGE_ID);
+        const settings = await Settings.findOne({ gymId });
+        if (settings?.whatsapp?.active) {
+            const params = [primaryClient.name, gymInfo.name, formatDateDDMonYYY(customStartDate), formatDateDDMonYYY(endDate)];
+            sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "onboarding", params, settings?.whatsapp);
+        }
         return reply.status(201).send({ success: true, data: primaryClient });
     } catch (error) {
         console.log(error)
