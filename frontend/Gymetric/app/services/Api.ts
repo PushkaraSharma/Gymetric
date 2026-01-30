@@ -99,6 +99,14 @@ export class Api {
     return await this.apiRequest('patch', '/api/gym/update', body);
   };
 
+  getSettings = async () => {
+    return await this.apiRequest('get', '/api/settings/');
+  };
+
+  updateSettings = async (body: any) => {
+    return await this.apiRequest('post', '/api/settings/', body);
+  };
+
 }
 
 // Singleton instance of the API for convenience

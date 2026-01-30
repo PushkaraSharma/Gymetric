@@ -20,6 +20,7 @@ import RenewMembership from "@/screens/Clients/ClientMembership/RenewMembership"
 import SearchClient from "@/screens/Clients/SearchClient"
 import { OnboardingScreen } from "@/screens/OnboardingScreen"
 import HelpCenter from "@/screens/Setting/HelpCenter"
+import NotificationSetting from "@/screens/Setting/NotificationSetting"
 import { useAppSelector } from "@/redux/Hooks"
 import { selectLoading } from "@/redux/state/GymStates"
 import { ActivityIndicator, TextStyle, View } from "react-native"
@@ -65,6 +66,7 @@ const AppStack = () => {
               </Stack.Group>
               <Stack.Screen name="Business Profile" component={BusinessProfile} />
               <Stack.Screen name="Help Center" component={HelpCenter} />
+              <Stack.Screen name="Notification Settings" component={NotificationSetting} />
             </Stack.Group>
           </>
         ) : (

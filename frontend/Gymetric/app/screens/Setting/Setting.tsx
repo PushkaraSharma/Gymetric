@@ -1,5 +1,7 @@
 import { Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native'
 import React, { JSX } from 'react'
+import { useFocusEffect } from '@react-navigation/native';
+import { api } from '@/services/Api';
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Text } from '@/components/Text'
@@ -10,13 +12,29 @@ import {
   Building,
   HelpCircle,
   FileText,
-  CreditCard
+  CreditCard,
+  MessageCircle
 } from 'lucide-react-native'
 import { navigate } from '@/navigators/navigationUtilities'
 import { ThemedStyle } from '@/theme/types'
 
 const Setting = () => {
   const { theme: { colors, spacing }, themed } = useAppTheme()
+  const [hasWhatsapp, setHasWhatsapp] = React.useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkSettings = async () => {
+        const response = await api.getSettings();
+        if (response.kind === 'ok' && response.data?.hasWhatsappConfigured) {
+          setHasWhatsapp(true);
+        } else {
+          setHasWhatsapp(false);
+        }
+      };
+      checkSettings();
+    }, [])
+  );
 
   const CardWithPrefixIcon = ({ navigateRoute, title, description, icon, noCard }: { navigateRoute: string, title: string, description?: string, icon: JSX.Element, noCard?: boolean }) => (
     <Pressable
@@ -56,6 +74,14 @@ const Setting = () => {
           description='Gym details, location and hours'
           icon={<Building size={22} color={colors.primary} />}
         />
+        {hasWhatsapp && (
+          <CardWithPrefixIcon
+            navigateRoute='Notification Settings'
+            title='Notification Settings'
+            description='Manage WhatsApp alerts and reminders'
+            icon={<MessageCircle size={22} color={colors.primary} />}
+          />
+        )}
       </View>
 
       <View style={{ marginBottom: spacing.xl }}>

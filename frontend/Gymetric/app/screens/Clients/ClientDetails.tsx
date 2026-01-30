@@ -29,14 +29,23 @@ const ClientDetails = ({ navigation, route }: any) => {
     const [tab, setTab] = useState<'Memberships' | 'Payments'>('Memberships');
 
     const getDaysProgress = (startStr: string, endStr: string) => {
-        const start = startOfDay(startStr);
-        const end = startOfDay(endStr);
+        if (!startStr || !endStr) return;
+        const start = startOfDay(parseISO(startStr));
+        const end = startOfDay(parseISO(endStr));
         const today = startOfDay(new Date());
-        const total = differenceInCalendarDays(end, start) + 1; // (Feb 25 - Jan 26) + 1 = 31
-        // Use Math.max to ensure we don't get negative days if membership hasn't started
-        const remain = differenceInCalendarDays(end, today) < 0 ? 0 : differenceInCalendarDays(end, today);
-        const used = total - remain;
-        const progress = used / total;
+        const total = differenceInCalendarDays(end, start) + 1; // Total duration
+        let used = 0;
+        let remain = 0;
+        if (today < start) {
+            // Future
+            used = 0;
+            remain = total;
+        } else {
+            // Started
+            remain = Math.max(0, differenceInCalendarDays(end, today)); // Remaining days from today
+            used = Math.min(total, Math.max(0, differenceInCalendarDays(today, start) + 1));
+        }
+        const progress = total > 0 ? used / total : 0;
         setMembershipDays({ total, remain, used, progress: Math.min(Math.max(progress, 0), 1), endDate: formatDate(end, 'MMM dd, yyyy') });
     };
 
@@ -45,8 +54,10 @@ const ClientDetails = ({ navigation, route }: any) => {
         const response = await api.getClient(route?.params?.data?._id);
         if (response.kind === 'ok') {
             setClient(response.data);
-            const activeMembership = response.data.activeMembership;
-            getDaysProgress(activeMembership?.startDate, activeMembership?.endDate);
+            const displayMembership = response.data.activeMembership || response.data.upcomingMembership;
+            if (displayMembership) {
+                getDaysProgress(displayMembership.startDate, displayMembership.endDate);
+            }
         }
         dispatch(setLoading({ loading: false }));
     };
@@ -109,8 +120,8 @@ const ClientDetails = ({ navigation, route }: any) => {
                     </View>
                     <Text weight='semiBold' size='xl'>{client?.name}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={themed({ marginRight: 15, backgroundColor: client?.membershipStatus === 'active' ? colors.activeBg : client?.membershipStatus === 'trial' ? colors.palette.indigo200 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 })}>
-                            <Text size='xs' weight='medium' style={themed({ color: client?.membershipStatus === 'active' ? colors.activeTxt : client?.membershipStatus === 'trial' ? colors.tint : colors.error, textTransform: 'capitalize' })}>{client?.membershipStatus}</Text>
+                        <View style={themed({ marginRight: 15, backgroundColor: ['active'].includes(client?.membershipStatus) ? colors.activeBg : ['trial', 'future'].includes(client?.membershipStatus) ? colors.palette.indigo200 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 })}>
+                            <Text size='xs' weight='medium' style={themed({ color: ['active'].includes(client?.membershipStatus) ? colors.activeTxt : ['trial', 'future'].includes(client?.membershipStatus) ? colors.tint : colors.error, textTransform: 'capitalize' })}>{client?.membershipStatus}</Text>
                         </View>
                         <Text size='xs' style={{ color: colors.textDim }}>Member since {client ? formatDate(client?.createdAt, 'MMM yyyy') : '-'}</Text>
                     </View>
@@ -131,47 +142,86 @@ const ClientDetails = ({ navigation, route }: any) => {
                 {
                     tab === 'Memberships' ?
                         <View style={{ paddingHorizontal: 15 }}>
-                            {client?.upcomingMembership && <Text style={{ color: colors.tint, marginBottom: 10 }} weight='medium'>Upcoming plan starts on {formatDate(client?.upcomingMembership?.startDate ?? new Date(), 'dd MMM yyyy')}</Text>}
-                            <Text preset='subheading'>Current Plan {client && membershipDays?.used === 0 && <Text size='xs' style={themed({ color: colors.tint })}>(Will start from {formatDate(client?.activeMembership?.startDate, 'dd MMM')})</Text>}</Text>
-                            {client?.activeMembership ?
-                                <View style={[$styles.card, { padding: 0, marginVertical: spacing.xxs }]}>
-                                    <View style={styles.dependentPill}>
-                                        <Text size='xs' style={{ color: colors.tint, textTransform: 'capitalize' }}>{client?.role}</Text>
-                                    </View>
-                                    <View style={{ borderTopEndRadius: 10, overflow: 'hidden', borderTopStartRadius: 10 }}>
-                                        <Image source={require('../../../assets/images/membershipImage.jpg')} style={{ height: 150 }} />
-                                    </View>
-                                    <View style={{ padding: spacing.md }}>
-                                        <View style={[$styles.flexRow, { marginBottom: 10 }]}>
-                                            <View>
-                                                <View style={[$styles.flexRow, { width: '100%' }]}>
-                                                    <Text preset='subheading'>{client?.activeMembership?.planName ?? 'Pro Monthly Plan'}</Text>
-                                                    {client?.role === 'dependent' && <Text size='xs' style={{ color: colors.textDim }}>Paid by {client?.activeMembership?.primaryMemberId?.name}</Text>}
+                            {/* Logic: Show Active OR Upcoming as the "Main" card. If Active exists, it takes precedence. If only Upcoming, show that. */}
+                            {(() => {
+                                const displayMembership = client?.activeMembership || client?.upcomingMembership;
+                                return (
+                                    <>
+                                        {/* If we are showing Active, and there is ALSO an Upcoming, we might want a small text or just show the Active one primarily */}
+                                        {client?.activeMembership && client?.upcomingMembership && <Text style={{ color: colors.tint, marginBottom: 10 }} weight='medium'>Upcoming plan starts on {formatDate(client?.upcomingMembership?.startDate ?? new Date(), 'dd MMM yyyy')}</Text>}
+
+                                        <Text preset='subheading'>{displayMembership ? (client?.activeMembership ? 'Current Plan' : 'Upcoming Plan') : 'Membership'}
+                                            {displayMembership && membershipDays?.used === 0 && <Text size='xs' style={themed({ color: colors.tint })}>(Will start from {formatDate(displayMembership?.startDate, 'dd MMM')})</Text>}
+                                        </Text>
+
+                                        {displayMembership ?
+                                            <View style={[$styles.card, { padding: 0, marginVertical: spacing.xxs }]}>
+                                                <View style={styles.dependentPill}>
+                                                    <Text size='xs' style={{ color: colors.tint, textTransform: 'capitalize' }}>{client?.role}</Text>
                                                 </View>
-                                                <Text style={{ color: colors.textDim }}>{client?.activeMembership?.description ?? "Full access to all facilities"}</Text>
+                                                <View style={{ borderTopEndRadius: 10, overflow: 'hidden', borderTopStartRadius: 10 }}>
+                                                    <Image source={require('../../../assets/images/membershipImage.jpg')} style={{ height: 150 }} />
+                                                </View>
+                                                <View style={{ padding: spacing.md }}>
+                                                    <View style={[$styles.flexRow, { marginBottom: 10 }]}>
+                                                        <View>
+                                                            <View style={[$styles.flexRow, { width: '100%' }]}>
+                                                                <Text preset='subheading'>{displayMembership?.planName ?? 'Membership Plan'}</Text>
+                                                                {client?.role === 'dependent' && <Text size='xs' style={{ color: colors.textDim }}>Paid by {displayMembership?.primaryMemberId?.name}</Text>}
+                                                            </View>
+                                                            <Text style={{ color: colors.textDim }}>{displayMembership?.description ?? "Full access to all facilities"}</Text>
+                                                        </View>
+                                                    </View>
+                                                    <View style={$styles.flexRow}>
+                                                        <Text>Days Utilised</Text>
+                                                        <Text weight='semiBold' style={{ color: membershipDays?.remain > 0 ? colors.tint : colors.error }}>{`${membershipDays?.used} / ${membershipDays?.total}`} days</Text>
+                                                    </View>
+                                                    <View style={{ height: 8, backgroundColor: 'lightgray', borderRadius: 4, marginTop: 5, marginBottom: 15 }}>
+                                                        <View style={{ height: 8, width: `${(membershipDays?.progress || 0) * 100}%`, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, borderRadius: 4, }}
+                                                        />
+                                                    </View>
+                                                    <View style={[$styles.flexRow, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 10 }]}>
+                                                        <View>
+                                                            <Text weight='medium' style={{ color: membershipDays?.remain > 0 ? colors.textDim : colors.error }}>{membershipDays?.remain > 0 ? "Expires On" : "Expired On"}</Text>
+                                                            <Text weight='medium' size='md'>{membershipDays?.endDate}</Text>
+                                                        </View>
+                                                        <Button disabled={membershipDays?.used === 0 && client?.activeMembership} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => { client?.upcomingMembership ? Toast.show({ type: 'error', text1: 'Client already have upcoming plan' }) : navigate('Renew Membership', { client: client }) }} />
+                                                    </View>
+                                                </View>
+                                            </View> :
+                                            <View style={{ marginTop: DEVICE_HEIGHT * 0.1 }}>
+                                                <NoDataFound title='No active membership' msg='Client does not have an active or upcoming plan' />
                                             </View>
-                                        </View>
-                                        <View style={$styles.flexRow}>
-                                            <Text>Days Utilised</Text>
-                                            <Text weight='semiBold' style={{ color: membershipDays?.remain > 0 ? colors.tint : colors.error }}>{`${membershipDays?.used} / ${membershipDays?.total}`} days</Text>
-                                        </View>
-                                        <View style={{ height: 8, backgroundColor: 'lightgray', borderRadius: 4, marginTop: 5, marginBottom: 15 }}>
-                                            <View style={{ height: 8, width: `${membershipDays.progress * 100}%`, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, borderRadius: 4, }}
-                                            />
-                                        </View>
-                                        <View style={[$styles.flexRow, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 10 }]}>
-                                            <View>
-                                                <Text weight='medium' style={{ color: membershipDays?.remain > 0 ? colors.textDim : colors.error }}>{membershipDays?.remain > 0 ? "Expires On" : "Expired On"}</Text>
-                                                <Text weight='medium' size='md'>{membershipDays?.endDate}</Text>
+                                        }
+                                    </>
+                                );
+                            })()}
+
+                            {/* Past Memberships Section */}
+                            {client?.membershipHistory && client?.membershipHistory.filter((m: any) => m._id !== client?.activeMembership?._id && m._id !== client?.upcomingMembership?._id).length > 0 && (
+                                <View style={{ marginTop: spacing.lg }}>
+                                    <Text preset='subheading' style={{ marginBottom: spacing.xs }}>Past Memberships</Text>
+                                    {client.membershipHistory
+                                        .filter((m: any) => m._id !== client?.activeMembership?._id && m._id !== client?.upcomingMembership?._id)
+                                        .map((historyItem: any, index: number) => (
+                                            <View key={index} style={[$styles.card, { marginBottom: spacing.sm, padding: spacing.sm }]}>
+                                                <View style={$styles.flexRow}>
+                                                    <View>
+                                                        <Text weight='semiBold'>{historyItem.planName}</Text>
+                                                        <Text size='xs' style={{ color: colors.textDim }}>
+                                                            {formatDate(historyItem.startDate, 'MMM dd, yyyy')} - {formatDate(historyItem.endDate, 'MMM dd, yyyy')}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={{ alignItems: 'flex-end' }}>
+                                                        <Text weight='medium' style={{ color: historyItem.status === 'expired' ? colors.textDim : colors.tint }}>{historyItem.status}</Text>
+                                                        {/*<Text size='xs'>₹{historyItem.totalAmount}</Text>*/}
+                                                    </View>
+                                                </View>
                                             </View>
-                                            <Button disabled={membershipDays?.used === 0} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => { client?.upcomingMembership ? Toast.show({ type: 'error', text1: 'Client already have upcoming plan' }) : navigate('Renew Membership', { client: client }) }} />
-                                        </View>
-                                    </View>
-                                </View> :
-                                <View style={{ marginTop: DEVICE_HEIGHT * 0.1 }}>
-                                    <NoDataFound title='No active membership' msg='Client already have upcoming plan' />
+                                        ))
+                                    }
                                 </View>
-                            }
+                            )}
                         </View> :
                         <View style={{ paddingHorizontal: 15 }}>
                             <Text preset='subheading'>Past Transactions</Text>
