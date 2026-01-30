@@ -2,7 +2,11 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import Client from '../models/Client.js';
 import Activity from '../models/Activity.js';
 import AssignedMembership from "../models/AssignedMembership.js";
-import { getISTMidnightToday } from "../utils/timeUtils.js";
+import Settings from "../models/Settings.js";
+import Gym from "../models/Gym.js";
+import { getISTMidnightToday, formatShortDate } from "../utils/timeUtils.js";
+import { sendWhatsAppTemplate } from "../services/Whatsapp.js";
+import dayjs from "dayjs";
 
 export const performExpiryChecks = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -67,7 +71,7 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                 );
 
                 // Log Activity
-                const primaryMember = await Client.findById(memb.primaryMemberId).select('name');
+                const primaryMember = await Client.findById(memb.primaryMemberId).select('name phoneNumber');
                 await Activity.create({
                     gymId: memb.gymId,
                     type: 'EXPIRY',
@@ -76,6 +80,57 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                     memberId: memb.primaryMemberId,
                     date: today
                 });
+
+                // Send WhatsApp Notification (Expired)
+                if (primaryMember?.phoneNumber) {
+                    const settings = await Settings.findOne({ gymId: memb.gymId });
+                    if (settings?.whatsapp?.active && settings?.whatsapp?.sendOnExpiry !== false) {
+                        const gym = await Gym.findById(memb.gymId);
+                        const templateName = "expired";
+                        const params = [primaryMember.name, gym?.name, formatShortDate(memb.endDate)];
+                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, settings.whatsapp, gym?.name);
+                    }
+                }
+            }
+        }
+
+        // STEP 3: SEND REMINDERS (Upcoming Expiries)
+        // Find settings where WhatsApp is active AND reminders are enabled (default true)
+        const allSettings = await Settings.find({
+            'whatsapp.active': true,
+            'whatsapp.sendOnReminder': { $ne: false }
+        });
+        for (const setting of allSettings) {
+            const reminderDays = setting.whatsapp.reminderDays || 3;
+            // Target date is 'reminderDays' from today
+            // e.g., if today is Jan 30, and reminder is 3 days, we check for Feb 2
+            const targetDateStart = dayjs(today).add(reminderDays, 'day').startOf('day').toDate();
+            const targetDateEnd = dayjs(today).add(reminderDays, 'day').endOf('day').toDate();
+            const expiringMemberships = await AssignedMembership.find({
+                gymId: setting.gymId,
+                status: { $in: ['active', 'trial'] },
+                endDate: { $gte: targetDateStart, $lte: targetDateEnd }
+            }).populate('primaryMemberId').populate('planId');
+
+            if (expiringMemberships.length > 0) {
+                const gym = await Gym.findById(setting.gymId);
+                for (const memb of expiringMemberships) {
+                    const primaryMember: any = memb.primaryMemberId;
+                    const plan: any = memb.planId;
+
+                    // Condition 1: Only for memberships defined in months (exclude daily passes)
+                    if (plan?.durationInMonths <= 0) continue;
+
+                    // Condition 2: Don't send if they already have an upcoming membership set
+                    if (primaryMember?.upcomingMembership) continue;
+
+                    if (primaryMember?.phoneNumber) {
+                        const remainingDays = dayjs(memb.endDate).diff(today, 'day');
+                        const templateName = "renewal";
+                        const params = [primaryMember.name, gym?.name, remainingDays, formatShortDate(memb.endDate)];
+                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, setting.whatsapp, gym?.name);
+                    }
+                }
             }
         }
 

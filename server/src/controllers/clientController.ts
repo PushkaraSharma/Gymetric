@@ -160,7 +160,7 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
 
         // 6. Messaging (Post-transaction)
         const settings = await Settings.findOne({ gymId });
-        if (settings?.whatsapp?.active) {
+        if (settings?.whatsapp?.active && settings?.whatsapp?.sendOnOnboarding !== false) {
             const gymInfo = await Gym.findById(gymId);
             const params = [primaryClient.name, gymInfo?.name || 'Gym', formatShortDate(customStartDate), formatShortDate(endDate)];
             sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "onboarding", params, settings?.whatsapp);
@@ -230,7 +230,7 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
             planName: plan.planName,
             startDate: newStartDate,
             endDate: newEndDate,
-            totalAmount: amount, // Fixed property name
+            totalAmount: amount,
             status: status
         }], { session });
 
@@ -296,6 +296,14 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
         }], { session });
 
         await session.commitTransaction();
+        // 6. Messaging (Post-transaction)
+        const settings = await Settings.findOne({ gymId });
+        if (settings?.whatsapp?.active && settings?.whatsapp?.sendOnRenewal !== false) {
+            const gymInfo = await Gym.findById(gymId);
+            const params = [primaryClient.name, plan?.planName, formatShortDate(newEndDate)];
+            sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "renewal_complete", params, settings?.whatsapp, gymInfo?.name);
+        }
+
         return reply.send({ success: true, data: primaryClient });
     } catch (error: any) {
         await session.abortTransaction();
@@ -334,7 +342,12 @@ export const getClientById = async (request: any, reply: any) => {
             populate: { path: 'primaryMemberId', select: 'name' }
         }).populate({
             path: 'upcomingMembership',
-            select: 'startDate planName'
+            select: 'startDate endDate status planName primaryMemberId',
+            populate: { path: 'primaryMemberId', select: 'name' }
+        }).populate({
+            path: 'membershipHistory',
+            select: 'startDate endDate status planName totalAmount',
+            options: { sort: { startDate: -1 } }
         });
 
         if (!client) {
