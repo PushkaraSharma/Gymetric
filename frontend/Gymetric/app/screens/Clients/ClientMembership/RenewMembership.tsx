@@ -17,7 +17,7 @@ import Toast from 'react-native-toast-message';
 import { goBack } from '@/navigators/navigationUtilities';
 import { addDays, format } from 'date-fns';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { DEVICE_WIDTH } from '@/utils/Constanst';
+import { DEVICE_WIDTH } from '@/utils/Constants';
 import { validateNextStep } from '@/utils/Helper';
 
 const RenewMembership = ({ route }: any) => {

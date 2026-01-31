@@ -20,3 +20,12 @@ export const utcStartOfMonth = (d = new Date()) =>
 
 export const addUtcDays = (d, days) =>
   new Date(d.getTime() + days * 24 * 60 * 60 * 1000);
+
+export const formatDateDDMonYYY = (date) => {
+  return date.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'});
+};
+
+export const textParam = (value) => ({
+  type: 'text',
+  text: String(value),
+});

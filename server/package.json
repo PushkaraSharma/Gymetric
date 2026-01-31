@@ -3,6 +3,7 @@
     "@fastify/cors": "^11.2.0",
     "@fastify/jwt": "^10.0.0",
     "@sentry/node": "^10.35.0",
+    "axios": "^1.13.3",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.2",
@@ -18,8 +19,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon app.js",
-    "start": "node app.js",
+    "dev": "tsx watch app.ts",
+    "start": "tsx app.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -27,6 +28,12 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
-    "@types/bcrypt": "^6.0.0"
+    "@types/bcrypt": "^6.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.1.0",
+    "@types/node-cron": "^3.0.11",
+    "dayjs": "^1.11.19",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }

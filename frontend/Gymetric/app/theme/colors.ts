@@ -1,95 +1,82 @@
 const palette = {
-  neutral100: "#FFFFFF",
-  neutral200: "#F4F2F1",
-  neutral250: "#E6E0DD",
-  neutral300: "#D7CEC9",
-  neutral400: "#B6ACA6",
-  neutral500: "#978F8A",
-  neutral600: "#564E4A",
-  neutral700: "#3C3836",
-  neutral800: "#191015",
-  neutral900: "#000000",
+  // Slate Scale
+  slate50: "#F8FAFC",
+  slate100: "#F1F5F9",
+  slate200: "#E2E8F0",
+  slate300: "#CBD5E1",
+  slate400: "#94A3B8",
+  slate500: "#64748B",
+  slate600: "#475569",
+  slate700: "#334155",
+  slate800: "#1E293B",
+  slate900: "#0F172A",
+  slate950: "#020617",
 
-  primary100: "#F4E0D9",
-  primary200: "#E8C1B4",
-  primary300: "#DDA28E",
-  primary400: "#D28468",
-  primary500: "#C76542",
-  primary600: "#A54F31",
+  // Indigo Primary
+  indigo50: "#EEF2FF",
+  indigo100: "#E0E7FF",
+  indigo200: "#C7D2FE",
+  indigo300: "#A5B4FC",
+  indigo400: "#818CF8",
+  indigo500: "#6366F1",
+  indigo600: "#4F46E5",
+  indigo700: "#4338CA",
 
-  secondary100: "#DCDDE9",
-  secondary200: "#BCC0D6",
-  secondary300: "#9196B9",
-  secondary400: "#626894",
-  secondary500: "#41476E",
+  // Success Emerald
+  emerald50: "#ECFDF5",
+  emerald100: "#D1FAE5",
+  emerald600: "#059669",
+  emerald700: "#047857",
 
-  accent100: "#FFEED4",
-  accent200: "#FFE1B2",
-  accent300: "#FDD495",
-  accent400: "#FBC878",
-  accent500: "#FFBB50",
+  // Error Rose
+  rose50: "#FFF1F2",
+  rose100: "#FFE4E6",
+  rose600: "#E11D48",
+  rose700: "#BE123C",
 
-  angry100: "#F2D6CD",
-  angry500: "#C03403",
-
-  overlay20: "rgba(25, 16, 21, 0.2)",
-  overlay50: "rgba(25, 16, 21, 0.5)",
-
-  activeBg: '#DCFCE7',
-  activeTxt: '#166534',
-
-  lightgray: '#e9e5e5ff'
-
+  white: "#FFFFFF",
+  black: "#000000",
 } as const
 
 export const colors = {
-  /**
-   * The palette is available to use, but prefer using the name.
-   * This is only included for rare, one-off cases. Try to use
-   * semantic names as much as possible.
-   */
   palette,
-  /**
-   * A helper for making something see-thru.
-   */
   transparent: "rgba(0, 0, 0, 0)",
-  /**
-   * The default text color in many components.
-   */
-  text: palette.neutral800,
-  /**
-   * Secondary text information.
-   */
-  textDim: palette.neutral500,
-  /**
-   * The default color of the screen background.
-   */
-  background: palette.neutral200,
-  /**
-   * The default border color.
-   */
-  border: palette.neutral400,
-  /**
-   * The main tinting color.
-   */
-  tint: palette.primary500,
-  /**
-   * The inactive tinting color.
-   */
-  tintInactive: palette.neutral300,
-  /**
-   * A subtle color used for lines.
-   */
-  separator: palette.neutral300,
-  /**
-   * Error messages.
-   */
-  error: palette.angry500,
-  /**
-   * Error Background.
-   */
-  errorBackground: palette.angry100,
 
-  activeTxt: palette.activeTxt,
-  activeBg: palette.activeBg
+  /**
+   * Semantic Colors
+   */
+  text: palette.slate900,
+  textDim: palette.slate500,
+  textContrast: palette.white,
+
+  background: palette.slate50,
+  surface: palette.white,
+
+  border: palette.slate200,
+  borderStrong: palette.slate300,
+
+  primary: palette.indigo600,
+  primaryBackground: palette.indigo50,
+
+  tint: palette.indigo600,
+  tintInactive: palette.slate400,
+
+  cta: palette.black,
+  ctaBackground: palette.slate100,
+
+  error: palette.rose600,
+  errorBackground: palette.rose50,
+
+  black: palette.black,
+  white: palette.white,
+
+  success: palette.emerald600,
+  successBackground: palette.emerald50,
+
+  // Compatibility with existing code if needed
+  activeBg: palette.emerald50,
+  activeTxt: palette.emerald600,
+  lightgray: palette.slate100,
+  separator: palette.slate200,
+  angry500: palette.rose600,
 } as const

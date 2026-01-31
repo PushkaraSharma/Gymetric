@@ -53,6 +53,10 @@ export class Api {
     return this.apiRequest('get', '/api/dashboard/summary');
   }
 
+  dashboardRevenue = async () => {
+    return this.apiRequest('get', '/api/dashboard/revenue');
+  }
+
   gymInfo = async () => {
     const response = await this.apiRequest('get', '/api/gym/info');
     if (response.kind === 'ok') {
@@ -97,6 +101,14 @@ export class Api {
 
   updateGym = async (body: any) => {
     return await this.apiRequest('patch', '/api/gym/update', body);
+  };
+
+  getSettings = async () => {
+    return await this.apiRequest('get', '/api/settings/');
+  };
+
+  updateSettings = async (body: any) => {
+    return await this.apiRequest('post', '/api/settings/', body);
   };
 
 }

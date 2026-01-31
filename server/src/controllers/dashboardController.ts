@@ -112,3 +112,95 @@ export const getDashboardSummary = async (request, reply) => {
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
+
+export const getRevenueStats = async (request, reply) => {
+    try {
+        const { gymId } = request.user;
+        const today = utcStartOfDay();
+        const startOfCurrent = utcStartOfMonth(today);
+
+        // 1. Monthly Revenue (Last 6 months)
+        const sixMonthsAgo = new Date(today);
+        sixMonthsAgo.setMonth(today.getMonth() - 5);
+        sixMonthsAgo.setDate(1); // Start of month 6 months ago
+
+        const monthlyRevenueRaw = await Client.aggregate([
+            { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
+            { $unwind: "$paymentHistory" },
+            { $match: { "paymentHistory.date": { $gte: sixMonthsAgo } } },
+            {
+                $group: {
+                    _id: {
+                        month: { $month: "$paymentHistory.date" },
+                        year: { $year: "$paymentHistory.date" }
+                    },
+                    total: { $sum: "$paymentHistory.amount" }
+                }
+            },
+            { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]);
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // Fill gaps if any months are missing (optional, but good for charts)
+        // For simplicity, we just map what we have, or we can construct a full 6-month array.
+        // Let's just return what we have for now, effectively.
+        const monthlyRevenue = monthlyRevenueRaw.map(item => ({
+            label: `${months[item._id.month - 1]}`,
+            amount: item.total
+        }));
+
+
+        // 2. Payment Method Breakdown (This Month)
+        const paymentMethodsRaw = await Client.aggregate([
+            { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
+            { $unwind: "$paymentHistory" },
+            { $match: { "paymentHistory.date": { $gte: startOfCurrent } } },
+            {
+                $group: {
+                    _id: "$paymentHistory.method",
+                    total: { $sum: "$paymentHistory.amount" },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const paymentMethods = paymentMethodsRaw.map(p => ({
+            method: p._id,
+            amount: p.total,
+            count: p.count
+        }));
+
+        // 3. Recent Transactions (Last 20)
+        // We need to unwind and sort, which can be heavy if many clients. 
+        // Better to limit match first if possible.
+        const recentTransactions = await Client.aggregate([
+            { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
+            { $unwind: "$paymentHistory" },
+            { $sort: { "paymentHistory.date": -1 } },
+            { $limit: 20 },
+            {
+                $project: {
+                    clientName: "$name",
+                    amount: "$paymentHistory.amount",
+                    date: "$paymentHistory.date",
+                    method: "$paymentHistory.method",
+                    remarks: "$paymentHistory.remarks"
+                }
+            }
+        ]);
+
+        return reply.send({
+            success: true,
+            data: {
+                monthlyRevenue,
+                paymentMethods,
+                recentTransactions
+            }
+        });
+
+    } catch (error: any) {
+        console.error("Revenue Stats Error:", error);
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};

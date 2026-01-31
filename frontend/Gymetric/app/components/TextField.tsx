@@ -2,7 +2,6 @@ import { ComponentType, forwardRef, Ref, useImperativeHandle, useRef } from "rea
 import {
   ImageStyle,
   StyleProp,
-  // eslint-disable-next-line no-restricted-imports
   TextInput,
   TextInputProps,
   TextStyle,
@@ -27,89 +26,25 @@ export interface TextFieldAccessoryProps {
 }
 
 export interface TextFieldProps extends Omit<TextInputProps, "ref"> {
-  /**
-   * A style modifier for different input states.
-   */
   status?: "error" | "disabled"
-  /**
-   * The label text to display if not using `labelTx`.
-   */
   label?: TextProps["text"]
-  /**
-   * Label text which is looked up via i18n.
-   */
   labelTx?: TextProps["tx"]
-  /**
-   * Optional label options to pass to i18n. Useful for interpolation
-   * as well as explicitly setting locale or translation fallbacks.
-   */
   labelTxOptions?: TextProps["txOptions"]
-  /**
-   * Pass any additional props directly to the label Text component.
-   */
   LabelTextProps?: TextProps
-  /**
-   * The helper text to display if not using `helperTx`.
-   */
   helper?: TextProps["text"]
-  /**
-   * Helper text which is looked up via i18n.
-   */
   helperTx?: TextProps["tx"]
-  /**
-   * Optional helper options to pass to i18n. Useful for interpolation
-   * as well as explicitly setting locale or translation fallbacks.
-   */
   helperTxOptions?: TextProps["txOptions"]
-  /**
-   * Pass any additional props directly to the helper Text component.
-   */
   HelperTextProps?: TextProps
-  /**
-   * The placeholder text to display if not using `placeholderTx`.
-   */
   placeholder?: TextProps["text"]
-  /**
-   * Placeholder text which is looked up via i18n.
-   */
   placeholderTx?: TextProps["tx"]
-  /**
-   * Optional placeholder options to pass to i18n. Useful for interpolation
-   * as well as explicitly setting locale or translation fallbacks.
-   */
   placeholderTxOptions?: TextProps["txOptions"]
-  /**
-   * Optional input style override.
-   */
   style?: StyleProp<TextStyle>
-  /**
-   * Style overrides for the container
-   */
   containerStyle?: StyleProp<ViewStyle>
-  /**
-   * Style overrides for the input wrapper
-   */
   inputWrapperStyle?: StyleProp<ViewStyle>
-  /**
-   * An optional component to render on the right side of the input.
-   * Example: `RightAccessory={(props) => <Icon icon="ladybug" containerStyle={props.style} color={props.editable ? colors.textDim : colors.text} />}`
-   * Note: It is a good idea to memoize this.
-   */
   RightAccessory?: ComponentType<TextFieldAccessoryProps>
-  /**
-   * An optional component to render on the left side of the input.
-   * Example: `LeftAccessory={(props) => <Icon icon="ladybug" containerStyle={props.style} color={props.editable ? colors.textDim : colors.text} />}`
-   * Note: It is a good idea to memoize this.
-   */
   LeftAccessory?: ComponentType<TextFieldAccessoryProps>
 }
 
-/**
- * A component that allows for the entering and editing of text.
- * @see [Documentation and Examples]{@link https://docs.infinite.red/ignite-cli/boilerplate/app/components/TextField/}
- * @param {TextFieldProps} props - The props for the `TextField` component.
- * @returns {JSX.Element} The rendered `TextField` component.
- */
 export const TextField = forwardRef(function TextField(props: TextFieldProps, ref: Ref<TextInput>) {
   const {
     labelTx,
@@ -172,12 +107,8 @@ export const TextField = forwardRef(function TextField(props: TextFieldProps, re
     HelperTextProps?.style,
   ]
 
-  /**
-   *
-   */
   function focusInput() {
     if (disabled) return
-
     input.current?.focus()
   }
 
@@ -246,16 +177,20 @@ export const TextField = forwardRef(function TextField(props: TextFieldProps, re
   )
 })
 
-const $labelStyle: ThemedStyle<TextStyle> = ({ spacing }) => ({
+const $labelStyle: ThemedStyle<TextStyle> = ({ spacing, colors, typography }) => ({
   marginBottom: spacing.xs,
+  color: colors.text,
+  fontFamily: typography.primary.medium,
 })
 
-const $inputWrapperStyle: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  alignItems: "flex-start",
+const $inputWrapperStyle: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  alignItems: "center", // Changed from flex-start to center
   borderWidth: 1,
-  borderRadius: 4,
-  backgroundColor: colors.palette.neutral100,
-  borderColor: colors.palette.neutral400,
+  borderRadius: 12, // More professional soft corners
+  backgroundColor: colors.surface,
+  borderColor: colors.border,
+  minHeight: 52,
+  paddingHorizontal: spacing.xs,
   overflow: "hidden",
 })
 
@@ -265,28 +200,26 @@ const $inputStyle: ThemedStyle<TextStyle> = ({ colors, typography, spacing }) =>
   fontFamily: typography.primary.normal,
   color: colors.text,
   fontSize: 16,
-  height: 24,
-  // https://github.com/facebook/react-native/issues/21720#issuecomment-532642093
-  paddingVertical: 0,
-  paddingHorizontal: 0,
-  marginVertical: spacing.xs,
-  marginHorizontal: spacing.sm,
+  paddingVertical: spacing.sm,
+  paddingHorizontal: spacing.sm,
+  marginVertical: 0,
 })
 
 const $helperStyle: ThemedStyle<TextStyle> = ({ spacing }) => ({
   marginTop: spacing.xs,
+  fontSize: 12,
 })
 
 const $rightAccessoryStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginEnd: spacing.xs,
-  height: 40,
+  height: 48,
   justifyContent: "center",
   alignItems: "center",
 })
 
 const $leftAccessoryStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginStart: spacing.xs,
-  height: 40,
+  height: 48,
   justifyContent: "center",
   alignItems: "center",
 })

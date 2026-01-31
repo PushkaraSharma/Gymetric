@@ -2,16 +2,13 @@ import { Platform, ScrollView, StyleSheet, View, ViewStyle } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
-import { useAppTheme } from '@/theme/context'
 import { Ionicons } from '@expo/vector-icons'
 import { goBack } from '@/navigators/navigationUtilities'
-import { colors } from '@/theme/colors'
 import { Button } from '@/components/Button'
-import { ThemedStyle } from '@/theme/types'
 import { api } from '@/services/Api'
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
-import { selectAllClients, selectLoading, setLoading } from '@/redux/state/GymStates'
+import { selectLoading, setLoading } from '@/redux/state/GymStates'
 import Toast from 'react-native-toast-message'
 import { ClientDateType, ClientOnBoardingType, STEPS } from '@/utils/types'
 import PersonalInfo from './CreateUpdateClient/PersonalInfo'
@@ -19,13 +16,15 @@ import OnBoardingStepsHeader from '@/components/OnBoardingStepsHeader'
 import SelectMembership from './ClientMembership/SelectMembership'
 import MembershipPayment from './ClientMembership/MembershipPayment'
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated'
-import { DEVICE_WIDTH } from '@/utils/Constanst'
+import { DEVICE_WIDTH } from '@/utils/Constants'
 import { alreadyExists } from '@/utils/Helper'
 import { format } from 'date-fns'
+import { useAppTheme } from '@/theme/context'
 
 const CreateClient = () => {
     const dispatch = useAppDispatch();
     const loader = useAppSelector(selectLoading);
+    const { theme: { colors }, themed } = useAppTheme()
 
     const Steps = ["Personal Info", "Membership", "Payment"] as STEPS[];
     const [currentStep, setCurrentStep] = useState<STEPS>("Personal Info");
@@ -83,7 +82,7 @@ const CreateClient = () => {
             if (invalidDependent) {
                 Toast.show({ type: 'error', text1: 'Incomplete depedent details' });
                 return;
-            } else if(selectedMembership?.[0]?.planType === 'couple' && (form.primaryDetails.gender === form.dependents?.[0]?.gender)){
+            } else if (selectedMembership?.[0]?.planType === 'couple' && (form.primaryDetails.gender === form.dependents?.[0]?.gender)) {
                 Toast.show({ type: 'error', text1: 'For Couple plan gender cannot be same' });
                 return;
             }
@@ -162,7 +161,7 @@ const CreateClient = () => {
                     </ScrollView>
                 </Animated.View>
                 <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-                    <Button disabled={!validateSteps()} disabledStyle={{ opacity: 0.4 }} text={currentStep === 'Payment' ? (loader ? 'Finishing...' : 'Finish Setup') : 'Next Step'} preset="reversed" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.background} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleCreate() : moveStep('next') }} />
+                    <Button disabled={!validateSteps()} disabledStyle={{ opacity: 0.4 }} text={currentStep === 'Payment' ? (loader ? 'Finishing...' : 'Finish Setup') : 'Next Step'} preset="reversed" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.text} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleCreate() : moveStep('next') }} />
                 </View>
             </View>
         </Screen>

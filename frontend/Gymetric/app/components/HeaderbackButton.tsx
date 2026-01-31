@@ -5,12 +5,13 @@ import { goBack } from '@/navigators/navigationUtilities'
 import { Ionicons } from '@expo/vector-icons'
 import { useAppTheme } from '@/theme/context'
 
+
 const HeaderbackButton = () => {
-    const { themed } = useAppTheme();
+    const { themed, theme: { colors } } = useAppTheme();
 
     return (
         <Pressable style={themed([$styles.row, { paddingHorizontal: 10 }])} onPress={goBack}>
-            <Ionicons name={'chevron-back'} size={25} />
+            <Ionicons name={'chevron-back'} size={25} color={colors.text} />
         </Pressable>
     )
 }

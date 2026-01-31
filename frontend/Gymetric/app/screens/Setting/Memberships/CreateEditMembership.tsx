@@ -5,7 +5,6 @@ import { $styles } from '@/theme/styles'
 import { Header } from '@/components/Header'
 import HeaderbackButton from '@/components/HeaderbackButton'
 import { spacing } from '@/theme/spacing'
-import { colors } from '@/theme/colors'
 import { Button } from '@/components/Button'
 import { Ionicons } from '@expo/vector-icons'
 import { TextField } from '@/components/TextField'
@@ -33,7 +32,7 @@ type MembershipType = {
 }
 
 const CreateEditMembership = ({ navigation, route }: any) => {
-  const { themed } = useAppTheme();
+  const { theme: { colors, spacing }, themed } = useAppTheme()
   const dispatch = useAppDispatch();
   const membership = route?.params?.membership;
   const loading = useAppSelector(selectLoading);
@@ -84,7 +83,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
       safeAreaEdges={["bottom"]}
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
-      <Header title={`${membership ? 'Update' : 'Create'} Membership`} backgroundColor='#fff' LeftActionComponent={<HeaderbackButton />} />
+      <Header title={`${membership ? 'Update' : 'Create'} Membership`} backgroundColor={colors.surface} LeftActionComponent={<HeaderbackButton />} />
       <View style={{ flex: 1 }}>
         <ScrollView style={{ paddingHorizontal: 15, paddingTop: 10 }}>
           <TextField
@@ -137,8 +136,8 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             placeholder="0.00"
             LeftAccessory={() => <Text style={{ alignSelf: 'center', marginLeft: 15, color: colors.textDim }} size='md'>₹</Text>}
           />
-          <View style={[$styles.card, { padding: spacing.md, marginTop: 0, paddingHorizontal: 0, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]}>
-            <View style={[$styles.flexRow, { paddingHorizontal: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: 10, borderColor: colors.border }]}>
+          <View style={[themed($card), { padding: spacing.md, paddingHorizontal: 0 }]}>
+            <View style={[$styles.flexRow, { paddingHorizontal: spacing.md, borderBottomWidth: 1, paddingBottom: 10, borderColor: colors.border }]}>
               <Text>Is it a Trial ?</Text>
               <Switch value={form.isTrial} onPress={() => handleForm('isTrial', !form.isTrial)} />
             </View>
@@ -149,10 +148,10 @@ const CreateEditMembership = ({ navigation, route }: any) => {
           </View>
           <View style={{ marginTop: 5, marginBottom: 15 }}>
             <Text preset='formLabel'>Duration Settings</Text>
-            <View style={[$styles.flexRow, { marginTop: 10, backgroundColor: colors.palette.neutral100, padding: 4, borderRadius: 5, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]}>
+            <View style={[$styles.flexRow, { marginTop: 10, backgroundColor: colors.surface, padding: 4, borderRadius: 10, borderWidth: 1, borderColor: colors.border }]}>
               {['Months', 'Days'].map((type: string, index: number) => (
-                <Pressable key={index} style={{ width: '48%', alignItems: 'center', padding: 8, backgroundColor: type === durationType ? colors.tint : colors.palette.neutral100, borderRadius: 5 }} onPress={() => { setDurationType(type as 'Months') }}>
-                  <Text weight='medium' style={{ color: type === durationType ? colors.palette.neutral100 : colors.textDim }}>{type}</Text>
+                <Pressable key={index} style={{ width: '48%', alignItems: 'center', padding: 8, backgroundColor: type === durationType ? colors.tint : colors.surface, borderRadius: 8 }} onPress={() => { setDurationType(type as 'Months') }}>
+                  <Text weight='medium' style={{ color: type === durationType ? colors.surface : colors.textDim }}>{type}</Text>
                 </Pressable>
               ))}
             </View>
@@ -165,7 +164,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             keyboardType='number-pad'
             placeholder="Enter duration length (e.g. 12)"
           />
-            <TextField
+          <TextField
             label='Order Index'
             value={form.index.toString()}
             onChangeText={(val) => { handleForm('index', Number(val)) }}
@@ -176,7 +175,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
           />
         </ScrollView>
         <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-          <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.background} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
+          <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.text} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
         </View>
       </View>
     </Screen>
@@ -189,4 +188,12 @@ const styles = StyleSheet.create({})
 
 const $textField: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.lg,
+})
+
+const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.surface,
+  borderRadius: 16,
+  marginBottom: spacing.md,
+  borderWidth: 1,
+  borderColor: colors.border,
 })
