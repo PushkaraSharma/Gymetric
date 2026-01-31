@@ -59,8 +59,15 @@ const Home = () => {
         }, [])
     );
 
-    const StatCard = ({ label, value, trend, icon, color, isLarge = false }: any) => (
-        <View style={[themed($statCard), isLarge && { width: '100%', marginBottom: 16 }]}>
+    const StatCard = ({ label, value, trend, icon, color, isLarge = false, onPress }: any) => (
+        <Pressable
+            style={({ pressed }) => [
+                themed($statCard),
+                isLarge && { width: '100%', marginBottom: 16 },
+                { opacity: pressed ? 0.8 : 1 }
+            ]}
+            onPress={onPress}
+        >
             <View style={$statHeader}>
                 <View style={[themed($iconContainer), { backgroundColor: color + '15' }]}>
                     {icon}
@@ -74,28 +81,32 @@ const Home = () => {
             </View>
             <Text style={themed($statValue)}>{value}</Text>
             <Text style={themed($statLabel)}>{label}</Text>
-        </View>
+        </Pressable>
     );
 
     const ActivityCard = ({ item }: { item: any }) => (
         <MotiView
             from={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            style={themed($activityCard)}
         >
-            <View style={themed($activityIconWrapper)}>
-                {ActivityIcons[item?.type] || <ActivityIconLucide size={20} color={colors.primary} />}
-            </View>
-            <View style={$activityContent}>
-                <View style={$activityTopRow}>
-                    <Text style={themed($activityTitle)}>{item?.title}</Text>
-                    <Text style={themed($activityTime)}>{formatDistanceToNow(new Date(item?.createdAt), { addSuffix: true })}</Text>
+            <Pressable
+                style={themed($activityCard)}
+                onPress={() => item?.memberId && navigate('Client Profile', { data: { _id: item.memberId } })}
+            >
+                <View style={themed($activityIconWrapper)}>
+                    {ActivityIcons[item?.type] || <ActivityIconLucide size={20} color={colors.primary} />}
                 </View>
-                <Text style={themed($activityDesc)} numberOfLines={1}>{item?.description}</Text>
-                {item?.amount && (
-                    <Text style={themed($activityAmount)}>₹{item?.amount}</Text>
-                )}
-            </View>
+                <View style={$activityContent}>
+                    <View style={$activityTopRow}>
+                        <Text style={themed($activityTitle)}>{item?.title}</Text>
+                        <Text style={themed($activityTime)}>{formatDistanceToNow(new Date(item?.createdAt), { addSuffix: true })}</Text>
+                    </View>
+                    <Text style={themed($activityDesc)} numberOfLines={1}>{item?.description}</Text>
+                    {item?.amount && (
+                        <Text style={themed($activityAmount)}>₹{item?.amount}</Text>
+                    )}
+                </View>
+            </Pressable>
         </MotiView>
     );
 
@@ -125,27 +136,29 @@ const Home = () => {
 
                 <View style={themed($content)}>
                     <View style={$revenueCardContainer}>
-                        <MotiView
-                            from={{ opacity: 0, translateY: 10 }}
-                            animate={{ opacity: 1, translateY: 0 }}
-                            style={themed($revenueCard)}
-                        >
-                            <View style={$revenueHeader}>
-                                <Text style={themed($revenueLabel)}>Revenue this month</Text>
-                                <Wallet size={24} color={colors.white} opacity={0.8} />
-                            </View>
-                            <Text size='xl' style={themed($revenueValue)} numberOfLines={1}>
-                                ₹{summary?.revenueThisMonth?.value ?? 0}
-                            </Text>
-                            <View style={$revenueFooter}>
-                                <View style={themed($revenueTrend)}>
-                                    <TrendingUp size={14} color={colors.white} />
-                                    <Text style={themed($revenueTrendText)} size="xs">
-                                        +{summary?.revenueThisMonth?.trend || 0}% from last month
-                                    </Text>
+                        <Pressable onPress={() => navigate('Revenue')}>
+                            <MotiView
+                                from={{ opacity: 0, translateY: 10 }}
+                                animate={{ opacity: 1, translateY: 0 }}
+                                style={themed($revenueCard)}
+                            >
+                                <View style={$revenueHeader}>
+                                    <Text style={themed($revenueLabel)}>Revenue this month</Text>
+                                    <Wallet size={24} color={colors.white} opacity={0.8} />
                                 </View>
-                            </View>
-                        </MotiView>
+                                <Text size='xl' style={themed($revenueValue)} numberOfLines={1}>
+                                    ₹{summary?.revenueThisMonth?.value ?? 0}
+                                </Text>
+                                <View style={$revenueFooter}>
+                                    <View style={themed($revenueTrend)}>
+                                        <TrendingUp size={14} color={colors.white} />
+                                        <Text style={themed($revenueTrendText)} size="xs">
+                                            +{summary?.revenueThisMonth?.trend || 0}% from last month
+                                        </Text>
+                                    </View>
+                                </View>
+                            </MotiView>
+                        </Pressable>
                     </View>
 
                     <View style={$statsGrid}>
@@ -154,6 +167,7 @@ const Home = () => {
                             value={summary?.totalClients ?? 0}
                             icon={<Users size={20} color={colors.primary} />}
                             color={colors.primary}
+                            onPress={() => navigate('Clients', { filter: 'All Clients' })}
                         />
                         <StatCard
                             label="Active Now"
@@ -161,6 +175,7 @@ const Home = () => {
                             trend={summary?.activeMembers?.trend}
                             icon={<ActivityIconLucide size={20} color={colors.success} />}
                             color={colors.success}
+                            onPress={() => navigate('Clients', { filter: 'Active' })}
                         />
                     </View>
 
@@ -170,12 +185,15 @@ const Home = () => {
                             value={summary?.expiringIn7Days ?? 0}
                             icon={<Clock size={20} color={colors.error} />}
                             color={colors.error}
+                            onPress={() => navigate('Clients', { filter: 'Expiring Soon' })}
                         />
                         <StatCard
-                            label="New Joinees"
+                            label="New Joinees (This month)"
                             value={summary?.newlyJoinedThisMonth?.value ?? 0}
                             icon={<UserPlus size={20} color={colors.palette.indigo500} />}
                             color={colors.palette.indigo500}
+                            // Logic: Just show active, but maybe future update can support 'Joined Recently' filter
+                            onPress={() => navigate('Clients', { filter: 'All Clients' })}
                         />
                     </View>
 

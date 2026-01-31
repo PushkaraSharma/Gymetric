@@ -16,14 +16,21 @@ import { addDays, isAfter, isBefore, parseISO } from 'date-fns';
 import ProfileInitialLogo from '@/components/ProfileInitialLogo'
 import { MotiView } from 'moti'
 
-const ClientsList = () => {
+const ClientsList = ({ route }: any) => {
   const { themed, theme: { colors, spacing, typography } } = useAppTheme();
   const dispatch = useAppDispatch();
   const clients = useAppSelector(selectAllClients);
 
   const filters = ['All Clients', 'Expiring Soon', 'Active', 'Expired', 'Trial', 'Inactive'];
   const [searchText, setSearchText] = useState<string>('');
-  const [selectedFilter, setSelectedFilter] = useState<string>('All Clients');
+  const [selectedFilter, setSelectedFilter] = useState<string>(route?.params?.filter || 'All Clients');
+
+  // Update filter if navigation params change while screen is already mounted
+  React.useEffect(() => {
+    if (route?.params?.filter) {
+      setSelectedFilter(route.params.filter);
+    }
+  }, [route?.params?.filter]);
 
   const filteredClients = useMemo(() => {
     if (!clients?.length) return [];

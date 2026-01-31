@@ -6,31 +6,40 @@ import { storage } from "@/utils/LocalStorage"
 import { MotiView, MotiText } from "moti"
 import { ChevronRight } from "lucide-react-native"
 import { Text } from "@/components/Text"
+import { SafeAreaView } from "react-native-safe-area-context"
 
 const ONBOARDING_DATA = [
     {
         id: "1",
         title: "Seamless Gym Management",
         description: "Effortlessly manage your gym operations, members, and memberships in one place.",
-        image: require("../../assets/images/membershipImage.jpg"),
+        image: require("../../assets/images/onboarding1.png"),
     },
     {
         id: "2",
         title: "Membership Tracking",
         description: "Real-time updates on active, expired, and upcoming memberships at your fingertips.",
-        image: require("../../assets/images/membershipImage.jpg"),
+        image: require("../../assets/images/onboarding2.png"),
     },
     {
         id: "3",
         title: "Business Growth",
         description: "Get insights into your gym's performance and grow your fitness community.",
-        image: require("../../assets/images/membershipImage.jpg"),
+        image: require("../../assets/images/onboarding3.png"),
     },
 ]
 
 const Slide = memo(({ item, width, colors, typography }: any) => {
     return (
         <View style={[$slide, { width }]}>
+            <MotiText
+                from={{ opacity: 0, translateY: 20 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ delay: 200, type: 'timing' }}
+                style={[$title, { color: colors.text, fontFamily: typography.secondary.bold, fontSize: 32 }]}
+            >
+                Gymetric
+            </MotiText>
             <MotiView
                 from={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -38,8 +47,8 @@ const Slide = memo(({ item, width, colors, typography }: any) => {
                 style={[
                     $imageContainer,
                     {
-                        borderColor: colors.black,
-                        shadowColor: colors.black,
+                        borderColor: colors.textDim,
+                        shadowColor: colors.text,
                         backgroundColor: colors.surface
                     }
                 ]}
@@ -106,7 +115,7 @@ export const OnboardingScreen = () => {
     }, [width, currentIndex])
 
     return (
-        <View style={[$container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[$container, { backgroundColor: colors.background }]}>
             <FlatList
                 ref={flatListRef}
                 data={ONBOARDING_DATA}
@@ -151,7 +160,7 @@ export const OnboardingScreen = () => {
                     <ChevronRight color={colors.background} size={20} />
                 </TouchableOpacity>
             </View>
-        </View>
+        </SafeAreaView>
     )
 }
 

@@ -18,7 +18,7 @@ import { OTA_VERSION } from "@/utils/Constants"
 import { MotiView } from "moti"
 
 export const LoginScreen = () => {
-  const { themed, theme: { colors } } = useAppTheme()
+  const { themed, theme: { colors, isDark } } = useAppTheme()
   const dispatch = useAppDispatch()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -70,7 +70,7 @@ export const LoginScreen = () => {
       >
         <View style={themed($logoContainer)}>
           <Image
-            source={require('../../assets/images/app-icon.png')}
+            source={isDark ? require('../../assets/images/app-icon-dark.png') : require('../../assets/images/app-icon.png')}
             resizeMode="contain"
             style={$logo}
           />

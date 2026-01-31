@@ -2,7 +2,7 @@
   "name": "Gymetric",
   "slug": "Gymetric",
   "scheme": "gymetric",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "orientation": "portrait",
   "userInterfaceStyle": "automatic",
   "icon": "./assets/images/app-icon.png",
@@ -52,7 +52,6 @@
       "expo-splash-screen",
       {
         "image": "./assets/images/app-icon.png",
-        "imageWidth": 300,
         "resizeMode": "contain",
         "backgroundColor": "#fff"
       }

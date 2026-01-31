@@ -7,7 +7,6 @@ import { useAppTheme } from '@/theme/context'
 import { useAppDispatch } from '@/redux/Hooks'
 import { navigate } from '@/navigators/navigationUtilities'
 import { Feather, Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons'
-import { spacing } from '@/theme/spacing'
 import { setLoading } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { Text } from '@/components/Text'
@@ -107,15 +106,15 @@ const ClientDetails = ({ navigation, route }: any) => {
                 LeftActionComponent={<HeaderbackButton />}
                 RightActionComponent={
                     <Pressable style={themed([$styles.row, { paddingHorizontal: 10 }])} onPress={() => { navigate('Update Basic Information', { client }) }}>
-                        <MaterialIcons name={'edit'} size={25} />
+                        <MaterialIcons name={'edit'} size={25} color={colors.text} />
                     </Pressable>
                 }
-                backgroundColor="#fff"
+                backgroundColor={colors.surface}
             />
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
                 <View style={{ marginVertical: spacing.md, alignItems: 'center', paddingHorizontal: 15 }}>
                     <View style={[{ marginBottom: spacing.md, borderRadius: 40, padding: spacing.sm, backgroundColor: colors.tintInactive, borderWidth: 4, borderColor: '#fff' }, $styles.shadow]}>
-                        <Octicons name='person' size={50} />
+                        <Octicons name='person' size={50} color={colors.text} />
                     </View>
                     <Text weight='semiBold' size='xl'>{client?.name}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -126,8 +125,8 @@ const ClientDetails = ({ navigation, route }: any) => {
                     </View>
                 </View>
                 <View style={[$styles.flexRow, { justifyContent: 'space-around', paddingHorizontal: 15 }]}>
-                    <Button text='Whatsapp' onPress={() => { openWhatsAppChat(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={() => <Ionicons name="logo-whatsapp" size={20} style={{ marginRight: 10 }} />} />
-                    <Button text='Call' onPress={() => { callNumber(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={() => <Feather name="phone" size={20} style={{ marginRight: 10 }} />} />
+                    <Button text='Whatsapp' onPress={() => { openWhatsAppChat(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={() => <Ionicons name="logo-whatsapp" size={20} style={{ marginRight: 10 }} color={colors.text} />} />
+                    <Button text='Call' onPress={() => { callNumber(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={() => <Feather name="phone" size={20} style={{ marginRight: 10 }} color={colors.text} />} />
                 </View>
                 <View style={[$styles.flexRow, { borderBottomWidth: 0.5, borderColor: colors.border, marginVertical: spacing.lg, justifyContent: 'space-around' }]}>
                     {

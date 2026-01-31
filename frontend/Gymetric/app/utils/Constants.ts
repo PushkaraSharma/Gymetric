@@ -14,4 +14,4 @@ export const BG_ACTIVITY_COLOR: any = {
     'ADVANCE_RENEWAL': colors.primaryBackground
 };
 
-export const OTA_VERSION = 2
+export const OTA_VERSION = 0

@@ -18,7 +18,7 @@ const SideDrawer = () => {
     const $drawerInsets = useSafeAreaInsetsStyle(["top", "bottom"]);
     const gymInfo = useAppSelector(selectGymInfo);
     const user: any = load('userData');
-    const { setThemeContextOverride, themeContext, themed, theme: { colors, spacing, typography } } = useAppTheme()
+    const { setThemeContextOverride, themeContext, themed, theme: { colors, spacing, typography, isDark } } = useAppTheme()
 
     const toggleTheme = useCallback(() => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
@@ -29,7 +29,7 @@ const SideDrawer = () => {
         <View style={themed([$drawer, $drawerInsets])}>
             <View style={themed($header)}>
                 <View style={themed($logoContainer)}>
-                    <Image source={require('../../../assets/images/app-icon.png')} resizeMode="contain" style={$logo} />
+                    <Image source={isDark ? require('@assets/images/app-icon-dark.png') : require('@assets/images/app-icon.png')} resizeMode="contain" style={$logo} />
                 </View>
                 <View style={$headerText}>
                     <Text style={themed($gymName)}>{gymInfo?.name || 'Gymetric'}</Text>

@@ -24,7 +24,7 @@ type GymFormType = {
 }
 
 const BusinessProfile = () => {
-  const { theme: { colors, spacing }, themed } = useAppTheme();
+  const { theme: { colors, spacing, isDark }, themed } = useAppTheme();
   const dispatch = useAppDispatch();
   const loading = useAppSelector(selectLoading);
   const gymDetails = useAppSelector(selectGymInfo);
@@ -56,8 +56,8 @@ const BusinessProfile = () => {
       <View style={{ flex: 1 }}>
         <ScrollView style={{ paddingHorizontal: 15 }}>
           <View>
-            <View style={[{ alignSelf: 'center', marginVertical: spacing.md, borderRadius: 60, padding: spacing.sm, backgroundColor: colors.palette.slate100, borderWidth: 4, borderColor: colors.surface }, $styles.shadow]}>
-              <Image source={require('@assets/images/app-icon.png')} style={{ width: 60, height: 60 }} />
+            <View style={[{ alignSelf: 'center', marginVertical: spacing.md, borderRadius: 60, padding: spacing.sm, backgroundColor: colors.surface, borderWidth: 4, borderColor: colors.textDim }, $styles.shadow]}>
+              <Image source={isDark ? require('@assets/images/app-icon-dark.png') : require('@assets/images/app-icon.png')} style={{ width: 60, height: 60 }} />
             </View>
           </View>
           <TextField
@@ -118,8 +118,6 @@ const BusinessProfile = () => {
 }
 
 export default BusinessProfile
-
-const styles = StyleSheet.create({})
 
 const $textField: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.lg,

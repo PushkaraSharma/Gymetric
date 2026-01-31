@@ -53,6 +53,10 @@ export class Api {
     return this.apiRequest('get', '/api/dashboard/summary');
   }
 
+  dashboardRevenue = async () => {
+    return this.apiRequest('get', '/api/dashboard/revenue');
+  }
+
   gymInfo = async () => {
     const response = await this.apiRequest('get', '/api/gym/info');
     if (response.kind === 'ok') {

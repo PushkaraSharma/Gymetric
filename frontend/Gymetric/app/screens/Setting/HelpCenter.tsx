@@ -39,9 +39,8 @@ const HelpCenter = () => {
         <Screen
             preset="fixed"
             safeAreaEdges={[]}
-            backgroundColor={colors.background}
         >
-            <Header title="Help Center" LeftActionComponent={<HeaderbackButton />} />
+            <Header title="Help Center" LeftActionComponent={<HeaderbackButton />} backgroundColor={colors.surface} />
 
             <View style={themed($container)}>
                 <Text preset="heading" style={themed($title)}>Get in Touch</Text>
