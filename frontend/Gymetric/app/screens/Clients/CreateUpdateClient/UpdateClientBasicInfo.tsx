@@ -7,7 +7,7 @@ import { $styles } from '@/theme/styles';
 import { Header } from '@/components/Header';
 import HeaderbackButton from '@/components/HeaderbackButton';
 import { Button } from '@/components/Button';
-import { colors } from '@/theme/colors';
+import { useAppTheme } from '@/theme/context';
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks';
 import { selectAllClients, selectLoading, setLoading } from '@/redux/state/GymStates';
 import { api } from '@/services/Api';
@@ -16,6 +16,7 @@ import { goBack } from '@/navigators/navigationUtilities';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 const UpdateClientbasicInfo = ({ route }: any) => {
+  const { theme: { colors } } = useAppTheme();
   const client = route?.params?.client;
   const loading = useAppSelector(selectLoading);
   const dispatch = useAppDispatch();
@@ -64,9 +65,9 @@ const UpdateClientbasicInfo = ({ route }: any) => {
         }}
         onCancel={() => setDatePicker(false)}
       />
-      <Header title='Update Client' backgroundColor='#fff' LeftActionComponent={<HeaderbackButton />} />
+      <Header title='Update Client' backgroundColor={colors.surface} LeftActionComponent={<HeaderbackButton />} />
       <View style={{ paddingHorizontal: 15, flex: 1 }}>
-        <PersonalInfo handleForm={handleForm} form={form} setDatePicker={(val) => {setDatePicker(true)}} isUpdate validNumber={validNumber} />
+        <PersonalInfo handleForm={handleForm} form={form} setDatePicker={(val) => { setDatePicker(true) }} isUpdate validNumber={validNumber} />
       </View>
       <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
         <Button preset='reversed' disabled={(form?.phoneNumber.length !== 10) || !form.name || !validNumber} disabledStyle={{ opacity: 0.4 }} text={loading ? 'Updating...' : 'Update'} onPress={handleUpdate} />

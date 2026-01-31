@@ -13,7 +13,7 @@ export interface RadioToggleProps extends Omit<ToggleProps<RadioInputProps>, "To
   inputDetailStyle?: ViewStyle
 }
 
-interface RadioInputProps extends BaseToggleInputProps<RadioToggleProps> {}
+interface RadioInputProps extends BaseToggleInputProps<RadioToggleProps> { }
 
 /**
  * @param {RadioToggleProps} props - The props for the `Radio` component.
@@ -48,30 +48,26 @@ function RadioInput(props: RadioInputProps) {
     }).start()
   }, [on])
 
-  const offBackgroundColor = [
-    disabled && colors.palette.neutral400,
-    status === "error" && colors.errorBackground,
-    colors.palette.neutral200,
-  ].filter(Boolean)[0]
+  const offBackgroundColor =
+    (disabled && colors.palette.slate300) ||
+    (status === "error" && colors.errorBackground) ||
+    colors.palette.slate100
 
-  const outerBorderColor = [
-    disabled && colors.palette.neutral400,
-    status === "error" && colors.error,
-    !on && colors.palette.neutral800,
-    colors.palette.secondary500,
-  ].filter(Boolean)[0]
+  const outerBorderColor =
+    (disabled && colors.palette.slate300) ||
+    (status === "error" && colors.error) ||
+    (!on && colors.border) ||
+    colors.primary
 
-  const onBackgroundColor = [
-    disabled && colors.transparent,
-    status === "error" && colors.errorBackground,
-    colors.palette.neutral100,
-  ].filter(Boolean)[0]
+  const onBackgroundColor =
+    (disabled && colors.transparent) ||
+    (status === "error" && colors.errorBackground) ||
+    colors.primaryBackground
 
-  const dotBackgroundColor = [
-    disabled && colors.palette.neutral600,
-    status === "error" && colors.error,
-    colors.palette.secondary500,
-  ].filter(Boolean)[0]
+  const dotBackgroundColor =
+    (disabled && colors.palette.slate500) ||
+    (status === "error" && colors.error) ||
+    colors.primary
 
   return (
     <View

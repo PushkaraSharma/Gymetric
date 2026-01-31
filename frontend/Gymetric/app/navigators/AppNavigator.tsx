@@ -8,7 +8,7 @@ import { useAppTheme } from "@/theme/context"
 
 import type { NavigationProps } from "./navigationTypes"
 import { navigationRef, useBackButtonHandler } from "./navigationUtilities"
-import { useMMKVString } from "react-native-mmkv"
+import { useMMKVBoolean, useMMKVString } from "react-native-mmkv"
 import { MainNavigator } from "./MainNavigator"
 import CreateClient from "@/screens/Clients/ClientOnboarding"
 import ClientDetails from "@/screens/Clients/ClientDetails"
@@ -16,13 +16,16 @@ import UpdateClientbasicInfo from "@/screens/Clients/CreateUpdateClient/UpdateCl
 import Memberships from "@/screens/Setting/Memberships/Memberships"
 import CreateEditMembership from "@/screens/Setting/Memberships/CreateEditMembership"
 import BusinessProfile from "@/screens/Setting/BusinessProfile"
-import ContactDetails from "@/screens/Setting/ContactDetails"
 import RenewMembership from "@/screens/Clients/ClientMembership/RenewMembership"
 import SearchClient from "@/screens/Clients/SearchClient"
+import { OnboardingScreen } from "@/screens/OnboardingScreen"
+import HelpCenter from "@/screens/Setting/HelpCenter"
+import NotificationSetting from "@/screens/Setting/NotificationSetting"
 import { useAppSelector } from "@/redux/Hooks"
 import { selectLoading } from "@/redux/state/GymStates"
 import { ActivityIndicator, TextStyle, View } from "react-native"
 import { ThemedStyle } from "@/theme/types"
+import Revenue from "@/screens/Revenue/Revenue"
 
 const exitRoutes = Config.exitRoutes
 
@@ -30,6 +33,7 @@ const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
   const [authToken] = useMMKVString('authToken');
+  const [hasSeenOnboarding] = useMMKVBoolean('hasSeenOnboarding');
   const isLoading = useAppSelector(selectLoading);
   const { themed, theme: { colors } } = useAppTheme()
 
@@ -44,7 +48,9 @@ const AppStack = () => {
           },
         }}
       >
-        {authToken ? (
+        {!hasSeenOnboarding ? (
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        ) : authToken ? (
           <>
             <Stack.Screen name="Main" component={MainNavigator} />
             <Stack.Group>
@@ -60,21 +66,20 @@ const AppStack = () => {
                 <Stack.Screen name="Create Edit Membership" component={CreateEditMembership} />
               </Stack.Group>
               <Stack.Screen name="Business Profile" component={BusinessProfile} />
-              <Stack.Screen name="Contact Details" component={ContactDetails} />
+              <Stack.Screen name="Help Center" component={HelpCenter} />
+              <Stack.Screen name="Notification Settings" component={NotificationSetting} />
+              <Stack.Screen name="Revenue" component={Revenue} />
             </Stack.Group>
-
           </>
         ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-          </>
+          <Stack.Screen name="Login" component={LoginScreen} />
         )}
       </Stack.Navigator>
-      {isLoading &&
+      {isLoading && (
         <View style={themed($isLoading)}>
-          <ActivityIndicator />
+          <ActivityIndicator color={colors.primary} />
         </View>
-      }
+      )}
     </>
   )
 }
@@ -93,14 +98,14 @@ export const AppNavigator = (props: NavigationProps) => {
   )
 };
 
-const $isLoading: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
+const $isLoading: ThemedStyle<TextStyle> = ({ colors }) => ({
   position: 'absolute',
   left: 0,
   right: 0,
   top: 0,
   bottom: 0,
   opacity: 0.5,
-  backgroundColor: 'black',
+  backgroundColor: colors.palette.slate950,
   justifyContent: 'center',
   alignItems: 'center'
 })

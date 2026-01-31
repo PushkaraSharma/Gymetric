@@ -2,7 +2,6 @@ import { Pressable, View, ViewStyle } from 'react-native'
 import React, { FC } from 'react'
 import { Text } from '@/components/Text'
 import { $styles } from '@/theme/styles'
-import { colors } from '@/theme/colors'
 import { Ionicons } from '@expo/vector-icons'
 import { formatDate } from 'date-fns'
 import { TextField } from '@/components/TextField'
@@ -19,7 +18,7 @@ type Props = {
 }
 
 const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, validNumber }) => {
-    const { themed } = useAppTheme();
+    const { theme: { colors }, themed } = useAppTheme();
 
     return (
         <View style={{ marginTop: 15 }}>
@@ -51,29 +50,29 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                     <TextField
                         value={form.age?.toString()}
                         onChangeText={(val) => { handleForm('age', val ? Number(val) : null) }}
-                        containerStyle={[themed($textField), { width: '30%' }]}
+                        containerStyle={[themed($textField), { width: '35%' }]}
                         keyboardType='number-pad'
                         autoCorrect={false}
                         label="Age"
                         placeholder="Enter age"
                     />
-                    <View style={{ width: '60%' }}>
+                    <View style={{ width: '55%' }}>
                         <Text weight='medium'>Birthday</Text>
                         <Pressable style={themed($dateView)} onPress={() => { setDatePicker({ visible: true, type: 'birthday' }) }}>
-                            <Text style={{ color: form.birthday ? '#000' : colors.textDim }}>{form.birthday ? formatDate(form.birthday, 'dd/MM/yyyy') : 'dd/mm/yyyy'}</Text>
+                            <Text style={{ color: form.birthday ? colors.text : colors.textDim }}>{form.birthday ? formatDate(form.birthday, 'dd/MM/yyyy') : 'dd/mm/yyyy'}</Text>
                             <Ionicons name='calendar-outline' size={20} color={colors.textDim} />
                         </Pressable>
                     </View>
                 </View>
-                <View>
+                <View style={{ marginTop: 10 }}>
                     <Text weight='medium'>Gender</Text>
-                    <View style={[$styles.flexRow, { backgroundColor: colors.tintInactive, padding: 4, borderRadius: 10, marginTop: 8 }]}>
+                    <View style={[$styles.flexRow, { backgroundColor: colors.surface, padding: 4, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: colors.border }]}>
                         {
                             ['Male', 'Female', 'Other'].map((gender: string, index: number) => {
                                 const selected = form.gender === gender;
                                 return (
-                                    <Pressable key={index} style={{ backgroundColor: selected ? colors.background : colors.tintInactive, width: '30%', alignItems: 'center', padding: 10, borderRadius: 10 }} onPress={() => { handleForm('gender', gender) }}>
-                                        <Text weight={selected ? 'medium' : 'normal'} style={{ color: selected ? colors.tint : colors.text }}>{gender}</Text>
+                                    <Pressable key={index} style={{ backgroundColor: selected ? colors.tint : colors.surface, width: '33.33%', alignItems: 'center', padding: 10, borderRadius: 10 }} onPress={() => { handleForm('gender', gender) }}>
+                                        <Text weight={selected ? 'medium' : 'normal'} style={{ color: selected ? colors.surface : colors.textDim }}>{gender}</Text>
                                     </Pressable>
                                 )
                             })
@@ -92,5 +91,13 @@ const $textField: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 })
 
 const $dateView: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-    flexDirection: 'row', backgroundColor: colors.palette.neutral100, alignItems: 'center', justifyContent: 'space-between', marginTop: 8, padding: 8, borderWidth: 1, borderColor: colors.palette.neutral400, borderRadius: 5
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
 })

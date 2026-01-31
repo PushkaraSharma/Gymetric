@@ -23,10 +23,11 @@ export const $styles = {
   } as ViewStyle,
 
   card: {
-    backgroundColor: colors.palette.neutral100,
-    borderRadius: 8,
-    padding: spacing.lg,
-    marginVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   flexRow: {
     flexDirection: 'row',
@@ -35,7 +36,7 @@ export const $styles = {
   } as ViewStyle,
 
   shadow: {
-    shadowColor: colors.palette.neutral800,
+    shadowColor: colors.palette.slate500,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 12.81,

@@ -1,20 +1,38 @@
-import { StyleSheet, View } from 'react-native'
+import { View, ViewStyle, TextStyle } from 'react-native'
 import React from 'react'
 import { useAppTheme } from '@/theme/context';
-import { colors } from '@/theme/colors';
 import { Text } from './Text';
 import { getInitials } from '@/utils/Helper';
+import { ThemedStyle } from '@/theme/types';
 
-const ProfileInitialLogo = ({ name }: { name: string }) => {
-    const { themed } = useAppTheme();
+interface ProfileInitialLogoProps {
+    name: string;
+    size?: number;
+}
+
+const ProfileInitialLogo = ({ name, size = 50 }: ProfileInitialLogoProps) => {
+    const { themed, theme: { colors, typography } } = useAppTheme();
 
     return (
-        <View style={themed({ backgroundColor: colors.palette.primary100, borderRadius: 25, marginRight: 15, width: 50, height: 50, alignItems: 'center', justifyContent: 'center' })}>
-            <Text style={themed({ color: colors.palette.primary500 })} size='md'>{getInitials(name)}</Text>
+        <View style={themed($container(size))}>
+            <Text style={themed($text)} size='md'>{getInitials(name)}</Text>
         </View>
     )
 }
 
 export default ProfileInitialLogo
 
-const styles = StyleSheet.create({})
+const $container: (size: number) => ThemedStyle<ViewStyle> = (size) => ({ colors }) => ({
+    backgroundColor: colors.primaryBackground,
+    borderRadius: size / 2,
+    marginRight: 15,
+    width: size,
+    height: size,
+    alignItems: 'center',
+    justifyContent: 'center',
+})
+
+const $text: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
+    color: colors.primary,
+    fontFamily: typography.primary.bold,
+})

@@ -7,11 +7,11 @@ export const DEVICE_WIDTH = width;
 export const DEVICE_HEIGHT = height;
 
 export const BG_ACTIVITY_COLOR: any = {
-    'ONBOARDING': colors.activeBg,
-    'RENEWAL': colors.palette.accent100,
+    'ONBOARDING': colors.successBackground,
+    'RENEWAL': colors.primaryBackground,
     'EXPIRY': colors.errorBackground,
-    'PAYMENT': colors.activeBg,
-    'ADVANCE_RENEWAL': colors.palette.accent100
+    'PAYMENT': colors.successBackground,
+    'ADVANCE_RENEWAL': colors.primaryBackground
 };
 
-export const OTA_VERSION = 2
+export const OTA_VERSION = 0

@@ -106,6 +106,7 @@ export const SelectField = forwardRef(function SelectField(
         index={0}
         stackBehavior="replace"
         enableDynamicSizing={false}
+        backgroundStyle={{ backgroundColor: colors.surface }}
         enableDismissOnClose
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
@@ -119,7 +120,7 @@ export const SelectField = forwardRef(function SelectField(
                 style={themed($bottomSheetFooter)}
                 bottomInset={bottom}
               >
-                <Button text="Dismiss" preset="reversed" onPress={dismissOptions} />
+                <Button text="Dismiss" preset="filled" onPress={dismissOptions} />
               </BottomSheetFooter>
             )
         }
@@ -137,7 +138,7 @@ export const SelectField = forwardRef(function SelectField(
                 value.some((v) => v?.[valueKey] === item?.[valueKey])
                   ? "check"
                   : undefined
-              } rightIconColor={colors.palette.angry500}
+              } rightIconColor={colors.error}
               onPress={() => updateValue(item)}
             />
           )}
@@ -149,7 +150,7 @@ export const SelectField = forwardRef(function SelectField(
 
 const $bottomSheetFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.lg,
-  paddingBottom: spacing.xs,
+  paddingBottom: spacing.xs
 });
 
 const $listItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
