@@ -17,8 +17,10 @@ import { useFocusEffect } from '@react-navigation/native'
 import { DEVICE_HEIGHT } from '@/utils/Constants'
 import NoDataFound from '@/components/NoDataFound'
 import Toast from 'react-native-toast-message'
+import ProfileInitialLogo from '@/components/ProfileInitialLogo'
 
-const ClientDetails = ({ navigation, route }: any) => {
+
+const ClientDetails = ({ route }: any) => {
     const { theme: { colors, spacing }, themed } = useAppTheme()
     const dispatch = useAppDispatch();
 
@@ -113,9 +115,19 @@ const ClientDetails = ({ navigation, route }: any) => {
             />
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
                 <View style={{ marginVertical: spacing.md, alignItems: 'center', paddingHorizontal: 15 }}>
-                    <View style={[{ marginBottom: spacing.md, borderRadius: 40, padding: spacing.sm, backgroundColor: colors.tintInactive, borderWidth: 4, borderColor: '#fff' }, $styles.shadow]}>
-                        <Octicons name='person' size={50} color={colors.text} />
-                    </View>
+                    <Pressable
+                        onPress={() => { navigate('Update Basic Information', { client }) }}
+                        style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+                    >
+                        <View style={[{ marginBottom: spacing.md, borderRadius: 80, padding: 4, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }, $styles.shadow]}>
+                            <ProfileInitialLogo
+                                name={client?.name ?? ''}
+                                size={80}
+                                imageUrl={client?.profilePicture}
+                                sideMargin={false}
+                            />
+                        </View>
+                    </Pressable>
                     <Text weight='semiBold' size='xl'>{client?.name}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <View style={themed({ marginRight: 15, backgroundColor: ['active'].includes(client?.membershipStatus) ? colors.activeBg : ['trial', 'future'].includes(client?.membershipStatus) ? colors.palette.indigo200 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 })}>

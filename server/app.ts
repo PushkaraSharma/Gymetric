@@ -12,7 +12,9 @@ import { systemRoutes } from './src/routes/system.js';
 import "./instrument.js";
 import * as Sentry from '@sentry/node';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import { settingRoutes } from './src/routes/settings.js';
+import { uploadRoutes } from './src/routes/upload.js';
 
 const start = async () => {
     if (!process.env.MONGO_URI) {
@@ -24,6 +26,11 @@ const start = async () => {
     const app: FastifyInstance = fastify({ logger: false });
 
     await app.register(cors, { origin: true });
+    await app.register(multipart, {
+        limits: {
+            fileSize: 5 * 1024 * 1024, // 5MB limit
+        }
+    });
 
     Sentry.setupFastifyErrorHandler(app);
 
@@ -40,6 +47,7 @@ const start = async () => {
     await app.register(gymRoutes, { prefix: '/api/gym' });
     await app.register(systemRoutes, { prefix: '/api/system' });
     await app.register(settingRoutes, { prefix: '/api/settings' });
+    await app.register(uploadRoutes, { prefix: '/api/upload' });
 
     app.setErrorHandler((error: any, request: any, reply: any) => {
         Sentry.captureException(error);

@@ -25,7 +25,7 @@ const SearchClient = ({ route }: any) => {
     const RenderItem = ({ item }: any) => (
         <Pressable style={[themed($item), $styles.flexRow]} onPress={() => { route?.params?.handleSelect?.(route?.params?.index, 'add', item); goBack(); }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <ProfileInitialLogo name={item.name} />
+                <ProfileInitialLogo name={item.name} imageUrl={item.profilePicture} />
                 <View>
                     <Text weight='medium' size='md'>{item.name}</Text>
                     <Text size='xs'>{item.phoneNumber}</Text>
@@ -90,7 +90,7 @@ const $item: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
     paddingVertical: 10,
     borderColor: colors.border,
     paddingHorizontal: 15,
-    backgroundColor: colors.palette.neutral100,
+    backgroundColor: colors.palette.slate100,
     margin: 5,
     marginHorizontal: 10,
     borderRadius: 10

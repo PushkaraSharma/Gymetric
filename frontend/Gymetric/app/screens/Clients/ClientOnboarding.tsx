@@ -116,10 +116,24 @@ const CreateClient = () => {
         dispatch(setLoading({ loading: true }));
         const body = { ...form, startDate: format(form.startDate, 'yyyy-MM-dd'), planId: selectedMembership?.[0]?._id };
         const response = await api.createClient(body);
-        dispatch(setLoading({ loading: false }));
+
         if (response.kind == 'ok') {
+            // Upload profile picture if provided
+            if (form.primaryDetails.profilePicture) {
+                const uploadResponse = await api.uploadClientProfilePicture(
+                    response.data._id,
+                    form.primaryDetails.profilePicture
+                );
+                if (uploadResponse.kind === 'error') {
+                    console.log('Profile picture upload failed, but client created');
+                }
+            }
+
+            dispatch(setLoading({ loading: false }));
             Toast.show({ type: 'success', text1: 'Client onboarded successfully' });
             goBack();
+        } else {
+            dispatch(setLoading({ loading: false }));
         }
     };
 

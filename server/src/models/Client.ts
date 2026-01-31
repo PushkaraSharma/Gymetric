@@ -8,6 +8,7 @@ const ClientSchema = new Schema<IClient>({
     age: Number,
     birthday: Date,
     gender: { type: String, enum: ['Male', 'Female', 'Other'] },
+    profilePicture: { type: String }, // Cloudinary URL
     gymId: { type: Schema.Types.ObjectId, ref: 'Gym', required: true },
     balance: { type: Number, default: 0 },
     role: { type: String, enum: ['primary', 'dependent'], default: 'primary' },

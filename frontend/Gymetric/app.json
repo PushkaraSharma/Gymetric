@@ -26,6 +26,8 @@
     "supportsTablet": true,
     "bundleIdentifier": "com.indieroots.gymetric",
     "infoPlist": {
+      "NSCameraUsageDescription": "This app uses the camera to capture profile photos.",
+      "NSPhotoLibraryUsageDescription": "This app uses the photo library to select profile photos.",
       "LSApplicationQueriesSchemes": [
         "whatsapp",
         "tel",

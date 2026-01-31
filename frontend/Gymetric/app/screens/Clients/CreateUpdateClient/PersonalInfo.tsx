@@ -1,4 +1,4 @@
-import { Pressable, View, ViewStyle } from 'react-native'
+import { Pressable, View, ViewStyle, Image, ImageStyle } from 'react-native'
 import React, { FC } from 'react'
 import { Text } from '@/components/Text'
 import { $styles } from '@/theme/styles'
@@ -8,6 +8,8 @@ import { TextField } from '@/components/TextField'
 import { ClientDateType, ClientDetailsType } from '@/utils/types'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
+import { useImagePicker } from '@/utils/useImagePicker'
+import { Camera } from 'lucide-react-native'
 
 type Props = {
     handleForm: (field: string, value: any) => void,
@@ -18,12 +20,43 @@ type Props = {
 }
 
 const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, validNumber }) => {
-    const { theme: { colors }, themed } = useAppTheme();
+    const { theme: { colors, spacing }, themed } = useAppTheme();
+    const { showImagePickerOptions } = useImagePicker();
+
+    const handleImageSelect = (uri: string) => {
+        handleForm('profilePicture', uri);
+    };
 
     return (
         <View style={{ marginTop: 15 }}>
             <Text preset='heading'>Personal Details</Text>
             <Text weight='light'>Please {isUpdate ? 'update' : 'enter'} client's basic information.</Text>
+
+            {/* Profile Picture Upload */}
+            <View style={{ alignItems: 'center', marginTop: spacing.md }}>
+                <Pressable onPress={() => showImagePickerOptions(handleImageSelect)}>
+                    <View style={themed($profilePictureContainer)}>
+                        {form.profilePicture ? (
+                            <Image
+                                source={{ uri: form.profilePicture }}
+                                style={$profileImage}
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            <View style={themed($placeholderContainer)}>
+                                <Camera size={32} color={colors.textDim} />
+                            </View>
+                        )}
+                    </View>
+                    <View style={themed($cameraIconBadge)}>
+                        <Ionicons name="camera" size={16} color={colors.background} />
+                    </View>
+                </Pressable>
+                <Text size="xs" style={{ color: colors.textDim, marginTop: spacing.xs }}>
+                    {form.profilePicture ? 'Tap to change photo' : 'Tap to add photo (optional)'}
+                </Text>
+            </View>
+
             <View style={{ marginTop: 20 }}>
                 <TextField
                     value={form.name}
@@ -64,7 +97,7 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                         </Pressable>
                     </View>
                 </View>
-                <View style={{ marginTop: 10 }}>
+                <View style={{ marginTop: 10, paddingBottom: spacing.xl }}>
                     <Text weight='medium'>Gender</Text>
                     <View style={[$styles.flexRow, { backgroundColor: colors.surface, padding: 4, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: colors.border }]}>
                         {
@@ -85,6 +118,45 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
 }
 
 export default PersonalInfo
+
+const $profilePictureContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    width: 90,
+    height: 90,
+    borderRadius: 80,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+})
+
+const $profileImage: ImageStyle = {
+    width: 120,
+    height: 120,
+}
+
+const $placeholderContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+})
+
+const $cameraIconBadge: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
+})
 
 const $textField: ThemedStyle<ViewStyle> = ({ spacing }) => ({
     marginBottom: spacing.lg,

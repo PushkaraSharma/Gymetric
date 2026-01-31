@@ -2,9 +2,11 @@
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/jwt": "^10.0.0",
+    "@fastify/multipart": "^9.4.0",
     "@sentry/node": "^10.35.0",
     "axios": "^1.13.3",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.9.0",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.2",
     "fastify-plugin": "^5.1.0",

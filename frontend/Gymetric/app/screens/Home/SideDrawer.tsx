@@ -29,7 +29,11 @@ const SideDrawer = () => {
         <View style={themed([$drawer, $drawerInsets])}>
             <View style={themed($header)}>
                 <View style={themed($logoContainer)}>
-                    <Image source={isDark ? require('@assets/images/app-icon-dark.png') : require('@assets/images/app-icon.png')} resizeMode="contain" style={$logo} />
+                    {gymInfo?.logo ? (
+                        <Image source={{ uri: gymInfo.logo }} resizeMode="cover" style={$logo} />
+                    ) : (
+                        <Image source={isDark ? require('@assets/images/app-icon-dark.png') : require('@assets/images/app-icon.png')} resizeMode="contain" style={$logo} />
+                    )}
                 </View>
                 <View style={$headerText}>
                     <Text style={themed($gymName)}>{gymInfo?.name || 'Gymetric'}</Text>
@@ -96,20 +100,20 @@ const $header: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
 })
 
 const $logoContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
-    width: 60,
-    height: 60,
-    borderRadius: 12,
+    width: 65,
+    height: 65,
+    borderRadius: 65,
     backgroundColor: colors.surface,
-    padding: 8,
-    borderWidth: 1,
+    borderWidth: 3,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
 })
 
 const $logo: ImageStyle = {
-    width: 40,
-    height: 40,
+    width: '100%',
+    height: '100%',
 }
 
 const $headerText: ViewStyle = {

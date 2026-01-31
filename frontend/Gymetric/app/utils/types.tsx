@@ -5,9 +5,10 @@ export type ClientDetailsType = {
     age?: number | null,
     birthday?: Date | null,
     gender: string,
+    profilePicture?: string,
 }
 
-type DependentType = {name: string, phoneNumber: string, gender: string, id?: number}
+type DependentType = { name: string, phoneNumber: string, gender: string, id?: number }
 
 export type ClientOnBoardingType = {
     primaryDetails: ClientDetailsType,

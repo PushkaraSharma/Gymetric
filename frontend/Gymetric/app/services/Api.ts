@@ -111,6 +111,66 @@ export class Api {
     return await this.apiRequest('post', '/api/settings/', body);
   };
 
+  uploadClientProfilePicture = async (clientId: string, imageUri: string) => {
+    const formData = new FormData();
+    const filename = imageUri.split('/').pop() || 'photo.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+    formData.append('file', {
+      uri: imageUri,
+      name: filename,
+      type,
+    } as any);
+
+    const response: any = await this.apisauce.post(
+      `/api/upload/client-profile?clientId=${clientId}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const message = response?.data?.message ?? "Upload failed";
+      Toast.show({ type: 'error', text1: 'Upload Error', text2: message });
+      return { kind: 'error', message };
+    }
+    return { kind: 'ok', data: response?.data?.data };
+  };
+
+  uploadGymLogo = async (imageUri: string) => {
+    const formData = new FormData();
+    const filename = imageUri.split('/').pop() || 'logo.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+    formData.append('file', {
+      uri: imageUri,
+      name: filename,
+      type,
+    } as any);
+
+    const response: any = await this.apisauce.post(
+      '/api/upload/gym-logo',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const message = response?.data?.message ?? "Upload failed";
+      Toast.show({ type: 'error', text1: 'Upload Error', text2: message });
+      return { kind: 'error', message };
+    }
+    return { kind: 'ok', data: response?.data?.data };
+  };
+
 }
 
 // Singleton instance of the API for convenience

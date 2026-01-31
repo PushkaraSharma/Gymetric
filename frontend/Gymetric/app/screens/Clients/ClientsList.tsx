@@ -114,7 +114,7 @@ const ClientsList = ({ route }: any) => {
         onPress={() => navigate('Client Profile', { data: item })}
       >
         <View style={$itemContent}>
-          <ProfileInitialLogo name={item.name} size={44} />
+          <ProfileInitialLogo name={item.name} size={44} imageUrl={item.profilePicture} />
           <View style={$itemTextContainer}>
             <Text style={themed($itemName)}>{item.name}</Text>
             <Text style={themed($itemPhone)}>{item.phoneNumber}</Text>

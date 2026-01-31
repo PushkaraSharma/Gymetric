@@ -8,6 +8,7 @@ export interface IClient {
     age?: number;
     birthday?: Date;
     gender?: 'Male' | 'Female' | 'Other';
+    profilePicture?: string;
     gymId: Types.ObjectId;
     balance: number;
     role: 'primary' | 'dependent';
@@ -76,5 +77,5 @@ export interface IGym {
     email: string;
     phoneNumber: string;
     address: string;
-    logo?: string;
+    logo?: string; // Cloudinary URL
 }

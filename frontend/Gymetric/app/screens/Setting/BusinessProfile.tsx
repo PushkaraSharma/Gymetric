@@ -14,6 +14,8 @@ import { useAppTheme } from '@/theme/context'
 import { api } from '@/services/Api'
 import Toast from 'react-native-toast-message'
 import { goBack } from '@/navigators/navigationUtilities'
+import { useImagePicker } from '@/utils/useImagePicker'
+import { Pressable } from 'react-native'
 
 type GymFormType = {
   name: string,
@@ -29,6 +31,12 @@ const BusinessProfile = () => {
   const loading = useAppSelector(selectLoading);
   const gymDetails = useAppSelector(selectGymInfo);
   const [form, setForm] = useState<GymFormType>({ name: gymDetails?.name, ownerName: gymDetails?.ownerName, address: gymDetails?.address, contactNumber: gymDetails?.contactNumber, email: gymDetails?.email })
+  const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
+  const { showImagePickerOptions } = useImagePicker();
+
+  const handleLogoUpdate = (uri: string) => {
+    setSelectedLogo(uri);
+  };
 
   const handleForm = (field: string, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -36,10 +44,24 @@ const BusinessProfile = () => {
 
   const updateGym = async () => {
     dispatch(setLoading({ loading: true }));
-    const response = await api.updateGym({ id: gymDetails?._id, ...form });
+
+    // Upload logo first if selected
+    let logoUrl = gymDetails?.logo;
+    if (selectedLogo) {
+      const uploadResponse = await api.uploadGymLogo(selectedLogo);
+      if (uploadResponse.kind === 'ok') {
+        logoUrl = uploadResponse.data.logo;
+      } else {
+        dispatch(setLoading({ loading: false }));
+        return; // Stop if upload fails
+      }
+    }
+
+    const response = await api.updateGym({ id: gymDetails?._id, ...form, logo: logoUrl });
     if (response.kind === 'ok') {
       dispatch(setGymInfo({ gymInfo: response.data }));
       Toast.show({ type: 'success', text1: 'Gym details updated successfully' });
+      setSelectedLogo(null);
       goBack();
     }
     dispatch(setLoading({ loading: false }));
@@ -56,9 +78,21 @@ const BusinessProfile = () => {
       <View style={{ flex: 1 }}>
         <ScrollView style={{ paddingHorizontal: 15 }}>
           <View>
-            <View style={[{ alignSelf: 'center', marginVertical: spacing.md, borderRadius: 60, padding: spacing.sm, backgroundColor: colors.surface, borderWidth: 4, borderColor: colors.textDim }, $styles.shadow]}>
-              <Image source={isDark ? require('@assets/images/app-icon-dark.png') : require('@assets/images/app-icon.png')} style={{ width: 60, height: 60 }} />
-            </View>
+            <Pressable
+              onPress={() => showImagePickerOptions(handleLogoUpdate)}
+              style={({ pressed }) => [{ alignSelf: 'center', opacity: pressed ? 0.8 : 1 }]}
+            >
+              <View style={[{ marginVertical: spacing.md, borderRadius: 60, backgroundColor: colors.surface, borderWidth: 4, borderColor: colors.border }, $styles.shadow]}>
+                {selectedLogo || gymDetails?.logo ? (
+                  <Image source={{ uri: selectedLogo || gymDetails?.logo }} style={{ width: 100, height: 100, borderRadius: 50 }} />
+                ) : (
+                  <Image source={isDark ? require('@assets/images/app-icon-dark.png') : require('@assets/images/app-icon.png')} style={{ width: 100, height: 100, borderRadius: 50 }} />
+                )}
+                <View style={themed($cameraBadge)}>
+                  <Ionicons name="camera" size={16} color={colors.background} />
+                </View>
+              </View>
+            </Pressable>
           </View>
           <TextField
             value={form.name}
@@ -127,4 +161,15 @@ const $footer: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   borderTopWidth: 1,
   padding: spacing.md,
   borderColor: colors.border,
+})
+
+const $cameraBadge: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  position: 'absolute',
+  bottom: 5,
+  right: 5,
+  backgroundColor: colors.primary,
+  padding: 6,
+  borderRadius: 15,
+  borderWidth: 2,
+  borderColor: colors.background,
 })
