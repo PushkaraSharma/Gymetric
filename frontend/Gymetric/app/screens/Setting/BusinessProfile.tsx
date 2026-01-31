@@ -14,7 +14,6 @@ import { useAppTheme } from '@/theme/context'
 import { api } from '@/services/Api'
 import Toast from 'react-native-toast-message'
 import { goBack } from '@/navigators/navigationUtilities'
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 
 type GymFormType = {
   name: string,
@@ -110,8 +109,8 @@ const BusinessProfile = () => {
             RightAccessory={() => <Ionicons name='location-sharp' size={20} color={colors.tintInactive} style={{ marginRight: 10, marginTop: 10 }} />}
           />
         </ScrollView>
-        <View style={{ borderTopWidth: 1, padding: 15, borderColor: colors.border }}>
-          <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.background} style={{ marginRight: 10 }} />} onPress={updateGym} />
+        <View style={themed($footer)}>
+          <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.text} style={{ marginRight: 10 }} />} onPress={updateGym} />
         </View>
       </View>
     </Screen>
@@ -124,4 +123,10 @@ const styles = StyleSheet.create({})
 
 const $textField: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.lg,
+})
+
+const $footer: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+  borderTopWidth: 1,
+  padding: spacing.md,
+  borderColor: colors.border,
 })

@@ -5,7 +5,6 @@ import { $styles } from '@/theme/styles'
 import { Header } from '@/components/Header'
 import HeaderbackButton from '@/components/HeaderbackButton'
 import { spacing } from '@/theme/spacing'
-import { colors } from '@/theme/colors'
 import { Button } from '@/components/Button'
 import { Ionicons } from '@expo/vector-icons'
 import { TextField } from '@/components/TextField'
@@ -33,7 +32,7 @@ type MembershipType = {
 }
 
 const CreateEditMembership = ({ navigation, route }: any) => {
-  const { themed } = useAppTheme();
+  const { theme: { colors, spacing }, themed } = useAppTheme()
   const dispatch = useAppDispatch();
   const membership = route?.params?.membership;
   const loading = useAppSelector(selectLoading);
@@ -137,7 +136,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             placeholder="0.00"
             LeftAccessory={() => <Text style={{ alignSelf: 'center', marginLeft: 15, color: colors.textDim }} size='md'>₹</Text>}
           />
-          <View style={[$styles.card, { padding: spacing.md, paddingHorizontal: 0 }]}>
+          <View style={[themed($card), { padding: spacing.md, paddingHorizontal: 0 }]}>
             <View style={[$styles.flexRow, { paddingHorizontal: spacing.md, borderBottomWidth: 1, paddingBottom: 10, borderColor: colors.border }]}>
               <Text>Is it a Trial ?</Text>
               <Switch value={form.isTrial} onPress={() => handleForm('isTrial', !form.isTrial)} />
@@ -176,7 +175,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
           />
         </ScrollView>
         <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-          <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.background} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
+          <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.text} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
         </View>
       </View>
     </Screen>
@@ -189,4 +188,12 @@ const styles = StyleSheet.create({})
 
 const $textField: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.lg,
+})
+
+const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.surface,
+  borderRadius: 16,
+  marginBottom: spacing.md,
+  borderWidth: 1,
+  borderColor: colors.border,
 })

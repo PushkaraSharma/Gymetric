@@ -5,7 +5,6 @@ import { SelectField } from '@/components/SelectField';
 import { spacing } from '@/theme/spacing';
 import { $styles } from '@/theme/styles';
 import { useAppTheme } from '@/theme/context';
-import { colors } from '@/theme/colors';
 import { ThemedStyle } from '@/theme/types';
 import { Entypo, Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons';
 import { formatDate } from 'date-fns';
@@ -26,7 +25,7 @@ type Props = {
 }
 
 const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership, memberships, handleDatePicker, handleForm, form, setForm, duplicateNo, setDuplicateNo }) => {
-    const { themed } = useAppTheme();
+    const { theme: { colors }, themed } = useAppTheme();
 
     const addMember = () => {
         // @ts-ignore
@@ -79,7 +78,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                     />
                     {
                         selectedMembership?.[0]?.planType === 'indivisual' ?
-                            <View style={[$styles.card, { padding: 0 }]}>
+                            <View style={[themed($card), { padding: 0 }]}>
                                 <View style={themed($cardHeader)}>
                                     <View style={themed({ backgroundColor: colors.palette.indigo100, padding: 8, borderRadius: 20 })}>
                                         <MaterialIcons name='card-membership' size={25} color={colors.tint} />
@@ -109,11 +108,11 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                             <View>
                                 <View style={[$styles.flexRow, { marginBottom: 10 }]}>
                                     <Text preset='subheading'>Group Members</Text>
-                                    <Text size='xxs' weight='medium' style={styles.slotText}>{form.dependents.length + 1}/{selectedMembership?.[0]?.membersAllowed} Slots Filled</Text>
+                                    <Text size='xxs' weight='medium' style={themed($slotText)}>{form.dependents.length + 1}/{selectedMembership?.[0]?.membersAllowed} Slots Filled</Text>
                                 </View>
                                 <View style={{ marginBottom: 10 }}>
                                     <Text size='xs' style={{ color: colors.textDim }}>Primary Payer</Text>
-                                    <View style={[$styles.card, $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs }]}>
+                                    <View style={[themed($card), $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs }]}>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '85%' }}>
                                             <View style={{ padding: 10, borderRadius: 20, backgroundColor: colors.palette.indigo100, marginRight: 15 }}>
                                                 <Octicons name='person' size={20} color={colors.tint} />
@@ -142,8 +141,8 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
 
                     <View style={[$styles.flexRow, { marginBottom: 15, marginTop: 10 }]}>
                         <Text weight='medium'>Start Date</Text>
-                        <Pressable style={{ width: '60%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, padding: 10, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.surface }} onPress={handleDatePicker}>
-                            <Text style={{ color: form.startDate ? '#000' : colors.textDim }}>{form.startDate ? formatDate(form.startDate, 'dd/MM/yyyy') : 'dd/mm/yyyy'}</Text>
+                        <Pressable style={themed($dateView)} onPress={handleDatePicker}>
+                            <Text style={{ color: form.startDate ? colors.text : colors.textDim }}>{form.startDate ? formatDate(form.startDate, 'dd/MM/yyyy') : 'dd/mm/yyyy'}</Text>
                             <Ionicons name='calendar-outline' size={20} color={colors.textDim} />
                         </Pressable>
                     </View>
@@ -158,7 +157,6 @@ export default SelectMembership
 
 const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center' },
-    slotText: { borderRadius: 10, backgroundColor: colors.palette.indigo100, color: colors.tint, paddingHorizontal: 5, paddingVertical: 2 }
 })
 
 const $cardHeader: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
@@ -167,7 +165,7 @@ const $cardHeader: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
     alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    backgroundColor: colors.palette.slate200,
+    backgroundColor: colors.palette.slate400,
     borderTopEndRadius: 12,
     borderTopStartRadius: 12,
 })
@@ -178,3 +176,26 @@ const $membershipItem: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
     borderColor: colors.border,
     paddingVertical: spacing.xs
 })
+
+const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+})
+
+const $dateView: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    width: '60%',
+})
+
+const $slotText: ThemedStyle<ViewStyle> = ({ spacing, colors, isDark }) => ({ borderRadius: 10, backgroundColor: isDark ? colors.palette.slate800 : colors.palette.indigo100, color: colors.tint, paddingHorizontal: 5, paddingVertical: 2 })

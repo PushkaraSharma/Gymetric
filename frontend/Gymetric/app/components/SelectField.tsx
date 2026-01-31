@@ -106,6 +106,7 @@ export const SelectField = forwardRef(function SelectField(
         index={0}
         stackBehavior="replace"
         enableDynamicSizing={false}
+        backgroundStyle={{ backgroundColor: colors.surface }}
         enableDismissOnClose
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
@@ -149,7 +150,7 @@ export const SelectField = forwardRef(function SelectField(
 
 const $bottomSheetFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.lg,
-  paddingBottom: spacing.xs,
+  paddingBottom: spacing.xs
 });
 
 const $listItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({

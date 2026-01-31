@@ -37,14 +37,14 @@ const ClientsList = () => {
         case 'Active':
           return c.membershipStatus === 'active';
         case 'Expired':
-          return c.membershipStatus === 'expired';
+          return c.membershipStatus === 'expired' || c.membershipStatus === 'trial_expired';
         case 'Trial':
           return c.membershipStatus === 'trial';
         case 'Inactive':
-          return c.membershipStatus === 'cancelled' || c.membershipStatus === 'trial_expired';
+          return c.membershipStatus === 'cancelled';
         case 'Expiring Soon':
-          if (!c.currentEndDate) return false;
-          const endDate = parseISO(c.currentEndDate);
+          if (!c.activeMembership?.endDate) return false;
+          const endDate = parseISO(c.activeMembership.endDate);
           return (c.membershipStatus === 'active' && isAfter(endDate, now) && isBefore(endDate, sevenDaysFromNow));
         case 'All Clients':
         default:

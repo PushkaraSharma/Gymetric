@@ -66,13 +66,13 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                 </View>
                 <View style={{ marginTop: 10 }}>
                     <Text weight='medium'>Gender</Text>
-                    <View style={[$styles.flexRow, { backgroundColor: colors.palette.slate200, padding: 4, borderRadius: 10, marginTop: 8 }]}>
+                    <View style={[$styles.flexRow, { backgroundColor: colors.surface, padding: 4, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: colors.border }]}>
                         {
                             ['Male', 'Female', 'Other'].map((gender: string, index: number) => {
                                 const selected = form.gender === gender;
                                 return (
-                                    <Pressable key={index} style={{ backgroundColor: selected ? colors.background : 'transparent', width: '33.33%', alignItems: 'center', padding: 10, borderRadius: 10 }} onPress={() => { handleForm('gender', gender) }}>
-                                        <Text weight={selected ? 'medium' : 'normal'} style={{ color: selected ? colors.tint : colors.textDim }}>{gender}</Text>
+                                    <Pressable key={index} style={{ backgroundColor: selected ? colors.tint : colors.surface, width: '33.33%', alignItems: 'center', padding: 10, borderRadius: 10 }} onPress={() => { handleForm('gender', gender) }}>
+                                        <Text weight={selected ? 'medium' : 'normal'} style={{ color: selected ? colors.surface : colors.textDim }}>{gender}</Text>
                                     </Pressable>
                                 )
                             })

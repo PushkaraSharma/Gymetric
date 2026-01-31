@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView } from 'react-native'
+import { View, StyleSheet, ScrollView, ViewStyle } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { Header } from '@/components/Header'
@@ -11,14 +11,16 @@ import { TextField } from '@/components/TextField'
 import { Button } from '@/components/Button'
 import { api } from '@/services/Api'
 import Toast from 'react-native-toast-message'
-import { setLoading } from '@/redux/state/GymStates'
-import { useAppDispatch } from '@/redux/Hooks'
+import { selectLoading, setLoading } from '@/redux/state/GymStates'
+import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { ThemedStyle } from '@/theme/types'
 import { spacing } from '@/theme/spacing'
+import { Ionicons } from '@expo/vector-icons'
 
 const NotificationSetting = ({ navigation }: any) => {
     const { theme: { colors }, themed } = useAppTheme()
     const dispatch = useAppDispatch();
+    const loading = useAppSelector(selectLoading);
 
     // State for settings
     const [settings, setSettings] = useState({
@@ -142,7 +144,6 @@ const NotificationSetting = ({ navigation }: any) => {
                                 containerStyle={{ marginBottom: spacing.sm }}
                             />
                             <View style={[themed($divider), { marginVertical: spacing.sm }]} />
-
                             <Switch
                                 inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
                                 labelPosition='left'
@@ -163,8 +164,8 @@ const NotificationSetting = ({ navigation }: any) => {
                                         onChangeText={(val: string) => updateSetting('reminderDays', val)}
                                         keyboardType="numeric"
                                         placeholder="e.g. 3"
-                                        style={{ backgroundColor: colors.background, paddingVertical: 6, fontSize: 14 }}
-                                        inputWrapperStyle={{ height: 40 }}
+                                        containerStyle={{ backgroundColor: colors.surface }}
+                                        inputWrapperStyle={{ backgroundColor: colors.background }}
                                     />
                                     <Text size="xs" style={{ color: colors.textDim, marginTop: 15, marginLeft: 5 }}>
                                         Default is 3 days.
@@ -177,12 +178,12 @@ const NotificationSetting = ({ navigation }: any) => {
 
             </ScrollView>
 
-            <View style={{ padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <View style={themed($footer)}>
                 <Button
-                    text="Save Changes"
+                    text={loading ? 'Saving...' : 'Save Changes'}
+                    preset="reversed"
+                    LeftAccessory={() => <Ionicons name='save' size={20} color={colors.text} style={{ marginRight: 10 }} />}
                     onPress={handleSave}
-                    disabled={!hasChanges}
-                    preset={'dark'} // Visual cue
                 />
             </View>
         </Screen>
@@ -191,7 +192,7 @@ const NotificationSetting = ({ navigation }: any) => {
 
 export default NotificationSetting
 
-const $card: ThemedStyle<any> = ({ colors, spacing }) => ({
+const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: spacing.md,
@@ -199,8 +200,15 @@ const $card: ThemedStyle<any> = ({ colors, spacing }) => ({
     borderColor: colors.border,
 })
 
-const $divider: ThemedStyle<any> = ({ colors }) => ({
+const $divider: ThemedStyle<ViewStyle> = ({ colors }) => ({
     height: 1,
     backgroundColor: colors.border,
     opacity: 0.5
 })
+
+const $footer: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+    borderTopWidth: 1,
+    padding: spacing.md,
+    borderColor: colors.border,
+})
+

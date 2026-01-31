@@ -8,7 +8,6 @@ import { Ionicons } from '@expo/vector-icons'
 import { TextField } from '@/components/TextField'
 import { ThemedStyle } from '@/theme/types'
 import { useAppTheme } from '@/theme/context'
-import { colors } from '@/theme/colors'
 import { useAppSelector } from '@/redux/Hooks'
 import { selectAllClients } from '@/redux/state/GymStates'
 import { Text } from '@/components/Text'
@@ -17,14 +16,14 @@ import { TextInput } from 'react-native-gesture-handler'
 
 const SearchClient = ({ route }: any) => {
     const [searchText, setSearchText] = useState<string>('');
-    const { themed } = useAppTheme();
+    const { theme: { colors }, themed } = useAppTheme();
     const inputRef = useRef<TextInput>(null);
     const clients = useAppSelector(selectAllClients);
     const search = searchText.trim().toLowerCase();
     const filteredClients = search ? clients?.filter((c) => c.name?.toLowerCase().includes(search) || c.phoneNumber?.includes(search)) : clients;
 
     const RenderItem = ({ item }: any) => (
-        <Pressable style={[themed($item), $styles.flexRow]} onPress={() => {route?.params?.handleSelect?.(route?.params?.index, 'add', item); goBack();}}>
+        <Pressable style={[themed($item), $styles.flexRow]} onPress={() => { route?.params?.handleSelect?.(route?.params?.index, 'add', item); goBack(); }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <ProfileInitialLogo name={item.name} />
                 <View>
@@ -49,8 +48,8 @@ const SearchClient = ({ route }: any) => {
             safeAreaEdges={["bottom"]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
-            <Header title={`Add Dependent ${route?.params?.index + 1}`} backgroundColor='#fff' LeftActionComponent={<Pressable style={[$styles.row, { paddingHorizontal: 10 }]} onPress={goBack}>
-                <Ionicons name={'close'} size={25} />
+            <Header title={`Add Dependent ${route?.params?.index + 1}`} backgroundColor={colors.surface} LeftActionComponent={<Pressable style={[$styles.row, { paddingHorizontal: 10 }]} onPress={goBack}>
+                <Ionicons name={'close'} size={25} color={colors.text} />
             </Pressable>} />
             <View style={{ flex: 1, paddingTop: 10 }}>
                 <TextField
@@ -78,7 +77,7 @@ export default SearchClient
 const $textField: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     marginVertical: spacing.xs,
     borderRadius: 10,
-    backgroundColor: colors.palette.neutral100,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     paddingStart: 10,
     paddingVertical: 5,

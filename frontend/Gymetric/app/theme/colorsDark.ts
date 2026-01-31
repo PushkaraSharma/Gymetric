@@ -13,6 +13,9 @@ const palette = {
   slate950: "#020617",
 
   // Indigo Primary (Lighter for Dark mode)
+  indigo50: "#EEF2FF",
+  indigo100: "#E0E7FF",
+  indigo200: "#C7D2FE",
   indigo300: "#A5B4FC",
   indigo400: "#818CF8",
   indigo500: "#6366F1",

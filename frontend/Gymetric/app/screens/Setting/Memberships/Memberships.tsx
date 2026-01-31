@@ -7,10 +7,8 @@ import { Header } from '@/components/Header'
 import HeaderbackButton from '@/components/HeaderbackButton'
 import { Text } from '@/components/Text'
 import { Button } from '@/components/Button'
-import { colors } from '@/theme/colors'
 import { FontAwesome6, Ionicons } from '@expo/vector-icons'
 import { navigate } from '@/navigators/navigationUtilities'
-import { spacing } from '@/theme/spacing'
 import { useAppDispatch } from '@/redux/Hooks'
 import { setLoading } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
@@ -26,7 +24,7 @@ const Memberships = () => {
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
 
     const MembershipCards = ({ item }: { item: any }) => (
-        <Pressable style={[themed($styles.card), $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs, opacity: item.active ? 1 : 0.5 }]} onPress={() => navigate('Create Edit Membership', { membership: item })}>
+        <Pressable style={[themed($card), $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs, opacity: item.active ? 1 : 0.5 }]} onPress={() => navigate('Create Edit Membership', { membership: item })}>
             <View style={{ flex: 1, maxWidth: '85%' }}>
                 <Text preset={'formLabel'}>{item.planName}</Text>
                 <View style={{ marginTop: 5, borderRadius: 6, backgroundColor: colors.palette.slate100, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2 }}>
@@ -75,7 +73,7 @@ const Memberships = () => {
                     }
                 </ScrollView>
                 <View style={themed($footer)}>
-                    <Button text={'Add New Membership'} preset="reversed" LeftAccessory={() => <FontAwesome6 name='circle-plus' size={20} color={colors.background} style={{ marginRight: 10 }} />} onPress={() => { navigate('Create Edit Membership') }} />
+                    <Button text={'Add New Membership'} preset="reversed" LeftAccessory={() => <FontAwesome6 name='circle-plus' size={20} color={colors.text} style={{ marginRight: 10 }} />} onPress={() => { navigate('Create Edit Membership') }} />
                 </View>
             </View>
         </Screen>
@@ -87,5 +85,13 @@ export default Memberships
 const $footer: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
     borderTopWidth: 1,
     padding: spacing.md,
+    borderColor: colors.border,
+})
+
+const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    marginBottom: spacing.md,
+    borderWidth: 1,
     borderColor: colors.border,
 })

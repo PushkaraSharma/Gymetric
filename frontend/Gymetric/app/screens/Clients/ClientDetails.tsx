@@ -8,7 +8,6 @@ import { useAppDispatch } from '@/redux/Hooks'
 import { navigate } from '@/navigators/navigationUtilities'
 import { Feather, Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons'
 import { spacing } from '@/theme/spacing'
-import { colors } from '@/theme/colors'
 import { setLoading } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { Text } from '@/components/Text'
@@ -21,7 +20,7 @@ import NoDataFound from '@/components/NoDataFound'
 import Toast from 'react-native-toast-message'
 
 const ClientDetails = ({ navigation, route }: any) => {
-    const { themed } = useAppTheme();
+    const { theme: { colors, spacing }, themed } = useAppTheme()
     const dispatch = useAppDispatch();
 
     const [client, setClient] = useState<{ [key: string]: any } | null>(null);
@@ -78,7 +77,7 @@ const ClientDetails = ({ navigation, route }: any) => {
     };
 
     const RenderPayment = (payment: any, index: number) => (
-        <View key={index} style={[$styles.card, $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs }]}>
+        <View key={index} style={[themed($card), $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{ backgroundColor: colors.palette.indigo100, padding: 8, borderRadius: 5, marginRight: 15 }}>
                     <Ionicons name='receipt' size={20} color={colors.tint} />
@@ -155,8 +154,8 @@ const ClientDetails = ({ navigation, route }: any) => {
                                         </Text>
 
                                         {displayMembership ?
-                                            <View style={[$styles.card, { padding: 0, marginVertical: spacing.xxs }]}>
-                                                <View style={styles.dependentPill}>
+                                            <View style={[themed($card), { padding: 0, marginVertical: spacing.xxs }]}>
+                                                <View style={themed($dependentPill)}>
                                                     <Text size='xs' style={{ color: colors.tint, textTransform: 'capitalize' }}>{client?.role}</Text>
                                                 </View>
                                                 <View style={{ borderTopEndRadius: 10, overflow: 'hidden', borderTopStartRadius: 10 }}>
@@ -204,7 +203,7 @@ const ClientDetails = ({ navigation, route }: any) => {
                                     {client.membershipHistory
                                         .filter((m: any) => m._id !== client?.activeMembership?._id && m._id !== client?.upcomingMembership?._id)
                                         .map((historyItem: any, index: number) => (
-                                            <View key={index} style={[$styles.card, { marginBottom: spacing.sm, padding: spacing.sm }]}>
+                                            <View key={index} style={[themed($card), { marginBottom: spacing.sm, padding: spacing.sm }]}>
                                                 <View style={$styles.flexRow}>
                                                     <View>
                                                         <Text weight='semiBold'>{historyItem.planName}</Text>
@@ -236,6 +235,29 @@ const ClientDetails = ({ navigation, route }: any) => {
 export default ClientDetails
 
 const styles = StyleSheet.create({
-    actionBtn: { width: '45%', minHeight: 45, borderWidth: 1, borderRadius: 10 },
-    dependentPill: { borderRadius: 10, backgroundColor: colors.palette.indigo100, paddingHorizontal: 5, paddingVertical: 2, position: 'absolute', zIndex: 1, right: 10, top: 10, borderWidth: 0.5, borderColor: colors.tint }
+    actionBtn: { width: '45%', minHeight: 45, borderWidth: 1, borderRadius: 10 }
+})
+
+import { ThemedStyle } from "@/theme/types"
+import { ViewStyle } from "react-native"
+
+const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+})
+
+const $dependentPill: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    borderRadius: 10,
+    backgroundColor: colors.palette.indigo100,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    position: 'absolute',
+    zIndex: 1,
+    right: 10,
+    top: 10,
+    borderWidth: 0.5,
+    borderColor: colors.tint
 })
