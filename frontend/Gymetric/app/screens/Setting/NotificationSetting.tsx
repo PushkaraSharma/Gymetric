@@ -164,6 +164,8 @@ const NotificationSetting = ({ navigation }: any) => {
                                         onChangeText={(val: string) => updateSetting('reminderDays', val)}
                                         keyboardType="numeric"
                                         placeholder="e.g. 3"
+                                        returnKeyType="done"
+                                        onSubmitEditing={handleSave}
                                         containerStyle={{ backgroundColor: colors.surface }}
                                         inputWrapperStyle={{ backgroundColor: colors.background }}
                                     />
@@ -182,7 +184,7 @@ const NotificationSetting = ({ navigation }: any) => {
                 <Button
                     text={loading ? 'Saving...' : 'Save Changes'}
                     preset="reversed"
-                    LeftAccessory={() => <Ionicons name='save' size={20} color={colors.text} style={{ marginRight: 10 }} />}
+                    LeftAccessory={() => <Ionicons name='save' size={20} color={colors.surface} style={{ marginRight: 10 }} />}
                     onPress={handleSave}
                 />
             </View>

@@ -147,6 +147,7 @@ const ClientsList = ({ route }: any) => {
           value={searchText}
           onChangeText={setSearchText}
           placeholder="Search members..."
+          returnKeyType="search"
           LeftAccessory={() => (
             <View style={{ paddingLeft: 12 }}>
               <Search size={20} color={colors.textDim} />

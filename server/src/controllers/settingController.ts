@@ -41,11 +41,7 @@ export const getSettings = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
         const rawSettings: any = await Settings.findOne({ gymId }).lean();
-        if (!rawSettings) {
-            return reply.status(404).send({ success: false, message: 'Settings not found' });
-        }
         const hasWhatsappConfigured = !!(rawSettings.whatsapp && rawSettings.whatsapp.phoneNumberId);
-        // Remove sensitive field
         if (rawSettings.whatsapp) {
             delete rawSettings.whatsapp.accessToken;
             delete rawSettings.whatsapp.phoneNumberId;

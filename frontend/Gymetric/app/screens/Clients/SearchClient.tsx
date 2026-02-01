@@ -60,6 +60,7 @@ const SearchClient = ({ route }: any) => {
                     autoCapitalize="none"
                     autoCorrect={false}
                     placeholder="Seach by name or phone number"
+                    returnKeyType="search"
                     LeftAccessory={() => <Ionicons name='search' size={22} color={colors.tint} />}
                 />
                 <FlatList

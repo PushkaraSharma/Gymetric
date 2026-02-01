@@ -13,11 +13,11 @@ const HelpCenter = () => {
     const { theme: { colors, spacing, typography }, themed } = useAppTheme()
 
     const handleEmail = () => {
-        Linking.openURL('mailto:support@gymetric.com')
+        Linking.openURL('mailto:pushkarasharma11@gmail.com')
     }
 
     const handlePhone = () => {
-        Linking.openURL('tel:+919876543210')
+        Linking.openURL('tel:+919711583364')
     }
 
     const SupportItem = ({ icon, title, value, onPress }: any) => (

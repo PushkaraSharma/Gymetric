@@ -43,6 +43,7 @@ const MembershipPayment: FC<Props> = ({ form, handleForm, selectedMembership }) 
                             keyboardType='number-pad'
                             value={form.amount?.toString()}
                             onChangeText={(val) => { handleForm('amount', Number(val)) }}
+                            returnKeyType="done"
                             style={{ fontSize: 36, lineHeight: 44, fontWeight: 'bold', color: colors.text }}
                         />
                         <Text style={{ marginLeft: 5 }}>/ {getDurationLabel()}</Text>

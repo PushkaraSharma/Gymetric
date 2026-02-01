@@ -1,5 +1,5 @@
-import { Pressable, View, ViewStyle, Image, ImageStyle } from 'react-native'
-import React, { FC } from 'react'
+import { Pressable, View, ViewStyle, Image, ImageStyle, TextInput } from 'react-native'
+import React, { FC, useRef } from 'react'
 import { Text } from '@/components/Text'
 import { $styles } from '@/theme/styles'
 import { Ionicons } from '@expo/vector-icons'
@@ -22,6 +22,9 @@ type Props = {
 const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, validNumber }) => {
     const { theme: { colors, spacing }, themed } = useAppTheme();
     const { showImagePickerOptions } = useImagePicker();
+
+    const phoneRef = useRef<any>(null);
+    const ageRef = useRef<any>(null);
 
     const handleImageSelect = (uri: string) => {
         handleForm('profilePicture', uri);
@@ -66,8 +69,11 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                     autoCorrect={false}
                     label="Full Name"
                     placeholder="e.g. John Doe"
+                    returnKeyType="next"
+                    onSubmitEditing={() => phoneRef.current?.focus()}
                 />
                 <TextField
+                    ref={phoneRef}
                     status={!validNumber ? 'error' : undefined}
                     helper={!validNumber ? 'Phone number already exists' : undefined}
                     value={form.phoneNumber}
@@ -78,9 +84,12 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                     autoCorrect={false}
                     label="Phone Number"
                     placeholder="Enter phone number"
+                    returnKeyType="next"
+                    onSubmitEditing={() => ageRef.current?.focus()}
                 />
                 <View style={[$styles.flexRow, { alignItems: 'baseline' }]}>
                     <TextField
+                        ref={ageRef}
                         value={form.age?.toString()}
                         onChangeText={(val) => { handleForm('age', val ? Number(val) : null) }}
                         containerStyle={[themed($textField), { width: '35%' }]}
@@ -88,6 +97,7 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                         autoCorrect={false}
                         label="Age"
                         placeholder="Enter age"
+                        returnKeyType="done"
                     />
                     <View style={{ width: '55%' }}>
                         <Text weight='medium'>Birthday</Text>

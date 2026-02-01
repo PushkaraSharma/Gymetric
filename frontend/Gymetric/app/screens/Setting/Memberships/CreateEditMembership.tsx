@@ -1,5 +1,5 @@
-import { Image, Platform, Pressable, ScrollView, StyleSheet, View, ViewStyle } from 'react-native'
-import React, { useState } from 'react'
+import { Image, Platform, Pressable, ScrollView, StyleSheet, View, ViewStyle, TextInput } from 'react-native'
+import React, { useRef, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Header } from '@/components/Header'
@@ -39,6 +39,12 @@ const CreateEditMembership = ({ navigation, route }: any) => {
   const [form, setForm] = useState<MembershipType>({ planName: membership?.planName ?? '', description: membership?.description ?? '', price: Number(membership?.price ?? 0), isTrial: membership?.isTrial ?? false, active: membership?.active ?? true, planType: membership?.planType ?? 'indivisual', membersAllowed: membership?.membersAllowed ?? 1, index: membership?.index ?? 0 });
   const [duration, setDuration] = useState<string>((membership?.durationInDays || membership?.durationInMonths || 0).toString());
   const [durationType, setDurationType] = useState<'Months' | 'Days'>(membership?.durationInDays ? 'Days' : 'Months');
+
+  const descRef = useRef<any>(null);
+  const priceRef = useRef<any>(null);
+  const durationRef = useRef<any>(null);
+  const indexRef = useRef<any>(null);
+  const membersAllowedRef = useRef<any>(null);
 
   const handleForm = (field: string, value: any) => {
     setForm(prev => {
@@ -94,14 +100,19 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             autoCorrect={false}
             label="Plan Name"
             placeholder="Membership Name (e.g. Pro Annual)"
+            returnKeyType="next"
+            onSubmitEditing={() => descRef.current?.focus()}
           />
           <TextField
+            ref={descRef}
             value={form.description}
             onChangeText={(val) => { handleForm('description', val) }}
             containerStyle={themed($textField)}
             autoCorrect={false}
             placeholder="Description (Optional)"
             multiline
+            returnKeyType="next"
+            blurOnSubmit={false}
           />
           <View style={{ marginBottom: 20 }}>
             <Text preset='formLabel'>Plan Type</Text>
@@ -117,16 +128,20 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             </View>
             {form.planType === 'group' &&
               <TextField
+                ref={membersAllowedRef}
                 value={form.membersAllowed.toString()}
                 onChangeText={(val) => { handleForm('membersAllowed', Number(val)) }}
                 containerStyle={[{ marginTop: 15 }]}
                 autoCorrect={false}
                 keyboardType='number-pad'
                 placeholder="Enter maximum allowed members"
+                returnKeyType="next"
+                onSubmitEditing={() => priceRef.current?.focus()}
               />
             }
           </View>
           <TextField
+            ref={priceRef}
             value={form.price.toString()}
             onChangeText={(val) => { handleForm('price', Number(val)) }}
             containerStyle={themed($textField)}
@@ -134,6 +149,8 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             keyboardType='number-pad'
             label="Price & Status"
             placeholder="0.00"
+            returnKeyType="next"
+            onSubmitEditing={() => durationRef.current?.focus()}
             LeftAccessory={() => <Text style={{ alignSelf: 'center', marginLeft: 15, color: colors.textDim }} size='md'>₹</Text>}
           />
           <View style={[themed($card), { padding: spacing.md, paddingHorizontal: 0 }]}>
@@ -157,14 +174,18 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             </View>
           </View>
           <TextField
+            ref={durationRef}
             value={duration}
             onChangeText={setDuration}
             containerStyle={themed($textField)}
             autoCorrect={false}
             keyboardType='number-pad'
             placeholder="Enter duration length (e.g. 12)"
+            returnKeyType="next"
+            onSubmitEditing={() => indexRef.current?.focus()}
           />
           <TextField
+            ref={indexRef}
             label='Order Index'
             value={form.index.toString()}
             onChangeText={(val) => { handleForm('index', Number(val)) }}
@@ -172,10 +193,12 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             autoCorrect={false}
             keyboardType='number-pad'
             placeholder="Enter index for sort order"
+            returnKeyType="done"
+            onSubmitEditing={createOrUpdate}
           />
         </ScrollView>
         <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-          <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.text} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
+          <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.surface} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
         </View>
       </View>
     </Screen>

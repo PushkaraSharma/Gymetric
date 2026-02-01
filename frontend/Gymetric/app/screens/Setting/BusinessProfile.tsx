@@ -1,5 +1,5 @@
-import { Image, Platform, ScrollView, StyleSheet, Text, View, ViewStyle } from 'react-native'
-import React, { useState } from 'react'
+import { Image, Platform, ScrollView, StyleSheet, Text, View, ViewStyle, TextInput } from 'react-native'
+import React, { useRef, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Header } from '@/components/Header'
@@ -33,6 +33,11 @@ const BusinessProfile = () => {
   const [form, setForm] = useState<GymFormType>({ name: gymDetails?.name, ownerName: gymDetails?.ownerName, address: gymDetails?.address, contactNumber: gymDetails?.contactNumber, email: gymDetails?.email })
   const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
   const { showImagePickerOptions } = useImagePicker();
+
+  const phoneRef = useRef<any>(null);
+  const ownerRef = useRef<any>(null);
+  const emailRef = useRef<any>(null);
+  const addressRef = useRef<any>(null);
 
   const handleLogoUpdate = (uri: string) => {
     setSelectedLogo(uri);
@@ -102,9 +107,12 @@ const BusinessProfile = () => {
             autoCorrect={false}
             label="Gym Name"
             placeholder="Enter gym name"
+            returnKeyType="next"
+            onSubmitEditing={() => phoneRef.current?.focus()}
             RightAccessory={() => <MaterialCommunityIcons name='dumbbell' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
           />
           <TextField
+            ref={phoneRef}
             value={form.contactNumber?.toString()}
             onChangeText={(val) => { handleForm('contactNumber', val) }}
             containerStyle={themed($textField)}
@@ -112,27 +120,37 @@ const BusinessProfile = () => {
             keyboardType='number-pad'
             label="Phone Number"
             placeholder="Enter contact number"
+            returnKeyType="next"
+            onSubmitEditing={() => ownerRef.current?.focus()}
             RightAccessory={() => <MaterialCommunityIcons name='phone' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
           />
           <TextField
+            ref={ownerRef}
             value={form.ownerName}
             onChangeText={(val) => { handleForm('ownerName', val) }}
             containerStyle={themed($textField)}
             autoCorrect={false}
             label="Owner"
             placeholder="Enter owner name"
+            returnKeyType="next"
+            onSubmitEditing={() => emailRef.current?.focus()}
             RightAccessory={() => <Octicons name='person' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
           />
           <TextField
+            ref={emailRef}
             value={form.email}
             onChangeText={(val) => { handleForm('email', val) }}
             containerStyle={themed($textField)}
             autoCorrect={false}
             label="Email"
             placeholder="Enter email address"
+            keyboardType="email-address"
+            returnKeyType="next"
+            onSubmitEditing={() => addressRef.current?.focus()}
             RightAccessory={() => <MaterialCommunityIcons name='email' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
           />
           <TextField
+            ref={addressRef}
             value={form.address}
             onChangeText={(val) => { handleForm('address', val) }}
             containerStyle={themed($textField)}
@@ -140,11 +158,14 @@ const BusinessProfile = () => {
             label="Location"
             multiline
             placeholder="Enter gym address"
+            returnKeyType="done"
+            onSubmitEditing={updateGym}
+            blurOnSubmit={true}
             RightAccessory={() => <Ionicons name='location-sharp' size={20} color={colors.tintInactive} style={{ marginRight: 10, marginTop: 10 }} />}
           />
         </ScrollView>
         <View style={themed($footer)}>
-          <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.text} style={{ marginRight: 10 }} />} onPress={updateGym} />
+          <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.surface} style={{ marginRight: 10 }} />} onPress={updateGym} />
         </View>
       </View>
     </Screen>

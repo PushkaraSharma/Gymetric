@@ -8,6 +8,7 @@ import { Ionicons, Octicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View, ViewStyle } from "react-native";
 import { useAppTheme } from "@/theme/context";
 import { ThemedStyle } from "@/theme/types";
+import React, { useRef } from "react";
 
 type AddMemberCardProps = {
     item: any;
@@ -19,6 +20,7 @@ type AddMemberCardProps = {
 
 const DependentCard = ({ item, index, updateDependent, duplicateNo, updateExistingDependent }: AddMemberCardProps) => {
     const { theme: { colors, isDark }, themed } = useAppTheme();
+    const phoneRef = useRef<any>(null);
 
     return (
         <View style={[themed($card), { padding: spacing.md, marginVertical: 0, marginBottom: 10 }]} key={index}>
@@ -49,10 +51,13 @@ const DependentCard = ({ item, index, updateDependent, duplicateNo, updateExisti
                             autoCapitalize="words"
                             autoCorrect={false}
                             placeholder="Full Name"
+                            returnKeyType="next"
+                            onSubmitEditing={() => phoneRef.current?.focus()}
                         />
                         <View style={[$styles.flexRow, { alignItems: 'flex-start' }]}>
                             <View style={{ width: '48%' }}>
                                 <TextField
+                                    ref={phoneRef}
                                     status={duplicateNo === index.toString() ? 'error' : undefined}
                                     helper={duplicateNo === index.toString() ? 'Phone already exists' : undefined}
                                     HelperTextProps={{ style: { fontSize: 12 } }}
@@ -63,6 +68,7 @@ const DependentCard = ({ item, index, updateDependent, duplicateNo, updateExisti
                                     autoCorrect={false}
                                     placeholder="Phone"
                                     maxLength={10}
+                                    returnKeyType="done"
                                 />
                             </View>
                             <View style={{ width: '48%' }}>
