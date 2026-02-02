@@ -19,9 +19,9 @@
     }
   },
   "include": [
-    "src/**/*",
-    "app.js",
-    "instrument.js"
+    "src/**/*.ts",
+    "app.ts",
+    "instrument.ts"
   ],
   "exclude": [
     "node_modules",

@@ -22,8 +22,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch app.ts",
-    "start": "npx tsx app.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "gcp-build": "tsc --project tsconfig.json --noEmitOnError false || true",
+    "start": "node dist/app.js"
   },
   "keywords": [],
   "author": "",
