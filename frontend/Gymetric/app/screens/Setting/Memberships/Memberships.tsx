@@ -8,7 +8,7 @@ import HeaderbackButton from '@/components/HeaderbackButton'
 import { Text } from '@/components/Text'
 import { Button } from '@/components/Button'
 import { FontAwesome6, Ionicons } from '@expo/vector-icons'
-import { navigate } from '@/navigators/navigationUtilities'
+import { goBack, navigate } from '@/navigators/navigationUtilities'
 import { useAppDispatch } from '@/redux/Hooks'
 import { setLoading } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
@@ -60,7 +60,7 @@ const Memberships = () => {
             contentContainerStyle={[$styles.flex1]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
-            <Header title='Memberships' backgroundColor={colors.surface} LeftActionComponent={<HeaderbackButton />} />
+            <Header title='Memberships' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
             <View style={{ paddingTop: 10, flex: 1 }}>
                 <ScrollView style={{ paddingHorizontal: 15, }}>
                     <Text style={{ marginBottom: 10 }}>Manage your gym's subscription plans</Text>
@@ -73,7 +73,7 @@ const Memberships = () => {
                     }
                 </ScrollView>
                 <View style={themed($footer)}>
-                    <Button text={'Add New Membership'} preset="reversed" LeftAccessory={() => <FontAwesome6 name='circle-plus' size={20} color={colors.surface} style={{ marginRight: 10 }} />} onPress={() => { navigate('Create Edit Membership') }} />
+                    <Button text={'Add New Membership'} preset="reversed" LeftAccessory={() => <FontAwesome6 name='circle-plus' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={() => { navigate('Create Edit Membership') }} />
                 </View>
             </View>
         </Screen>

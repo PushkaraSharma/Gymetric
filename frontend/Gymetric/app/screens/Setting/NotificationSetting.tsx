@@ -16,6 +16,7 @@ import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { ThemedStyle } from '@/theme/types'
 import { spacing } from '@/theme/spacing'
 import { Ionicons } from '@expo/vector-icons'
+import { goBack } from '@/navigators/navigationUtilities'
 
 const NotificationSetting = ({ navigation }: any) => {
     const { theme: { colors }, themed } = useAppTheme()
@@ -86,7 +87,8 @@ const NotificationSetting = ({ navigation }: any) => {
         <Screen preset="fixed" contentContainerStyle={[$styles.flex1]} safeAreaEdges={["bottom"]}>
             <Header
                 title='Notification Settings'
-                LeftActionComponent={<HeaderbackButton />}
+                leftIcon="caretLeft"
+                onLeftPress={goBack}
                 backgroundColor={colors.background}
             />
             <ScrollView contentContainerStyle={{ padding: spacing.md }}>
@@ -184,7 +186,7 @@ const NotificationSetting = ({ navigation }: any) => {
                 <Button
                     text={loading ? 'Saving...' : 'Save Changes'}
                     preset="reversed"
-                    LeftAccessory={() => <Ionicons name='save' size={20} color={colors.surface} style={{ marginRight: 10 }} />}
+                    LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />}
                     onPress={handleSave}
                 />
             </View>

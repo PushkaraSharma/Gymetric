@@ -14,6 +14,7 @@ import { TrendingUp, Wallet, CreditCard, Banknote, Smartphone, ArrowDownLeft } f
 import { format } from 'date-fns'
 import { MotiView } from 'moti'
 import { $styles } from '@/theme/styles'
+import { goBack } from '@/navigators/navigationUtilities'
 
 const Revenue = () => {
     const { themed, theme: { colors, spacing, typography } } = useAppTheme();
@@ -75,7 +76,8 @@ const Revenue = () => {
         >
             <Header
                 title="Revenue"
-                LeftActionComponent={<HeaderbackButton />}
+                leftIcon="caretLeft"
+                onLeftPress={goBack}
                 backgroundColor={colors.surface}
             />
             <ScrollView

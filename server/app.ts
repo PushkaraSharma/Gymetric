@@ -16,6 +16,7 @@ import multipart from '@fastify/multipart';
 import { settingRoutes } from './src/routes/settings.js';
 import { uploadRoutes } from './src/routes/upload.js';
 
+// on onboarding or any other time -> use AI to share some insights ( like workout plan etc )
 const start = async () => {
     if (!process.env.MONGO_URI) {
         console.error("MONGO_URI is not defined");

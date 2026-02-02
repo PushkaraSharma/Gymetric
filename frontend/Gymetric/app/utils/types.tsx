@@ -4,6 +4,8 @@ export type ClientDetailsType = {
     phoneNumber: string,
     age?: number | null,
     birthday?: Date | null,
+    anniversaryDate?: Date | null,
+    onboardingPurpose?: string,
     gender: string,
     profilePicture?: string,
 }
@@ -28,7 +30,7 @@ export type MembershipRenewType = {
     dependents: DependentType[]
 }
 
-export type ClientDateType = { visible: boolean, type: 'birthday' | 'startDate' };
+export type ClientDateType = { visible: boolean, type: 'birthday' | 'startDate' | 'anniversaryDate' };
 
 export type STEPS = "Personal Info" | "Membership" | "Payment";
 

@@ -18,7 +18,7 @@ import MembershipPayment from './ClientMembership/MembershipPayment'
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated'
 import { DEVICE_WIDTH } from '@/utils/Constants'
 import { alreadyExists } from '@/utils/Helper'
-import { format } from 'date-fns'
+import { differenceInYears, format } from 'date-fns'
 import { useAppTheme } from '@/theme/context'
 
 const CreateClient = () => {
@@ -28,7 +28,7 @@ const CreateClient = () => {
 
     const Steps = ["Personal Info", "Membership", "Payment"] as STEPS[];
     const [currentStep, setCurrentStep] = useState<STEPS>("Personal Info");
-    const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { name: '', phoneNumber: '', age: null, birthday: null, gender: 'Male' }, dependents: [], amount: 0, method: 'Cash', paymentReceived: true, startDate: new Date() });
+    const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { name: '', phoneNumber: '', age: null, birthday: null, gender: 'Male', anniversaryDate: null, onboardingPurpose: '' }, dependents: [], amount: 0, method: 'Cash', paymentReceived: true, startDate: new Date() });
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
     const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([]);
     const [datePicker, setDatePicker] = useState<ClientDateType>({ visible: false, type: 'startDate' });
@@ -65,7 +65,11 @@ const CreateClient = () => {
     const handleForm = (field: string, value: any, scope: 'root' | 'primaryDetails' = 'root') => {
         setForm(prev => {
             if (scope === 'primaryDetails') {
-                return { ...prev, primaryDetails: { ...prev.primaryDetails, [field]: value } };
+                let updatedDetails = { ...prev.primaryDetails, [field]: value };
+                if (field === 'birthday' && value) {
+                    updatedDetails.age = differenceInYears(new Date(), value);
+                }
+                return { ...prev, primaryDetails: updatedDetails };
             }
             return { ...prev, [field]: value };
         });
@@ -114,7 +118,16 @@ const CreateClient = () => {
 
     const handleCreate = async () => {
         dispatch(setLoading({ loading: true }));
-        const body = { ...form, startDate: format(form.startDate, 'yyyy-MM-dd'), planId: selectedMembership?.[0]?._id };
+        const body = {
+            ...form,
+            startDate: format(form.startDate, 'yyyy-MM-dd'),
+            planId: selectedMembership?.[0]?._id,
+            primaryDetails: {
+                ...form.primaryDetails,
+                birthday: form.primaryDetails.birthday ? format(form.primaryDetails.birthday, 'yyyy-MM-dd') : null,
+                anniversaryDate: form.primaryDetails.anniversaryDate ? format(form.primaryDetails.anniversaryDate, 'yyyy-MM-dd') : null,
+            }
+        };
         const response = await api.createClient(body);
 
         if (response.kind == 'ok') {
@@ -152,9 +165,9 @@ const CreateClient = () => {
                 isVisible={datePicker.visible}
                 mode="date"
                 minimumDate={datePicker.type === 'startDate' ? new Date() : new Date('1900-01-01')}
-                date={datePicker.type === 'birthday' ? new Date() : form.startDate ?? new Date()}
+                date={datePicker.type === 'birthday' ? (form.primaryDetails.birthday ?? new Date()) : datePicker.type === 'anniversaryDate' ? (form.primaryDetails.anniversaryDate ?? new Date()) : (form.startDate ?? new Date())}
                 onConfirm={async (date) => {
-                    handleForm(datePicker.type, date, datePicker.type === 'birthday' ? 'primaryDetails' : 'root');
+                    handleForm(datePicker.type, date, (datePicker.type === 'birthday' || datePicker.type === 'anniversaryDate') ? 'primaryDetails' : 'root');
                     setDatePicker({ visible: false, type: 'startDate' });
                 }}
                 onCancel={() => setDatePicker({ visible: false, type: 'startDate' })}
@@ -175,7 +188,7 @@ const CreateClient = () => {
                     </ScrollView>
                 </Animated.View>
                 <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-                    <Button disabled={!validateSteps()} disabledStyle={{ opacity: 0.4 }} text={currentStep === 'Payment' ? (loader ? 'Finishing...' : 'Finish Setup') : 'Next Step'} preset="reversed" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.surface} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleCreate() : moveStep('next') }} />
+                    <Button disabled={!validateSteps()} disabledStyle={{ opacity: 0.4 }} text={currentStep === 'Payment' ? (loader ? 'Finishing...' : 'Finish Setup') : 'Next Step'} preset="reversed" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.white} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleCreate() : moveStep('next') }} />
                 </View>
             </View>
         </Screen>

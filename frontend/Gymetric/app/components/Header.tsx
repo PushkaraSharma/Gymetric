@@ -259,7 +259,7 @@ function HeaderAction(props: HeaderActionProps) {
   if (icon) {
     return (
       <PressableIcon
-        size={24}
+        size={30}
         icon={icon}
         color={iconColor}
         onPress={onPress}
@@ -304,7 +304,7 @@ const $actionIconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   justifyContent: "center",
   height: "100%",
-  paddingHorizontal: spacing.md,
+  paddingLeft: 10,
   zIndex: 2,
 })
 

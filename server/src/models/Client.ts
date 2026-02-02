@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { MEMBERSHIP_TYPES } from "../utils/Constants.js";
+import { MEMBERSHIP_TYPES, ONBOARDING_PURPOSES } from "../utils/Constants.js";
 import { IClient } from "../types/models.js";
 
 const ClientSchema = new Schema<IClient>({
@@ -7,6 +7,8 @@ const ClientSchema = new Schema<IClient>({
     phoneNumber: { type: String, required: true, unique: true },
     age: Number,
     birthday: Date,
+    anniversaryDate: Date,
+    onboardingPurpose: { type: String, enum: ONBOARDING_PURPOSES },
     gender: { type: String, enum: ['Male', 'Female', 'Other'] },
     profilePicture: { type: String }, // Cloudinary URL
     gymId: { type: Schema.Types.ObjectId, ref: 'Gym', required: true },

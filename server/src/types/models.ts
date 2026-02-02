@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { MembershipStatus, PaymentMethod, ActivityType } from '../utils/Constants.js';
+import { MembershipStatus, PaymentMethod, ActivityType, OnboardingPurpose } from '../utils/Constants.js';
 
 export interface IClient {
     _id: Types.ObjectId;
@@ -7,6 +7,8 @@ export interface IClient {
     phoneNumber: string;
     age?: number;
     birthday?: Date;
+    anniversaryDate?: Date;
+    onboardingPurpose?: OnboardingPurpose;
     gender?: 'Male' | 'Female' | 'Other';
     profilePicture?: string;
     gymId: Types.ObjectId;

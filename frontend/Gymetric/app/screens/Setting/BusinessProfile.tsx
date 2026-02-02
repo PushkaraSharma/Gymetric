@@ -79,7 +79,7 @@ const BusinessProfile = () => {
       safeAreaEdges={["bottom"]}
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
-      <Header title='Business Profile' backgroundColor={colors.surface} LeftActionComponent={<HeaderbackButton />} />
+      <Header title='Business Profile' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
       <View style={{ flex: 1 }}>
         <ScrollView style={{ paddingHorizontal: 15 }}>
           <View>
@@ -165,7 +165,7 @@ const BusinessProfile = () => {
           />
         </ScrollView>
         <View style={themed($footer)}>
-          <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.surface} style={{ marginRight: 10 }} />} onPress={updateGym} />
+          <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={updateGym} />
         </View>
       </View>
     </Screen>

@@ -10,6 +10,8 @@ import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { useImagePicker } from '@/utils/useImagePicker'
 import { Camera } from 'lucide-react-native'
+import { SelectField } from '@/components/SelectField'
+import { ONBOARDING_PURPOSES } from '@/utils/Constants'
 
 type Props = {
     handleForm: (field: string, value: any) => void,
@@ -87,6 +89,21 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                     returnKeyType="next"
                     onSubmitEditing={() => ageRef.current?.focus()}
                 />
+                <View style={{ paddingBottom: spacing.lg }}>
+                    <Text weight='medium'>Gender</Text>
+                    <View style={[$styles.flexRow, { backgroundColor: colors.surface, padding: 4, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: colors.border }]}>
+                        {
+                            ['Male', 'Female', 'Other'].map((gender: string, index: number) => {
+                                const selected = form.gender === gender;
+                                return (
+                                    <Pressable key={index} style={{ backgroundColor: selected ? colors.tint : colors.surface, width: '33.33%', alignItems: 'center', padding: 10, borderRadius: 10 }} onPress={() => { handleForm('gender', gender) }}>
+                                        <Text weight={selected ? 'medium' : 'normal'} style={{ color: selected ? colors.surface : colors.textDim }}>{gender}</Text>
+                                    </Pressable>
+                                )
+                            })
+                        }
+                    </View>
+                </View>
                 <View style={[$styles.flexRow, { alignItems: 'baseline' }]}>
                     <TextField
                         ref={ageRef}
@@ -107,21 +124,25 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                         </Pressable>
                     </View>
                 </View>
-                <View style={{ marginTop: 10, paddingBottom: spacing.xl }}>
-                    <Text weight='medium'>Gender</Text>
-                    <View style={[$styles.flexRow, { backgroundColor: colors.surface, padding: 4, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: colors.border }]}>
-                        {
-                            ['Male', 'Female', 'Other'].map((gender: string, index: number) => {
-                                const selected = form.gender === gender;
-                                return (
-                                    <Pressable key={index} style={{ backgroundColor: selected ? colors.tint : colors.surface, width: '33.33%', alignItems: 'center', padding: 10, borderRadius: 10 }} onPress={() => { handleForm('gender', gender) }}>
-                                        <Text weight={selected ? 'medium' : 'normal'} style={{ color: selected ? colors.surface : colors.textDim }}>{gender}</Text>
-                                    </Pressable>
-                                )
-                            })
-                        }
-                    </View>
+
+                <View style={{ width: '100%', paddingBottom: spacing.lg }}>
+                    <Text weight='medium'>Anniversary Date</Text>
+                    <Pressable style={themed($dateView)} onPress={() => { setDatePicker({ visible: true, type: 'anniversaryDate' }) }}>
+                        <Text style={{ color: form.anniversaryDate ? colors.text : colors.textDim }}>{form.anniversaryDate ? formatDate(form.anniversaryDate, 'dd/MM/yyyy') : 'dd/mm/yyyy'}</Text>
+                        <Ionicons name='calendar-outline' size={20} color={colors.textDim} />
+                    </Pressable>
                 </View>
+
+                <SelectField
+                    label="Onboarding Purpose"
+                    value={form.onboardingPurpose ? [ONBOARDING_PURPOSES.find(o => o.value === form.onboardingPurpose)] : []}
+                    onSelect={(newValues) => handleForm('onboardingPurpose', newValues[0]?.value)}
+                    options={ONBOARDING_PURPOSES}
+                    multiple={false}
+                    labelKey="label"
+                    valueKey="value"
+                    containerStyle={{ paddingBottom: spacing.xl }}
+                />
             </View>
         </View>
     )

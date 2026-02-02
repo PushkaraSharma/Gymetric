@@ -15,6 +15,8 @@ import Toast from 'react-native-toast-message';
 import { goBack } from '@/navigators/navigationUtilities';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
+import { differenceInYears, format } from 'date-fns';
+
 const UpdateClientbasicInfo = ({ route }: any) => {
   const { theme: { colors } } = useAppTheme();
   const client = route?.params?.client;
@@ -25,11 +27,13 @@ const UpdateClientbasicInfo = ({ route }: any) => {
     name: client?.name,
     phoneNumber: client?.phoneNumber,
     age: client?.age,
-    birthday: client?.birthday,
+    birthday: client?.birthday ? new Date(client.birthday) : null,
+    anniversaryDate: client?.anniversaryDate ? new Date(client.anniversaryDate) : null,
+    onboardingPurpose: client?.onboardingPurpose || '',
     gender: client?.gender,
     profilePicture: client?.profilePicture
   });
-  const [datePicker, setDatePicker] = useState<boolean>(false);
+  const [datePicker, setDatePicker] = useState<ClientDateType>({ visible: false, type: 'birthday' });
   const [validNumber, setValidNumber] = useState<boolean>(true);
 
   const alreadyExists = (ph: string) => {
@@ -37,7 +41,13 @@ const UpdateClientbasicInfo = ({ route }: any) => {
   };
 
   const handleForm = (field: string, value: any) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm(prev => {
+      let updated = { ...prev, [field]: value };
+      if (field === 'birthday' && value) {
+        updated.age = differenceInYears(new Date(), value);
+      }
+      return updated;
+    });
     if (field === 'phoneNumber' && value.length === 10 && alreadyExists(value)) {
       setValidNumber(false);
     } else {
@@ -58,7 +68,13 @@ const UpdateClientbasicInfo = ({ route }: any) => {
       }
     }
 
-    const response = await api.updateClient({ id: client?._id, ...form, profilePicture: profilePictureUrl });
+    const response = await api.updateClient({
+      id: client?._id,
+      ...form,
+      profilePicture: profilePictureUrl,
+      birthday: form.birthday ? format(form.birthday, 'yyyy-MM-dd') : null,
+      anniversaryDate: form.anniversaryDate ? format(form.anniversaryDate, 'yyyy-MM-dd') : null,
+    });
     if (response) {
       Toast.show({ type: 'success', text1: 'Client details updated successfully' });
       goBack();
@@ -74,18 +90,18 @@ const UpdateClientbasicInfo = ({ route }: any) => {
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
       <DateTimePickerModal
-        isVisible={datePicker}
+        isVisible={datePicker.visible}
         mode="date"
-        date={form.birthday ?? new Date()}
+        date={datePicker.type === 'birthday' ? (form.birthday ?? new Date()) : (form.anniversaryDate ?? new Date())}
         onConfirm={async (date) => {
-          handleForm('birthday', date);
-          setDatePicker(false);
+          handleForm(datePicker.type, date);
+          setDatePicker({ visible: false, type: 'birthday' });
         }}
-        onCancel={() => setDatePicker(false)}
+        onCancel={() => setDatePicker({ visible: false, type: 'birthday' })}
       />
-      <Header title='Update Client' backgroundColor={colors.surface} LeftActionComponent={<HeaderbackButton />} />
+      <Header title='Update Client' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
       <ScrollView style={{ paddingHorizontal: 15, flex: 1 }}>
-        <PersonalInfo handleForm={handleForm} form={form} setDatePicker={(val) => { setDatePicker(true) }} isUpdate validNumber={validNumber} />
+        <PersonalInfo handleForm={handleForm} form={form} setDatePicker={setDatePicker} isUpdate validNumber={validNumber} />
       </ScrollView>
       <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
         <Button preset='reversed' disabled={(form?.phoneNumber.length !== 10) || !form.name || !validNumber} disabledStyle={{ opacity: 0.4 }} text={loading ? 'Updating...' : 'Update'} onPress={handleUpdate} />

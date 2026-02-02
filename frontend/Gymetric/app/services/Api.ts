@@ -49,6 +49,10 @@ export class Api {
     return this.apiRequest('post', '/api/auth/login', { username, password });
   }
 
+  resetPassword = async (oldPassword: string, newPassword: string) => {
+    return await this.apiRequest('post', '/api/auth/reset-password', { oldPassword, newPassword });
+  };
+
   dashboardAPI = async () => {
     return this.apiRequest('get', '/api/dashboard/summary');
   }

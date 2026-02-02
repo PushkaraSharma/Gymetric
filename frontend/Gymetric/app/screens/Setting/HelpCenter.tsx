@@ -8,6 +8,7 @@ import HeaderbackButton from '@/components/HeaderbackButton'
 import { Mail, Phone, ChevronRight } from 'lucide-react-native'
 import { $styles } from '@/theme/styles'
 import { ThemedStyle } from '@/theme/types'
+import { goBack } from '@/navigators/navigationUtilities'
 
 const HelpCenter = () => {
     const { theme: { colors, spacing, typography }, themed } = useAppTheme()
@@ -40,7 +41,7 @@ const HelpCenter = () => {
             preset="fixed"
             safeAreaEdges={[]}
         >
-            <Header title="Help Center" LeftActionComponent={<HeaderbackButton />} backgroundColor={colors.surface} />
+            <Header title="Help Center" leftIcon="caretLeft" onLeftPress={goBack} backgroundColor={colors.surface} />
 
             <View style={themed($container)}>
                 <Text preset="heading" style={themed($title)}>Get in Touch</Text>
@@ -56,7 +57,7 @@ const HelpCenter = () => {
                     <SupportItem
                         icon={<Phone size={22} color={colors.primary} />}
                         title="Call Us"
-                        value="+91 98765 43210"
+                        value="+91 9711583364"
                         onPress={handlePhone}
                     />
                 </View>

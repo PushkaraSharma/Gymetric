@@ -21,6 +21,7 @@ import SearchClient from "@/screens/Clients/SearchClient"
 import { OnboardingScreen } from "@/screens/OnboardingScreen"
 import HelpCenter from "@/screens/Setting/HelpCenter"
 import NotificationSetting from "@/screens/Setting/NotificationSetting"
+import ChangePassword from "@/screens/Setting/ChangePassword"
 import { useAppSelector } from "@/redux/Hooks"
 import { selectLoading } from "@/redux/state/GymStates"
 import { ActivityIndicator, TextStyle, View } from "react-native"
@@ -68,6 +69,7 @@ const AppStack = () => {
               <Stack.Screen name="Business Profile" component={BusinessProfile} />
               <Stack.Screen name="Help Center" component={HelpCenter} />
               <Stack.Screen name="Notification Settings" component={NotificationSetting} />
+              <Stack.Screen name="Change Password" component={ChangePassword} />
               <Stack.Screen name="Revenue" component={Revenue} />
             </Stack.Group>
           </>

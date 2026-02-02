@@ -89,7 +89,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
       safeAreaEdges={["bottom"]}
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
-      <Header title={`${membership ? 'Update' : 'Create'} Membership`} backgroundColor={colors.surface} LeftActionComponent={<HeaderbackButton />} />
+      <Header title={`${membership ? 'Update' : 'Create'} Membership`} backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
       <View style={{ flex: 1 }}>
         <ScrollView style={{ paddingHorizontal: 15, paddingTop: 10 }}>
           <TextField
@@ -198,7 +198,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
           />
         </ScrollView>
         <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-          <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.surface} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
+          <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
         </View>
       </View>
     </Screen>

@@ -13,7 +13,8 @@ import {
   HelpCircle,
   FileText,
   CreditCard,
-  MessageCircle
+  MessageCircle,
+  Key
 } from 'lucide-react-native'
 import { navigate } from '@/navigators/navigationUtilities'
 import { ThemedStyle } from '@/theme/types'
@@ -38,7 +39,7 @@ const Setting = () => {
 
   const CardWithPrefixIcon = ({ navigateRoute, title, description, icon, noCard }: { navigateRoute: string, title: string, description?: string, icon: JSX.Element, noCard?: boolean }) => (
     <Pressable
-      style={[!noCard && themed($card), $styles.flexRow, { padding: spacing.md }]}
+      style={[!noCard && themed($card), $styles.flexRow, { padding: spacing.sm }]}
       onPress={() => navigateRoute !== 'Terms' && navigate(navigateRoute)}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '85%' }}>
@@ -46,7 +47,7 @@ const Setting = () => {
           {icon}
         </View>
         <View style={{ flex: 1 }}>
-          <Text preset={noCard ? 'formLabel' : 'subheading'} style={themed({ color: colors.text })}>{title}</Text>
+          <Text preset='formLabel' style={themed({ color: colors.text })}>{title}</Text>
           {description && <Text size='xs' style={themed({ color: colors.textDim })} numberOfLines={1}>{description}</Text>}
         </View>
       </View>
@@ -73,6 +74,12 @@ const Setting = () => {
           title='Business Profile'
           description='Gym details, location and hours'
           icon={<Building size={22} color={colors.primary} />}
+        />
+        <CardWithPrefixIcon
+          navigateRoute='Change Password'
+          title='Change Password'
+          description='Update your account password'
+          icon={<Key size={22} color={colors.primary} />}
         />
         {hasWhatsapp && (
           <CardWithPrefixIcon

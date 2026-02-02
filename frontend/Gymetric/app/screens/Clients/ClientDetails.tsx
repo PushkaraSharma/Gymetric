@@ -5,7 +5,7 @@ import { $styles } from '@/theme/styles'
 import { Header } from '@/components/Header'
 import { useAppTheme } from '@/theme/context'
 import { useAppDispatch } from '@/redux/Hooks'
-import { navigate } from '@/navigators/navigationUtilities'
+import { goBack, navigate } from '@/navigators/navigationUtilities'
 import { Feather, Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons'
 import { setLoading } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
@@ -105,7 +105,8 @@ const ClientDetails = ({ route }: any) => {
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
             <Header title='Client Profile'
-                LeftActionComponent={<HeaderbackButton />}
+                leftIcon="caretLeft"
+                onLeftPress={goBack}
                 RightActionComponent={
                     <Pressable style={themed([$styles.row, { paddingHorizontal: 10 }])} onPress={() => { navigate('Update Basic Information', { client }) }}>
                         <MaterialIcons name={'edit'} size={25} color={colors.text} />
