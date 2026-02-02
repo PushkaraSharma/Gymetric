@@ -7,6 +7,7 @@
     "axios": "^1.13.3",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.9.0",
+    "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.2",
     "fastify-plugin": "^5.1.0",
@@ -34,7 +35,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.1.0",
     "@types/node-cron": "^3.0.11",
-    "dayjs": "^1.11.19",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
