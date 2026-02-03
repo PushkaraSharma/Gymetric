@@ -13,7 +13,7 @@ jobs:
       - name: Trigger Expiry Check API
         run: |
           curl --request POST \
-          --url https://gymetric.onrender.com/api/system/run-expiry-check \
+          --url https://api.gymetric.indieroots.in/api/system/run-expiry-check \
           --header 'Content-Type: application/json' \
           --data '{"secret": "${{ secrets.CRON_SECRET }}"}' \
           --fail \
