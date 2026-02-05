@@ -300,10 +300,9 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
         const settings = await Settings.findOne({ gymId });
         if (settings?.whatsapp?.active && settings?.whatsapp?.sendOnRenewal !== false) {
             const gymInfo = await Gym.findById(gymId);
-            const params = [primaryClient.name, plan?.planName, formatShortDate(newEndDate)];
+            const params = [primaryClient.name, plan?.planName, formatShortDate(newStartDate), formatShortDate(newEndDate)];
             sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "renewal_complete", params, settings?.whatsapp, gymInfo?.name);
         }
-
         return reply.send({ success: true, data: primaryClient });
     } catch (error: any) {
         await session.abortTransaction();

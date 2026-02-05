@@ -28,7 +28,7 @@ const CreateClient = () => {
 
     const Steps = ["Personal Info", "Membership", "Payment"] as STEPS[];
     const [currentStep, setCurrentStep] = useState<STEPS>("Personal Info");
-    const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { name: '', phoneNumber: '', age: null, birthday: null, gender: 'Male', anniversaryDate: null, onboardingPurpose: '' }, dependents: [], amount: 0, method: 'Cash', paymentReceived: true, startDate: new Date() });
+    const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { name: '', phoneNumber: '', age: null, birthday: null, gender: 'Male', anniversaryDate: null, onboardingPurpose: 'General Fitness' }, dependents: [], amount: 0, method: 'Cash', paymentReceived: true, startDate: new Date() });
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
     const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([]);
     const [datePicker, setDatePicker] = useState<ClientDateType>({ visible: false, type: 'startDate' });

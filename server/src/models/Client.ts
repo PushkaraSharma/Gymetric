@@ -8,7 +8,7 @@ const ClientSchema = new Schema<IClient>({
     age: Number,
     birthday: Date,
     anniversaryDate: Date,
-    onboardingPurpose: { type: String, enum: ONBOARDING_PURPOSES },
+    onboardingPurpose: { type: String, enum: ONBOARDING_PURPOSES, default: 'General Fitness' },
     gender: { type: String, enum: ['Male', 'Female', 'Other'] },
     profilePicture: { type: String }, // Cloudinary URL
     gymId: { type: Schema.Types.ObjectId, ref: 'Gym', required: true },

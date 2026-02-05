@@ -34,7 +34,6 @@ export const sendWhatsAppTemplate = async (to: string, templateName: string, bod
                 components
             }
         };
-        console.log(data)
         const response = await axios.post(url, data, {
             headers: { Authorization: `Bearer ${whatsapp?.accessToken}` }
         });
