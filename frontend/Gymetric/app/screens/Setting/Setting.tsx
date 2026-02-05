@@ -1,4 +1,4 @@
-import { Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native'
+import { Linking, Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native'
 import React, { JSX } from 'react'
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '@/services/Api';
@@ -40,7 +40,7 @@ const Setting = () => {
   const CardWithPrefixIcon = ({ navigateRoute, title, description, icon, noCard }: { navigateRoute: string, title: string, description?: string, icon: JSX.Element, noCard?: boolean }) => (
     <Pressable
       style={[!noCard && themed($card), $styles.flexRow, { padding: spacing.sm }]}
-      onPress={() => navigateRoute !== 'Terms' && navigate(navigateRoute)}
+      onPress={() => navigateRoute === 'Terms' ? Linking.openURL('https://gymetric.indieroots.in/terms') : navigate(navigateRoute)}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '85%' }}>
         <View style={themed($iconWrapper)}>
