@@ -13,9 +13,7 @@ export const verifyOtp = async (request: FastifyRequest, reply: FastifyReply) =>
         // 1. Verify token with Firebase Admin
         let decodedToken;
         try {
-            console.log(firebaseIdToken)
             decodedToken = await verifyFirebaseToken(firebaseIdToken);
-            console.log(decodedToken)
         } catch (e) {
             return reply.status(401).send({ success: false, message: 'Invalid OTP / Token' });
         }
@@ -125,7 +123,8 @@ export const onboard = async (request: FastifyRequest, reply: FastifyReply) => {
                 phoneNumber: newUser.phoneNumber,
                 role: newUser.role,
                 gymName: newGym.name,
-                address: newGym.address
+                address: newGym.address,
+                username: ownerName
             }
         });
 
@@ -165,11 +164,13 @@ export const passwordLogin = async (request: FastifyRequest, reply: FastifyReply
                 role: user.role,
                 gymName: (user.gymId as any).name,
                 address: (user.gymId as any).address,
+                username: (user.gymId as any).ownerName || user.username,
                 token
             }
         });
 
     } catch (error: any) {
+        console.log("error", error)
         return reply.status(500).send({ success: false, error: error.message });
     }
 }
@@ -241,9 +242,11 @@ export const resetPassword = async (request: FastifyRequest, reply: FastifyReply
             return reply.status(404).send({ success: false, message: 'User not found' });
         }
 
-        const isCorrect = await bcrypt.compare(oldPassword, user.passwordHash);
-        if (!isCorrect) {
-            return reply.status(401).send({ success: false, message: 'Invalid old password' });
+        if (oldPassword && user.passwordHash) {
+            const isCorrect = await bcrypt.compare(oldPassword, user.passwordHash);
+            if (!isCorrect) {
+                return reply.status(401).send({ success: false, message: 'Invalid old password' });
+            }
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -254,6 +257,35 @@ export const resetPassword = async (request: FastifyRequest, reply: FastifyReply
             success: true,
             message: "Password reset successfully"
         });
+    } catch (error: any) {
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};
+
+export const checkUser = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { phoneNumber } = request.body as any;
+        const user = await User.findOne({ phoneNumber }).populate('gymId');
+
+        if (user) {
+            const name = (user.gymId as any)?.ownerName || user.username || '';
+            return reply.status(200).send({
+                success: true,
+                data: {
+                    exists: true,
+                    hasPassword: !!user.passwordHash,
+                    username: name
+                }
+            });
+        } else {
+            return reply.status(200).send({
+                success: true,
+                data: {
+                    exists: false,
+                    hasPassword: false
+                }
+            });
+        }
     } catch (error: any) {
         return reply.status(500).send({ success: false, error: error.message });
     }

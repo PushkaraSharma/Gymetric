@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { setupGymAndAdmin, loginAdmin, resetPassword, verifyOtp, onboard, passwordLogin } from './../controllers/authController.js'
+import { setupGymAndAdmin, loginAdmin, resetPassword, verifyOtp, onboard, passwordLogin, checkUser } from './../controllers/authController.js'
 
 export async function authRoutes(fastify: FastifyInstance) {
   /**
@@ -37,4 +37,10 @@ export async function authRoutes(fastify: FastifyInstance) {
    * @desc    Reset password using old password
    */
   fastify.post('/reset-password', { preHandler: [fastify.authenticate] }, resetPassword);
+
+  /**
+   * @route   POST /api/auth/check-user
+   * @desc    Check if user exists and has password
+   */
+  fastify.post('/check-user', checkUser);
 }

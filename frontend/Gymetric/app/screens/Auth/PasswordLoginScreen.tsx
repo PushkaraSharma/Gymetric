@@ -1,6 +1,6 @@
 
 import React, { useState } from "react"
-import { View, ViewStyle, TextStyle } from "react-native"
+import { View, ViewStyle, TextStyle, Pressable } from "react-native"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { TextField } from "@/components/TextField"
@@ -13,6 +13,8 @@ import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
 import { Eye, EyeOff } from "lucide-react-native"
+import auth from '@react-native-firebase/auth';
+import { da } from "date-fns/locale"
 
 export const PasswordLoginScreen = () => {
     const { themed, theme: { colors, spacing } } = useAppTheme()
@@ -22,12 +24,33 @@ export const PasswordLoginScreen = () => {
 
     // Optional: prepopulate if coming from somewhere that knows the phone (or remembered)
     const initialPhone = route.params?.phoneNumber || ""
+    const username = route.params?.username || ""
 
     const [phoneNumber, setPhoneNumber] = useState(initialPhone)
     const [password, setPassword] = useState("")
     const [isPasswordVisible, setIsPasswordVisible] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
+
+    const handleLoginWithOtp = async () => {
+        if (!phoneNumber) return;
+        setIsLoading(true);
+        try {
+            const formattedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
+
+            if (__DEV__) {
+                auth().settings.appVerificationDisabledForTesting = true;
+            }
+
+            const confirmation = await auth().signInWithPhoneNumber(formattedNumber);
+            navigation.navigate("OTPVerification", { confirmation, phoneNumber: formattedNumber });
+        } catch (e: any) {
+            console.error(e);
+            setError("Failed to send OTP")
+        } finally {
+            setIsLoading(false);
+        }
+    }
 
     const handleLogin = async () => {
         if (!phoneNumber || !password) {
@@ -43,14 +66,12 @@ export const PasswordLoginScreen = () => {
             // Assuming user enters raw number or +91... let's stick to raw input for now unless we enforce formatting
             const formattedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
 
-            const response = await api.loginPassword(formattedNumber, password)
-
+            const response = await api.passwordLogin(formattedNumber, password)
             if (response.kind === 'ok') {
-                const { token, data } = response.data;
-                saveString("authToken", token);
-                save("userData", data);
-                api.setAuthToken(token);
-                dispatch(setLoggedInUser(data));
+                saveString("authToken", response.data.token);
+                api.setAuthToken(response.data.token);
+                save("userData", response.data);
+                dispatch(setLoggedInUser(response.data));
             } else {
                 setError(response.message || "Invalid credentials")
             }
@@ -71,18 +92,19 @@ export const PasswordLoginScreen = () => {
             backgroundColor={colors.background}
         >
             <View style={themed($container)}>
-                <Text preset="heading" text="Welcome Back!" style={themed($title)} />
+                <Text preset="heading" text={`Welcome Back${username ? `, ${username}` : ''}!`} style={themed($title)} />
                 <Text preset="subheading" text="Login to continue managing your gym." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
-
-                <TextField
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    label="Phone Number"
-                    placeholder="9999999999"
-                    keyboardType="phone-pad"
-                    containerStyle={{ marginBottom: spacing.md }}
-                    LeftAccessory={() => <Text style={{ paddingLeft: 12, paddingTop: 14, color: colors.textDim }}>+91</Text>}
-                />
+                <View style={{ opacity: 0.5, pointerEvents: 'none' }}>
+                    <TextField
+                        value={phoneNumber}
+                        onChangeText={setPhoneNumber}
+                        label="Phone Number"
+                        placeholder="9999999999"
+                        keyboardType="phone-pad"
+                        containerStyle={{ marginBottom: spacing.md }}
+                        LeftAccessory={() => <Text style={{ paddingLeft: 12, color: colors.textDim }}>+91</Text>}
+                    />
+                </View>
 
                 <TextField
                     value={password}
@@ -92,14 +114,13 @@ export const PasswordLoginScreen = () => {
                     secureTextEntry={!isPasswordVisible}
                     containerStyle={{ marginBottom: spacing.lg }}
                     RightAccessory={() => (
-                        <View style={{ paddingRight: 12, paddingTop: 12 }}>
+                        <Pressable style={{ paddingRight: 12 }} onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
                             <EyeOff
                                 size={20}
                                 color={colors.textDim}
-                                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                                 style={{ opacity: isPasswordVisible ? 0.5 : 1 }}
                             />
-                        </View>
+                        </Pressable>
                     )}
                 />
 
@@ -116,7 +137,7 @@ export const PasswordLoginScreen = () => {
                 <Button
                     text="Forgot Password? / Login with OTP"
                     preset="default"
-                    onPress={() => navigation.navigate("PhoneLogin")}
+                    onPress={handleLoginWithOtp}
                     style={{ backgroundColor: 'transparent', borderWidth: 0 }}
                     textStyle={{ color: colors.primary, fontSize: 14 }}
                 />

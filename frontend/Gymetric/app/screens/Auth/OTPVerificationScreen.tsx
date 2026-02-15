@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react"
-import { View, ViewStyle, TextStyle } from "react-native"
+import { View, ViewStyle, TextStyle, ActivityIndicator } from "react-native"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { TextField } from "@/components/TextField"
@@ -8,7 +8,6 @@ import { Button } from "@/components/Button"
 import { useAppTheme } from "@/theme/context"
 import { ThemedStyle } from "@/theme/types"
 import { useNavigation, useRoute } from "@react-navigation/native"
-import auth from '@react-native-firebase/auth';
 import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
@@ -93,11 +92,12 @@ export const OTPVerificationScreen = () => {
                 {error ? <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text> : null}
 
                 <Button
-                    text="Verify"
+                    text={isLoading ? "Verifying..." : "Verify"}
                     preset="reversed"
                     onPress={handleVerify}
                     disabled={isLoading}
                     style={{ marginTop: spacing.md }}
+                    RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
                 />
             </View>
         </Screen>

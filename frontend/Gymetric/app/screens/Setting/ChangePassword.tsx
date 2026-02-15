@@ -63,8 +63,8 @@ const ChangePassword = () => {
                 </Text>
 
                 <TextField
-                    label="Old Password"
-                    placeholder="Enter current password"
+                    label="Old Password (Optional)"
+                    placeholder="Enter current password if known"
                     value={oldPassword}
                     onChangeText={setOldPassword}
                     containerStyle={themed($textField)}
@@ -94,7 +94,7 @@ const ChangePassword = () => {
                     preset="reversed"
                     style={{ marginTop: spacing.xl }}
                     onPress={handleUpdate}
-                    disabled={!oldPassword || !newPassword || !confirmPassword}
+                    disabled={!newPassword || !confirmPassword}
                 />
             </ScrollView>
         </Screen>

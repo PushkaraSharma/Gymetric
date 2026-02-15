@@ -61,6 +61,10 @@ export class Api {
     return await this.apiRequest('post', '/api/auth/login-password', { phoneNumber, password });
   };
 
+  checkUser = async (phoneNumber: string) => {
+    return await this.apiRequest('post', '/api/auth/check-user', { phoneNumber });
+  };
+
   resetPassword = async (oldPassword: string, newPassword: string) => {
     return await this.apiRequest('post', '/api/auth/reset-password', { oldPassword, newPassword });
   };

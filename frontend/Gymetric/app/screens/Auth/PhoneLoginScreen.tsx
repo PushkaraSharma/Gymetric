@@ -10,6 +10,8 @@ import { ThemedStyle } from "@/theme/types"
 import auth from '@react-native-firebase/auth';
 import { useNavigation } from "@react-navigation/native"
 
+import { api } from "@/services/Api"
+
 export const PhoneLoginScreen = () => {
     const { themed, theme: { colors, spacing } } = useAppTheme()
     const navigation = useNavigation<any>()
@@ -17,7 +19,7 @@ export const PhoneLoginScreen = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
 
-    const handleSendOtp = async () => {
+    const handleContinue = async () => {
         if (!phoneNumber || phoneNumber.length < 10) {
             setError("Please enter a valid phone number")
             return
@@ -29,11 +31,25 @@ export const PhoneLoginScreen = () => {
         try {
             // Format number to E.164 (Assuming India +91 for now, can be made dynamic)
             const formattedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
-            const confirmation = await auth().signInWithPhoneNumber(formattedNumber);
-            navigation.navigate("OTPVerification", { confirmation, phoneNumber: formattedNumber });
+
+            // Check if user exists & has password
+            const check = await api.checkUser(formattedNumber);
+            if (check.kind === 'ok' && check.data.exists && check.data.hasPassword) {
+                // User has password -> Go to Password Login
+                navigation.navigate("PasswordLogin", {
+                    phoneNumber,
+                    username: check.data.username
+                });
+            } else {
+                if (__DEV__) {
+                    auth().settings.appVerificationDisabledForTesting = true;
+                }
+                const confirmation = await auth().signInWithPhoneNumber(formattedNumber);
+                navigation.navigate("OTPVerification", { confirmation, phoneNumber: formattedNumber });
+            }
         } catch (e: any) {
             console.error(e);
-            setError("Failed to send OTP. Please try again.")
+            setError("Something went wrong. Please try again.")
         } finally {
             setIsLoading(false)
         }
@@ -48,8 +64,7 @@ export const PhoneLoginScreen = () => {
         >
             <View style={themed($container)}>
                 <Text preset="heading" text="What's your number?" style={themed($title)} />
-                <Text preset="subheading" text="We'll send you a code to verify it." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
-
+                <Text preset="subheading" text="We'll check if you have an account." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
                 <TextField
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
@@ -64,9 +79,9 @@ export const PhoneLoginScreen = () => {
                 {error ? <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text> : null}
 
                 <Button
-                    text="Send Code"
+                    text="Continue"
                     preset="reversed"
-                    onPress={handleSendOtp}
+                    onPress={handleContinue}
                     disabled={isLoading}
                     style={{ marginTop: spacing.md }}
                 />

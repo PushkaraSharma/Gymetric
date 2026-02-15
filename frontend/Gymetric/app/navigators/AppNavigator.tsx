@@ -30,6 +30,7 @@ import { selectLoading } from "@/redux/state/GymStates"
 import { ActivityIndicator, TextStyle, View } from "react-native"
 import { ThemedStyle } from "@/theme/types"
 import Revenue from "@/screens/Revenue/Revenue"
+import { WhatsAppPremium } from "@/screens/Setting/WhatsAppPremium"
 
 const exitRoutes = Config.exitRoutes
 
@@ -72,8 +73,9 @@ const AppStack = () => {
               <Stack.Screen name="Business Profile" component={BusinessProfile} />
               <Stack.Screen name="Help Center" component={HelpCenter} />
               <Stack.Screen name="Notification Settings" component={NotificationSetting} />
-              <Stack.Screen name="Change Password" component={ChangePassword} />
+              <Stack.Screen name="WhatsApp Premium" component={WhatsAppPremium} />
               <Stack.Screen name="Revenue" component={Revenue} />
+              <Stack.Screen name="Change Password" component={ChangePassword} />
             </Stack.Group>
           </>
         ) : (

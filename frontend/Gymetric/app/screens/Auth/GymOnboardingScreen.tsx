@@ -55,7 +55,7 @@ export const GymOnboardingScreen = () => {
             const response = await api.onboard(payload)
 
             if (response.kind === 'ok') {
-                const { token, data } = response.data; // adjust based on API structure
+                const { token, ...data } = response.data; // adjust based on API structure
                 saveString("authToken", token);
                 save("userData", data);
                 api.setAuthToken(token);
