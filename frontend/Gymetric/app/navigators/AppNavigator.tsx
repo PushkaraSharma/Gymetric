@@ -3,7 +3,10 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import Config from "@/config"
 import { ErrorBoundary } from "@/screens/ErrorScreen/ErrorBoundary"
-import { LoginScreen } from "@/screens/LoginScreen"
+import { PhoneLoginScreen } from "@/screens/Auth/PhoneLoginScreen"
+import { OTPVerificationScreen } from "@/screens/Auth/OTPVerificationScreen"
+import { GymOnboardingScreen } from "@/screens/Auth/GymOnboardingScreen"
+import { PasswordLoginScreen } from "@/screens/Auth/PasswordLoginScreen"
 import { useAppTheme } from "@/theme/context"
 
 import type { NavigationProps } from "./navigationTypes"
@@ -74,7 +77,12 @@ const AppStack = () => {
             </Stack.Group>
           </>
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Group>
+            <Stack.Screen name="PhoneLogin" component={PhoneLoginScreen} />
+            <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
+            <Stack.Screen name="GymOnboarding" component={GymOnboardingScreen} />
+            <Stack.Screen name="PasswordLogin" component={PasswordLoginScreen} />
+          </Stack.Group>
         )}
       </Stack.Navigator>
       {isLoading && (
