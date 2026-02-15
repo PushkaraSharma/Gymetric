@@ -162,7 +162,7 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
         const settings = await Settings.findOne({ gymId });
         if (settings?.whatsapp?.active && settings?.whatsapp?.sendOnOnboarding !== false) {
             const gymInfo = await Gym.findById(gymId);
-            const params = [primaryClient.name, gymInfo?.name || 'Gym', formatShortDate(customStartDate), formatShortDate(endDate)];
+            const params = [primaryClient.name, gymInfo?.name || 'Gym', plan.planName, formatShortDate(customStartDate), formatShortDate(endDate)];
             sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "onboarding", params, settings?.whatsapp);
         }
 
