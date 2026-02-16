@@ -49,6 +49,22 @@ export class Api {
     return this.apiRequest('post', '/api/auth/login', { username, password });
   }
 
+  verifyOtp = async (firebaseIdToken: string) => {
+    return await this.apiRequest('post', '/api/auth/verify-otp', { firebaseIdToken });
+  };
+
+  onboard = async (body: any) => {
+    return await this.apiRequest('post', '/api/auth/onboard', body);
+  };
+
+  passwordLogin = async (phoneNumber: string, password: string) => {
+    return await this.apiRequest('post', '/api/auth/login-password', { phoneNumber, password });
+  };
+
+  checkUser = async (phoneNumber: string) => {
+    return await this.apiRequest('post', '/api/auth/check-user', { phoneNumber });
+  };
+
   resetPassword = async (oldPassword: string, newPassword: string) => {
     return await this.apiRequest('post', '/api/auth/reset-password', { oldPassword, newPassword });
   };

@@ -6,6 +6,7 @@ import { ThemedStyle } from '@/theme/types'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Text } from "@/components/Text"
+import { Button } from "@/components/Button"
 import {
     Users,
     Activity as ActivityIconLucide,
@@ -16,7 +17,9 @@ import {
     UserPlus,
     AlertCircle,
     Plus,
-    Menu
+    Menu,
+    X,
+    MessageCircle
 } from 'lucide-react-native'
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo, setLoading } from '@/redux/state/GymStates'
@@ -28,12 +31,15 @@ import { getGreeting } from '@/utils/Helper'
 import { formatDistanceToNow } from 'date-fns'
 import { MotiView } from 'moti'
 
+let hasShownBannerSession = false;
+
 const Home = () => {
     const { themed, theme: { colors, spacing, typography } } = useAppTheme();
     const dispatch = useAppDispatch();
     const gymInfo = useAppSelector(selectGymInfo);
     const [open, setOpen] = useState(false);
     const [summary, setSummary] = useState<{ [key: string]: any } | null>(null);
+    const [showBanner, setShowBanner] = useState(false);
     const greeting = useMemo(() => getGreeting(), []);
 
     const ActivityIcons: { [key: string]: JSX.Element } = {
@@ -50,6 +56,17 @@ const Home = () => {
         if (response.kind === 'ok') {
             setSummary(response.data);
         }
+
+        // Check if WhatsApp is configured
+        const settingsRes = await api.getSettings();
+        if (settingsRes.kind === 'ok' && !settingsRes.data?.hasWhatsappConfigured) {
+            // Show banner once per session
+            if (!hasShownBannerSession) {
+                setShowBanner(true);
+                hasShownBannerSession = true;
+            }
+        }
+
         dispatch(setLoading({ loading: false }));
     };
 
@@ -135,6 +152,34 @@ const Home = () => {
                 </View>
 
                 <View style={themed($content)}>
+                    {showBanner && (
+                        <MotiView
+                            from={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            style={themed($banner)}
+                        >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <MessageCircle size={20} color="white" style={{ marginRight: 8 }} />
+                                    <Text preset="bold" style={{ color: 'white', fontSize: 16 }}>Premium Integration</Text>
+                                </View>
+                                <TouchableOpacity onPress={() => setShowBanner(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                    <X color="white" size={20} />
+                                </TouchableOpacity>
+                            </View>
+                            <Text size="xs" style={{ color: 'rgba(255,255,255,0.9)', marginTop: 8, marginBottom: 12, lineHeight: 18 }}>
+                                Automate reminders, welcome messages & engage clients seamlessly on WhatsApp.
+                            </Text>
+                            <Button
+                                text="Learn More"
+                                preset="reversed"
+                                style={{ backgroundColor: 'white', height: 36, minHeight: 36, paddingVertical: 0, alignSelf: 'flex-start', paddingHorizontal: 16 }}
+                                textStyle={{ color: colors.primary, fontSize: 12, fontFamily: typography.primary.bold }}
+                                onPress={() => navigate('WhatsApp Premium')}
+                            />
+                        </MotiView>
+                    )}
+
                     <View style={$revenueCardContainer}>
                         <Pressable onPress={() => navigate('Revenue')}>
                             <MotiView
@@ -263,6 +308,19 @@ const $content: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $revenueCardContainer: ViewStyle = {
     marginVertical: 16,
 }
+
+const $banner: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    backgroundColor: colors.palette.indigo500,
+    borderRadius: 16,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    marginTop: spacing.sm,
+    shadowColor: colors.palette.indigo500,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+})
 
 const $revenueCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     backgroundColor: colors.palette.indigo600,
