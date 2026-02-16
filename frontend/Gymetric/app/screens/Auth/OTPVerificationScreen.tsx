@@ -12,6 +12,8 @@ import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
+import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
+import { useRef } from "react"
 
 export const OTPVerificationScreen = () => {
     const { themed, theme: { colors, spacing } } = useAppTheme()
@@ -24,18 +26,56 @@ export const OTPVerificationScreen = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
 
-    const handleVerify = async () => {
-        if (!code || code.length < 6) {
+    // Resend OTP State
+    const [confirmResult, setConfirmResult] = useState(confirmation)
+    const [timer, setTimer] = useState(30)
+    const [canResend, setCanResend] = useState(false)
+    const isVerifying = useRef(false)
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1)
+            }, 1000)
+        } else {
+            setCanResend(true)
+        }
+        return () => clearInterval(interval)
+    }, [timer])
+
+    const handleResendOtp = async () => {
+        if (!canResend) return
+
+        setError("")
+        try {
+            const newConfirmation = await signInWithPhoneNumber(getAuth(), phoneNumber)
+            setConfirmResult(newConfirmation)
+            setTimer(30)
+            setCanResend(false)
+        } catch (e: any) {
+            console.error("Resend error", e)
+            setError("Failed to resend OTP. Try again later.")
+        }
+    }
+
+    const handleVerify = async (otpCode?: string) => {
+        const codeToVerify = otpCode || code
+        if (!codeToVerify || codeToVerify.length < 6) {
             setError("Please enter a valid 6-digit code")
             return
         }
+
+        // Prevent double submission
+        if (isVerifying.current) return
+        isVerifying.current = true
 
         setIsLoading(true)
         setError("")
 
         try {
             // 1. Confirm OTP with Firebase
-            const result = await confirmation.confirm(code);
+            const result = await confirmResult.confirm(codeToVerify);
             const user = result.user;
             const idToken = await user.getIdToken();
 
@@ -44,32 +84,38 @@ export const OTPVerificationScreen = () => {
 
             if (response.kind === 'ok') {
                 if (response.data.isNewUser) {
-                    // Navigate to Onboarding
                     navigation.navigate("GymOnboarding", { idToken, phoneNumber });
                 } else {
-                    // Log in directly
                     const { token, ...data } = response.data;
                     saveString("authToken", token);
                     save("userData", data);
                     api.setAuthToken(token);
                     dispatch(setLoggedInUser(data));
-                    // Navigation will handle the rest via AppNavigator state change
                 }
             } else {
-                setError(response.message || "Verification failed.")
+                setError("Verification failed.")
             }
 
         } catch (e: any) {
             console.error(e);
-            setError(e.message || "Invalid code. Please try again.")
+            setError("Invalid code. Please try again.")
         } finally {
             setIsLoading(false)
+            isVerifying.current = false
+        }
+    }
+
+    // Auto-submit when 6 digits are entered (works with SMS autofill too)
+    const handleCodeChange = (text: string) => {
+        setCode(text)
+        if (text.length === 6) {
+            handleVerify(text)
         }
     }
 
     return (
         <Screen
-            preset="scroll"
+            preset="fixed"
             contentContainerStyle={themed($screenContentContainer)}
             safeAreaEdges={["top", "bottom"]}
             backgroundColor={colors.background}
@@ -80,12 +126,14 @@ export const OTPVerificationScreen = () => {
 
                 <TextField
                     value={code}
-                    onChangeText={setCode}
+                    onChangeText={handleCodeChange}
                     label="Verification Code"
                     placeholder="123456"
                     keyboardType="number-pad"
                     autoFocus
                     maxLength={6}
+                    autoComplete="sms-otp"
+                    textContentType="oneTimeCode"
                     containerStyle={{ marginBottom: spacing.lg }}
                 />
 
@@ -94,11 +142,26 @@ export const OTPVerificationScreen = () => {
                 <Button
                     text={isLoading ? "Verifying..." : "Verify"}
                     preset="reversed"
-                    onPress={handleVerify}
+                    onPress={() => handleVerify()}
                     disabled={isLoading}
                     style={{ marginTop: spacing.md }}
                     RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
                 />
+
+                <View style={{ marginTop: spacing.xl, alignItems: 'center' }}>
+                    {canResend ? (
+                        <Text
+                            text="Resend Code"
+                            style={{ color: colors.primary, textDecorationLine: 'underline' }}
+                            onPress={handleResendOtp}
+                        />
+                    ) : (
+                        <Text
+                            text={`Resend code in ${timer}s`}
+                            style={{ color: colors.textDim }}
+                        />
+                    )}
+                </View>
             </View>
         </Screen>
     )

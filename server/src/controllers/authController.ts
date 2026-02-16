@@ -287,6 +287,7 @@ export const checkUser = async (request: FastifyRequest, reply: FastifyReply) =>
             });
         }
     } catch (error: any) {
+        console.log("here, ", error)
         return reply.status(500).send({ success: false, error: error.message });
     }
 };

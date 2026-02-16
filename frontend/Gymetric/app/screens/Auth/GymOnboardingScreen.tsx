@@ -1,6 +1,6 @@
 
 import React, { useState } from "react"
-import { View, ViewStyle, TextStyle } from "react-native"
+import { View, ViewStyle, TextStyle, ActivityIndicator } from "react-native"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { TextField } from "@/components/TextField"
@@ -61,12 +61,12 @@ export const GymOnboardingScreen = () => {
                 api.setAuthToken(token);
                 dispatch(setLoggedInUser(data));
             } else {
-                setError(response.message || "Onboarding failed")
+                setError("Onboarding failed")
             }
 
         } catch (e: any) {
             console.error(e);
-            setError(e.message || "Something went wrong. Please try again.")
+            setError("Something went wrong. Please try again.")
         } finally {
             setIsLoading(false)
         }
@@ -115,7 +115,7 @@ export const GymOnboardingScreen = () => {
                     secureTextEntry={!isPasswordVisible}
                     containerStyle={{ marginBottom: spacing.lg }}
                     RightAccessory={() => (
-                        <View style={{ paddingRight: 12, paddingTop: 12 }}>
+                        <View style={{ paddingRight: 12 }}>
                             <EyeOff
                                 size={20}
                                 color={colors.textDim}
@@ -129,11 +129,12 @@ export const GymOnboardingScreen = () => {
                 {error ? <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text> : null}
 
                 <Button
-                    text="Complete Setup"
+                    text={isLoading ? "Setting up..." : "Complete Setup"}
                     preset="reversed"
                     onPress={handleOnboard}
                     disabled={isLoading}
                     style={{ marginTop: spacing.md }}
+                    RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
                 />
             </View>
         </Screen>

@@ -1,13 +1,13 @@
 
 import React, { useState } from "react"
-import { View, ViewStyle, TextStyle } from "react-native"
+import { View, ViewStyle, TextStyle, ActivityIndicator } from "react-native"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { TextField } from "@/components/TextField"
 import { Button } from "@/components/Button"
 import { useAppTheme } from "@/theme/context"
 import { ThemedStyle } from "@/theme/types"
-import auth from '@react-native-firebase/auth';
+import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { useNavigation } from "@react-navigation/native"
 
 import { api } from "@/services/Api"
@@ -31,7 +31,6 @@ export const PhoneLoginScreen = () => {
         try {
             // Format number to E.164 (Assuming India +91 for now, can be made dynamic)
             const formattedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
-
             // Check if user exists & has password
             const check = await api.checkUser(formattedNumber);
             if (check.kind === 'ok' && check.data.exists && check.data.hasPassword) {
@@ -41,10 +40,9 @@ export const PhoneLoginScreen = () => {
                     username: check.data.username
                 });
             } else {
-                if (__DEV__) {
-                    auth().settings.appVerificationDisabledForTesting = true;
-                }
-                const confirmation = await auth().signInWithPhoneNumber(formattedNumber);
+                console.log("OTPVerification")
+                const confirmation = await signInWithPhoneNumber(getAuth(), formattedNumber);
+                console.log("confirmation", confirmation)
                 navigation.navigate("OTPVerification", { confirmation, phoneNumber: formattedNumber });
             }
         } catch (e: any) {
@@ -57,7 +55,7 @@ export const PhoneLoginScreen = () => {
 
     return (
         <Screen
-            preset="scroll"
+            preset="fixed"
             contentContainerStyle={themed($screenContentContainer)}
             safeAreaEdges={["top", "bottom"]}
             backgroundColor={colors.background}
@@ -70,6 +68,7 @@ export const PhoneLoginScreen = () => {
                     onChangeText={setPhoneNumber}
                     label="Phone Number"
                     placeholder="9999999999"
+                    placeholderTextColor={colors.palette.slate300}
                     keyboardType="phone-pad"
                     autoFocus
                     containerStyle={{ marginBottom: spacing.lg }}
@@ -79,11 +78,12 @@ export const PhoneLoginScreen = () => {
                 {error ? <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text> : null}
 
                 <Button
-                    text="Continue"
+                    text={isLoading ? "Please wait..." : "Continue"}
                     preset="reversed"
                     onPress={handleContinue}
                     disabled={isLoading}
                     style={{ marginTop: spacing.md }}
+                    RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
                 />
             </View>
         </Screen>

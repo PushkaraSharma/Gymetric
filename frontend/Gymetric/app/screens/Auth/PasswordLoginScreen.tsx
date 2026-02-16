@@ -1,6 +1,6 @@
 
 import React, { useState } from "react"
-import { View, ViewStyle, TextStyle, Pressable } from "react-native"
+import { View, ViewStyle, TextStyle, Pressable, ActivityIndicator } from "react-native"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { TextField } from "@/components/TextField"
@@ -13,7 +13,7 @@ import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
 import { Eye, EyeOff } from "lucide-react-native"
-import auth from '@react-native-firebase/auth';
+import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { da } from "date-fns/locale"
 
 export const PasswordLoginScreen = () => {
@@ -37,12 +37,7 @@ export const PasswordLoginScreen = () => {
         setIsLoading(true);
         try {
             const formattedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
-
-            if (__DEV__) {
-                auth().settings.appVerificationDisabledForTesting = true;
-            }
-
-            const confirmation = await auth().signInWithPhoneNumber(formattedNumber);
+            const confirmation = await signInWithPhoneNumber(getAuth(), formattedNumber);
             navigation.navigate("OTPVerification", { confirmation, phoneNumber: formattedNumber });
         } catch (e: any) {
             console.error(e);
@@ -73,7 +68,7 @@ export const PasswordLoginScreen = () => {
                 save("userData", response.data);
                 dispatch(setLoggedInUser(response.data));
             } else {
-                setError(response.message || "Invalid credentials")
+                setError("Invalid credentials")
             }
 
         } catch (e: any) {
@@ -127,11 +122,12 @@ export const PasswordLoginScreen = () => {
                 {error ? <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text> : null}
 
                 <Button
-                    text="Login"
+                    text={isLoading ? "Logging in..." : "Login"}
                     preset="reversed"
                     onPress={handleLogin}
                     disabled={isLoading}
                     style={{ marginBottom: spacing.md }}
+                    RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
                 />
 
                 <Button
