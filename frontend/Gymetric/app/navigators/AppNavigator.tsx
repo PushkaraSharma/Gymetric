@@ -3,7 +3,10 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import Config from "@/config"
 import { ErrorBoundary } from "@/screens/ErrorScreen/ErrorBoundary"
-import { LoginScreen } from "@/screens/LoginScreen"
+import { PhoneLoginScreen } from "@/screens/Auth/PhoneLoginScreen"
+import { OTPVerificationScreen } from "@/screens/Auth/OTPVerificationScreen"
+import { GymOnboardingScreen } from "@/screens/Auth/GymOnboardingScreen"
+import { PasswordLoginScreen } from "@/screens/Auth/PasswordLoginScreen"
 import { useAppTheme } from "@/theme/context"
 
 import type { NavigationProps } from "./navigationTypes"
@@ -27,6 +30,7 @@ import { selectLoading } from "@/redux/state/GymStates"
 import { ActivityIndicator, TextStyle, View } from "react-native"
 import { ThemedStyle } from "@/theme/types"
 import Revenue from "@/screens/Revenue/Revenue"
+import { WhatsAppPremium } from "@/screens/Setting/WhatsAppPremium"
 
 const exitRoutes = Config.exitRoutes
 
@@ -69,12 +73,18 @@ const AppStack = () => {
               <Stack.Screen name="Business Profile" component={BusinessProfile} />
               <Stack.Screen name="Help Center" component={HelpCenter} />
               <Stack.Screen name="Notification Settings" component={NotificationSetting} />
-              <Stack.Screen name="Change Password" component={ChangePassword} />
+              <Stack.Screen name="WhatsApp Premium" component={WhatsAppPremium} />
               <Stack.Screen name="Revenue" component={Revenue} />
+              <Stack.Screen name="Change Password" component={ChangePassword} />
             </Stack.Group>
           </>
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Group>
+            <Stack.Screen name="PhoneLogin" component={PhoneLoginScreen} />
+            <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
+            <Stack.Screen name="GymOnboarding" component={GymOnboardingScreen} />
+            <Stack.Screen name="PasswordLogin" component={PasswordLoginScreen} />
+          </Stack.Group>
         )}
       </Stack.Navigator>
       {isLoading && (

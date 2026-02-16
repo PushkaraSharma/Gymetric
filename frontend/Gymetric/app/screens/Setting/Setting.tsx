@@ -81,11 +81,18 @@ const Setting = () => {
           description='Update your account password'
           icon={<Key size={22} color={colors.primary} />}
         />
-        {hasWhatsapp && (
+        {hasWhatsapp ? (
           <CardWithPrefixIcon
             navigateRoute='Notification Settings'
             title='Notification Settings'
             description='Manage WhatsApp alerts and reminders'
+            icon={<MessageCircle size={22} color={colors.primary} />}
+          />
+        ) : (
+          <CardWithPrefixIcon
+            navigateRoute='WhatsApp Premium'
+            title='Connect WhatsApp'
+            description='Automate reminders & messages'
             icon={<MessageCircle size={22} color={colors.primary} />}
           />
         )}

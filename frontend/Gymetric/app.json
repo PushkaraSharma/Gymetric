@@ -19,9 +19,11 @@
     "icon": "./assets/images/app-icon.png",
     "package": "com.indieroots.gymetric",
     "allowBackup": false,
-    "edgeToEdgeEnabled": true
+    "edgeToEdgeEnabled": true,
+    "googleServicesFile": "./google-services.json"
   },
   "ios": {
+    "googleServicesFile": "./GoogleService-Info.plist",
     "icon": "./assets/images/app-icon.png",
     "supportsTablet": true,
     "bundleIdentifier": "com.indieroots.gymetric",
@@ -67,7 +69,25 @@
         }
       }
     ],
-    "expo-build-properties"
+    [
+      "expo-build-properties",
+      {
+        "ios": {
+          "useFrameworks": "static",
+          "podfileProperties": {
+            "use_modular_headers": "true"
+          },
+          "forceStaticLinking": [
+            "RNFBApp",
+            "RNFBAnalytics",
+            "RNFBCrashlytics",
+            "RNFBPerf"
+          ]
+        }
+      }
+    ],
+    "@react-native-firebase/app",
+    "@react-native-firebase/auth"
   ],
   "experiments": {
     "tsconfigPaths": true

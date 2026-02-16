@@ -92,3 +92,6 @@ app-dependency-graph.svg
 app-dependency-graph.png
 
 /dist
+
+google-services.json
+GoogleService-Info.plist
