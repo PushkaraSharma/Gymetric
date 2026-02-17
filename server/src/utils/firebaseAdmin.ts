@@ -13,7 +13,7 @@ dotenv.config();
 let firebaseApp: admin.app.App | null = null;
 
 try {
-    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? './../serviceAccountKey.json';
     // Check if service account file exists or if credentials are provided via env
     if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
         firebaseApp = admin.initializeApp({

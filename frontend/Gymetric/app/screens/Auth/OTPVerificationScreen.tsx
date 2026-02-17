@@ -25,6 +25,7 @@ export const OTPVerificationScreen = () => {
     const [code, setCode] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
+    const [otpSending, setOtpSending] = useState(false)
 
     // Resend OTP State
     const [confirmResult, setConfirmResult] = useState(confirmation)
@@ -46,7 +47,7 @@ export const OTPVerificationScreen = () => {
 
     const handleResendOtp = async () => {
         if (!canResend) return
-
+        setOtpSending(true)
         setError("")
         try {
             const newConfirmation = await signInWithPhoneNumber(getAuth(), phoneNumber)
@@ -56,6 +57,8 @@ export const OTPVerificationScreen = () => {
         } catch (e: any) {
             console.error("Resend error", e)
             setError("Failed to resend OTP. Try again later.")
+        } finally {
+            setOtpSending(false)
         }
     }
 
@@ -143,24 +146,27 @@ export const OTPVerificationScreen = () => {
                     text={isLoading ? "Verifying..." : "Verify"}
                     preset="reversed"
                     onPress={() => handleVerify()}
-                    disabled={isLoading}
+                    disabled={isLoading || otpSending}
                     style={{ marginTop: spacing.md }}
                     RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
                 />
 
                 <View style={{ marginTop: spacing.xl, alignItems: 'center' }}>
-                    {canResend ? (
-                        <Text
-                            text="Resend Code"
-                            style={{ color: colors.primary, textDecorationLine: 'underline' }}
-                            onPress={handleResendOtp}
-                        />
-                    ) : (
-                        <Text
-                            text={`Resend code in ${timer}s`}
-                            style={{ color: colors.textDim }}
-                        />
-                    )}
+                    {
+                        otpSending ? (
+                            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 5 }} />
+                        ) : canResend ? (
+                            <Text
+                                text="Resend Code"
+                                style={{ color: colors.primary, textDecorationLine: 'underline' }}
+                                onPress={handleResendOtp}
+                            />
+                        ) : (
+                            <Text
+                                text={`Resend code in ${timer}s`}
+                                style={{ color: colors.textDim }}
+                            />
+                        )}
                 </View>
             </View>
         </Screen>
