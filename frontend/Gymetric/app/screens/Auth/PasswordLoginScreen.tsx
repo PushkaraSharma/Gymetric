@@ -30,11 +30,12 @@ export const PasswordLoginScreen = () => {
     const [password, setPassword] = useState("")
     const [isPasswordVisible, setIsPasswordVisible] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
+    const [isOtpLoading, setIsOtpLoading] = useState(false)
     const [error, setError] = useState("")
 
     const handleLoginWithOtp = async () => {
         if (!phoneNumber) return;
-        setIsLoading(true);
+        setIsOtpLoading(true);
         try {
             const formattedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
             const confirmation = await signInWithPhoneNumber(getAuth(), formattedNumber);
@@ -43,7 +44,7 @@ export const PasswordLoginScreen = () => {
             console.error(e);
             setError("Failed to send OTP")
         } finally {
-            setIsLoading(false);
+            setIsOtpLoading(false);
         }
     }
 
@@ -125,18 +126,18 @@ export const PasswordLoginScreen = () => {
                     text={isLoading ? "Logging in..." : "Login"}
                     preset="reversed"
                     onPress={handleLogin}
-                    disabled={isLoading}
+                    disabled={isLoading || isOtpLoading}
                     style={{ marginBottom: spacing.md }}
                     RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
                 />
 
-                <Button
+                {isOtpLoading ? <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 5 }} /> : <Button
                     text="Forgot Password? / Login with OTP"
                     preset="default"
                     onPress={handleLoginWithOtp}
                     style={{ backgroundColor: 'transparent', borderWidth: 0 }}
                     textStyle={{ color: colors.primary, fontSize: 14 }}
-                />
+                />}
             </View>
         </Screen>
     )

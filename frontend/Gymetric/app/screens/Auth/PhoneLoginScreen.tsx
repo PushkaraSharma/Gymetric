@@ -40,9 +40,7 @@ export const PhoneLoginScreen = () => {
                     username: check.data.username
                 });
             } else {
-                console.log("OTPVerification")
                 const confirmation = await signInWithPhoneNumber(getAuth(), formattedNumber);
-                console.log("confirmation", confirmation)
                 navigation.navigate("OTPVerification", { confirmation, phoneNumber: formattedNumber });
             }
         } catch (e: any) {
