@@ -1,10 +1,9 @@
-import { View, StyleSheet, ScrollView, ViewStyle } from 'react-native'
+import { View, ScrollView, ViewStyle } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { Header } from '@/components/Header'
 import { useAppTheme } from '@/theme/context'
 import { $styles } from '@/theme/styles'
-import HeaderbackButton from '@/components/HeaderbackButton'
 import { Text } from '@/components/Text'
 import { Switch } from '@/components/Toggle/Switch'
 import { TextField } from '@/components/TextField'
@@ -17,11 +16,14 @@ import { ThemedStyle } from '@/theme/types'
 import { spacing } from '@/theme/spacing'
 import { Ionicons } from '@expo/vector-icons'
 import { goBack } from '@/navigators/navigationUtilities'
+import { Skeleton } from '@/components/Skeleton'
 
 const NotificationSetting = ({ navigation }: any) => {
     const { theme: { colors }, themed } = useAppTheme()
     const dispatch = useAppDispatch();
     const loading = useAppSelector(selectLoading);
+
+    const [isLoading, setIsLoading] = useState(true);
 
     // State for settings
     const [settings, setSettings] = useState({
@@ -40,7 +42,7 @@ const NotificationSetting = ({ navigation }: any) => {
     }, []);
 
     const fetchSettings = async () => {
-        dispatch(setLoading({ loading: true }));
+        setIsLoading(true);
         const response = await api.getSettings();
         if (response.kind === 'ok') {
             const data = response.data?.whatsapp || {};
@@ -53,7 +55,7 @@ const NotificationSetting = ({ navigation }: any) => {
                 reminderDays: String(data.reminderDays ?? 3),
             });
         }
-        dispatch(setLoading({ loading: false }));
+        setIsLoading(false);
     };
 
     const handleSave = async () => {
@@ -92,91 +94,103 @@ const NotificationSetting = ({ navigation }: any) => {
                 backgroundColor={colors.background}
             />
             <ScrollView contentContainerStyle={{ padding: spacing.md }}>
-                <View style={[themed($card), { marginBottom: spacing.lg }]}>
-                    <Switch
-                        inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
-                        labelPosition='left'
-                        label="Enable WhatsApp Integration"
-                        labelStyle={{ fontSize: 16, fontWeight: '600', color: colors.text }}
-                        value={settings.active}
-                        onValueChange={(val: boolean) => updateSetting('active', val)}
-                    />
-                    <Text size="xs" style={{ color: colors.textDim, marginTop: spacing.xs }}>
-                        Enable or disable all WhatsApp automated messages.
-                    </Text>
-                </View>
-
-                {settings.active && (
-                    <>
-                        <Text preset="subheading" style={{ marginBottom: spacing.sm, marginLeft: spacing.xs }}>Automated Messages</Text>
-
-                        <View style={[themed($card)]}>
-                            <Switch
-                                inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
-                                labelPosition='left'
-                                label="Welcome Message"
-                                helper="Send when a new member is onboarded"
-                                HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
-                                value={settings.sendOnOnboarding}
-                                onValueChange={(val: boolean) => updateSetting('sendOnOnboarding', val)}
-                                containerStyle={{ marginBottom: spacing.sm }}
-                            />
-                            <View style={[themed($divider), { marginVertical: spacing.sm }]} />
-
-                            <Switch
-                                inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
-                                labelPosition='left'
-                                label="Renewal Confirmation"
-                                helper="Send when a membership is renewed"
-                                HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
-                                value={settings.sendOnRenewal}
-                                onValueChange={(val: boolean) => updateSetting('sendOnRenewal', val)}
-                                containerStyle={{ marginBottom: spacing.sm }}
-                            />
-                            <View style={[themed($divider), { marginVertical: spacing.sm }]} />
-
-                            <Switch
-                                inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
-                                labelPosition='left'
-                                label="Expiry Notification"
-                                helper="Send when a membership expires"
-                                HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
-                                value={settings.sendOnExpiry}
-                                onValueChange={(val: boolean) => updateSetting('sendOnExpiry', val)}
-                                containerStyle={{ marginBottom: spacing.sm }}
-                            />
-                            <View style={[themed($divider), { marginVertical: spacing.sm }]} />
-                            <Switch
-                                inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
-                                labelPosition='left'
-                                label="Expiration Reminder"
-                                helper="Send a reminder before membership expires"
-                                HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
-                                value={settings.sendOnReminder}
-                                onValueChange={(val: boolean) => updateSetting('sendOnReminder', val)}
-                                containerStyle={{ marginBottom: spacing.sm }}
-                            />
-
-                            {settings.sendOnReminder && (
-                                <View style={{ marginTop: spacing.xs }}>
-                                    <TextField
-                                        label="Days before expiry"
-                                        labelTxOptions={{ style: { fontSize: 12, color: colors.textDim } }}
-                                        value={settings.reminderDays}
-                                        onChangeText={(val: string) => updateSetting('reminderDays', val)}
-                                        keyboardType="numeric"
-                                        placeholder="e.g. 3"
-                                        returnKeyType="done"
-                                        onSubmitEditing={handleSave}
-                                        containerStyle={{ backgroundColor: colors.surface }}
-                                        inputWrapperStyle={{ backgroundColor: colors.background }}
-                                    />
-                                    <Text size="xs" style={{ color: colors.textDim, marginTop: 15, marginLeft: 5 }}>
-                                        Default is 3 days.
-                                    </Text>
-                                </View>
-                            )}
+                {isLoading ? (
+                    <View style={[themed($card)]}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                            <Skeleton width={150} height={20} />
+                            <Skeleton width={40} height={20} borderRadius={12} />
                         </View>
+                        <Skeleton width="100%" height={14} />
+                    </View>
+                ) : (
+                    <>
+                        <View style={[themed($card), { marginBottom: spacing.lg }]}>
+                            <Switch
+                                inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
+                                labelPosition='left'
+                                label="Enable WhatsApp Integration"
+                                labelStyle={{ fontSize: 16, fontWeight: '600', color: colors.text }}
+                                value={settings.active}
+                                onValueChange={(val: boolean) => updateSetting('active', val)}
+                            />
+                            <Text size="xs" style={{ color: colors.textDim, marginTop: spacing.xs }}>
+                                Enable or disable all WhatsApp automated messages.
+                            </Text>
+                        </View>
+
+                        {settings.active && (
+                            <>
+                                <Text preset="subheading" style={{ marginBottom: spacing.sm, marginLeft: spacing.xs }}>Automated Messages</Text>
+
+                                <View style={[themed($card)]}>
+                                    <Switch
+                                        inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
+                                        labelPosition='left'
+                                        label="Welcome Message"
+                                        helper="Send when a new member is onboarded"
+                                        HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
+                                        value={settings.sendOnOnboarding}
+                                        onValueChange={(val: boolean) => updateSetting('sendOnOnboarding', val)}
+                                        containerStyle={{ marginBottom: spacing.sm }}
+                                    />
+                                    <View style={[themed($divider), { marginVertical: spacing.sm }]} />
+
+                                    <Switch
+                                        inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
+                                        labelPosition='left'
+                                        label="Renewal Confirmation"
+                                        helper="Send when a membership is renewed"
+                                        HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
+                                        value={settings.sendOnRenewal}
+                                        onValueChange={(val: boolean) => updateSetting('sendOnRenewal', val)}
+                                        containerStyle={{ marginBottom: spacing.sm }}
+                                    />
+                                    <View style={[themed($divider), { marginVertical: spacing.sm }]} />
+
+                                    <Switch
+                                        inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
+                                        labelPosition='left'
+                                        label="Expiry Notification"
+                                        helper="Send when a membership expires"
+                                        HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
+                                        value={settings.sendOnExpiry}
+                                        onValueChange={(val: boolean) => updateSetting('sendOnExpiry', val)}
+                                        containerStyle={{ marginBottom: spacing.sm }}
+                                    />
+                                    <View style={[themed($divider), { marginVertical: spacing.sm }]} />
+                                    <Switch
+                                        inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
+                                        labelPosition='left'
+                                        label="Expiration Reminder"
+                                        helper="Send a reminder before membership expires"
+                                        HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
+                                        value={settings.sendOnReminder}
+                                        onValueChange={(val: boolean) => updateSetting('sendOnReminder', val)}
+                                        containerStyle={{ marginBottom: spacing.sm }}
+                                    />
+
+                                    {settings.sendOnReminder && (
+                                        <View style={{ marginTop: spacing.xs }}>
+                                            <TextField
+                                                label="Days before expiry"
+                                                labelTxOptions={{ style: { fontSize: 12, color: colors.textDim } }}
+                                                value={settings.reminderDays}
+                                                onChangeText={(val: string) => updateSetting('reminderDays', val)}
+                                                keyboardType="numeric"
+                                                placeholder="e.g. 3"
+                                                returnKeyType="done"
+                                                onSubmitEditing={handleSave}
+                                                containerStyle={{ backgroundColor: colors.surface }}
+                                                inputWrapperStyle={{ backgroundColor: colors.background }}
+                                            />
+                                            <Text size="xs" style={{ color: colors.textDim, marginTop: 15, marginLeft: 5 }}>
+                                                Default is 3 days.
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </>
+                        )}
                     </>
                 )}
 

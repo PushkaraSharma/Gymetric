@@ -1,4 +1,4 @@
-import { FlatList, Platform, Pressable, ScrollView, TouchableOpacity, View, ViewStyle, TextStyle } from 'react-native'
+import { FlatList, Pressable, ScrollView, TouchableOpacity, View, ViewStyle, TextStyle, RefreshControl } from 'react-native'
 import React, { useCallback, useMemo, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import { addDays, isAfter, isBefore, parseISO } from 'date-fns';
 import ProfileInitialLogo from '@/components/ProfileInitialLogo'
 import { MotiView } from 'moti'
+import { Skeleton } from '@/components/Skeleton'
 
 const ClientsList = ({ route }: any) => {
   const { themed, theme: { colors, spacing, typography } } = useAppTheme();
@@ -24,6 +25,8 @@ const ClientsList = ({ route }: any) => {
   const filters = ['All Clients', 'Expiring Soon', 'Active', 'Expired', 'Trial', 'Inactive'];
   const [searchText, setSearchText] = useState<string>('');
   const [selectedFilter, setSelectedFilter] = useState<string>(route?.params?.filter || 'All Clients');
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Update filter if navigation params change while screen is already mounted
   React.useEffect(() => {
@@ -60,11 +63,17 @@ const ClientsList = ({ route }: any) => {
     });
   }, [clients, selectedFilter, searchText]);
 
-  const getClients = async () => {
-    dispatch(setLoading({ loading: true }));
+  const getClients = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setIsLoading(true);
     await api.allClients();
-    dispatch(setLoading({ loading: false }));
+    if (isRefresh) setRefreshing(false);
+    else setIsLoading(false);
   };
+
+  const onRefresh = useCallback(() => {
+    getClients(true);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -166,17 +175,44 @@ const ClientsList = ({ route }: any) => {
         </ScrollView>
       </View>
 
-      <FlatList
-        data={filteredClients}
-        keyExtractor={(item) => item._id || item.phoneNumber}
-        renderItem={RenderItem}
-        contentContainerStyle={themed($listContent)}
-        ListEmptyComponent={
-          <View style={$emptyContainer}>
-            <Text style={themed({ color: colors.textDim })}>No members found</Text>
-          </View>
-        }
-      />
+      {isLoading ? (
+        <ScrollView contentContainerStyle={themed($listContent)}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <View key={i} style={themed($itemContainer)}>
+              <View style={themed($item)}>
+                <View style={$itemContent}>
+                  <Skeleton width={44} height={44} borderRadius={22} style={{ marginRight: 12 }} />
+                  <View style={$itemTextContainer}>
+                    <Skeleton width={120} height={16} style={{ marginBottom: 4 }} />
+                    <Skeleton width={80} height={12} />
+                  </View>
+                </View>
+                <Skeleton width={60} height={24} borderRadius={8} />
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={filteredClients}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.text}
+              colors={[colors.primary]}
+            />
+          }
+          keyExtractor={(item) => item._id || item.phoneNumber}
+          renderItem={RenderItem}
+          contentContainerStyle={themed($listContent)}
+          ListEmptyComponent={
+            <View style={$emptyContainer}>
+              <Text style={themed({ color: colors.textDim })}>No members found</Text>
+            </View>
+          }
+        />
+      )}
     </Screen>
   )
 }

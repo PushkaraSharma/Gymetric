@@ -18,20 +18,24 @@ import {
 } from 'lucide-react-native'
 import { navigate } from '@/navigators/navigationUtilities'
 import { ThemedStyle } from '@/theme/types'
+import { Skeleton } from '@/components/Skeleton'
 
 const Setting = () => {
   const { theme: { colors, spacing }, themed } = useAppTheme()
   const [hasWhatsapp, setHasWhatsapp] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   useFocusEffect(
     React.useCallback(() => {
       const checkSettings = async () => {
+        setIsLoading(true);
         const response = await api.getSettings();
         if (response.kind === 'ok' && response.data?.hasWhatsappConfigured) {
           setHasWhatsapp(true);
         } else {
           setHasWhatsapp(false);
         }
+        setIsLoading(false);
       };
       checkSettings();
     }, [])
@@ -81,7 +85,17 @@ const Setting = () => {
           description='Update your account password'
           icon={<Key size={22} color={colors.primary} />}
         />
-        {hasWhatsapp ? (
+        {isLoading ? (
+          <View style={[themed($card), $styles.flexRow, { padding: spacing.sm }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <Skeleton width={44} height={44} borderRadius={12} style={{ marginRight: 16 }} />
+              <View style={{ flex: 1 }}>
+                <Skeleton width="60%" height={20} style={{ marginBottom: 4 }} />
+                <Skeleton width="40%" height={14} />
+              </View>
+            </View>
+          </View>
+        ) : hasWhatsapp ? (
           <CardWithPrefixIcon
             navigateRoute='Notification Settings'
             title='Notification Settings'
