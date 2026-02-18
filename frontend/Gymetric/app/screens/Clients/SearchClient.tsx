@@ -91,7 +91,7 @@ const $item: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
     paddingVertical: 10,
     borderColor: colors.border,
     paddingHorizontal: 15,
-    backgroundColor: colors.palette.slate100,
+    backgroundColor: colors.surface,
     margin: 5,
     marginHorizontal: 10,
     borderRadius: 10

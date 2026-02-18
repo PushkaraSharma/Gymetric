@@ -21,8 +21,7 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
         // STEP 1: PROMOTE UPCOMING MEMBERSHIPS STARTING TODAY
         // We find all clients who have an upcoming membership that starts today or earlier
         const clientsReadyForPromotion = await Client.find({
-            upcomingMembership: { $ne: null },
-            membershipStatus: { $in: ['expired', 'active', 'future'] }
+            upcomingMembership: { $ne: null }
         }).populate('upcomingMembership');
 
         for (const client of clientsReadyForPromotion) {
@@ -65,8 +64,13 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                 await memb.save();
 
                 // Update all members belonging to this membership
+                // CRITICAL FIX: Only update clients if this is their CURRENT active membership.
+                // If they have renewed, their activeMembership will point to a new plan, so we skip them.
                 await Client.updateMany(
-                    { _id: { $in: memb.memberIds } },
+                    {
+                        _id: { $in: memb.memberIds },
+                        activeMembership: memb._id
+                    },
                     { $set: { membershipStatus: newStatus } }
                 );
 

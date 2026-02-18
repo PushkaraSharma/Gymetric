@@ -1,4 +1,4 @@
-import { Platform, Pressable, ScrollView, TextStyle, View, ViewStyle, TouchableOpacity } from 'react-native'
+import { Platform, Pressable, ScrollView, TextStyle, View, ViewStyle, TouchableOpacity, RefreshControl } from 'react-native'
 import React, { JSX, useCallback, useMemo, useState } from 'react'
 import { Drawer } from "react-native-drawer-layout"
 import { useAppTheme } from '@/theme/context'
@@ -30,6 +30,7 @@ import SideDrawer from './SideDrawer'
 import { getGreeting } from '@/utils/Helper'
 import { formatDistanceToNow } from 'date-fns'
 import { MotiView } from 'moti'
+import { Skeleton } from '@/components/Skeleton'
 
 let hasShownBannerSession = false;
 
@@ -40,6 +41,8 @@ const Home = () => {
     const [open, setOpen] = useState(false);
     const [summary, setSummary] = useState<{ [key: string]: any } | null>(null);
     const [showBanner, setShowBanner] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const greeting = useMemo(() => getGreeting(), []);
 
     const ActivityIcons: { [key: string]: JSX.Element } = {
@@ -50,8 +53,9 @@ const Home = () => {
         'ADVANCE_RENEWAL': <RefreshCw size={20} color={colors.primary} />
     };
 
-    const loadData = async () => {
-        dispatch(setLoading({ loading: true }));
+    const loadData = async (isRefresh = false) => {
+        if (isRefresh) setRefreshing(true);
+        else setIsLoading(true);
         const response = await api.dashboardAPI();
         if (response.kind === 'ok') {
             setSummary(response.data);
@@ -67,12 +71,17 @@ const Home = () => {
             }
         }
 
-        dispatch(setLoading({ loading: false }));
+        if (isRefresh) setRefreshing(false);
+        else setIsLoading(false);
     };
+
+    const onRefresh = useCallback(() => {
+        loadData(true);
+    }, []);
 
     useFocusEffect(
         useCallback(() => {
-            loadData();
+            loadData(false);
         }, [])
     );
 
@@ -136,125 +145,174 @@ const Home = () => {
             renderDrawerContent={() => <SideDrawer />}
         >
             <Screen
-                preset="auto"
-                ScrollViewProps={{ showsVerticalScrollIndicator: false }}
+                preset="fixed"
                 safeAreaEdges={["top"]}
                 backgroundColor={colors.background}
+                contentContainerStyle={[$styles.flex1]}
             >
-                <View style={themed($header)}>
-                    <Pressable onPress={() => { setOpen(!open) }} style={themed($menuBtn)}>
-                        <Menu size={24} color={colors.text} />
-                    </Pressable>
-                    <View style={$headerText}>
-                        <Text style={themed($greeting)}>{greeting},</Text>
-                        <Text style={themed($ownerName)}>{gymInfo?.ownerName || 'Admin'}</Text>
-                    </View>
-                </View>
-
-                <View style={themed($content)}>
-                    {showBanner && (
-                        <MotiView
-                            from={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            style={themed($banner)}
-                        >
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <MessageCircle size={20} color="white" style={{ marginRight: 8 }} />
-                                    <Text preset="bold" style={{ color: 'white', fontSize: 16 }}>Premium Integration</Text>
-                                </View>
-                                <TouchableOpacity onPress={() => setShowBanner(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                                    <X color="white" size={20} />
-                                </TouchableOpacity>
-                            </View>
-                            <Text size="xs" style={{ color: 'rgba(255,255,255,0.9)', marginTop: 8, marginBottom: 12, lineHeight: 18 }}>
-                                Automate reminders, welcome messages & engage clients seamlessly on WhatsApp.
-                            </Text>
-                            <Button
-                                text="Learn More"
-                                preset="reversed"
-                                style={{ backgroundColor: 'white', height: 36, minHeight: 36, paddingVertical: 0, alignSelf: 'flex-start', paddingHorizontal: 16 }}
-                                textStyle={{ color: colors.primary, fontSize: 12, fontFamily: typography.primary.bold }}
-                                onPress={() => navigate('WhatsApp Premium')}
-                            />
-                        </MotiView>
-                    )}
-
-                    <View style={$revenueCardContainer}>
-                        <Pressable onPress={() => navigate('Revenue')}>
-                            <MotiView
-                                from={{ opacity: 0, translateY: 10 }}
-                                animate={{ opacity: 1, translateY: 0 }}
-                                style={themed($revenueCard)}
-                            >
-                                <View style={$revenueHeader}>
-                                    <Text style={themed($revenueLabel)}>Revenue this month</Text>
-                                    <Wallet size={24} color={colors.white} opacity={0.8} />
-                                </View>
-                                <Text size='xl' style={themed($revenueValue)} numberOfLines={1}>
-                                    ₹{summary?.revenueThisMonth?.value ?? 0}
-                                </Text>
-                                <View style={$revenueFooter}>
-                                    <View style={themed($revenueTrend)}>
-                                        <TrendingUp size={14} color={colors.white} />
-                                        <Text style={themed($revenueTrendText)} size="xs">
-                                            +{summary?.revenueThisMonth?.trend || 0}% from last month
-                                        </Text>
-                                    </View>
-                                </View>
-                            </MotiView>
+                <ScrollView
+                    style={{ flex: 1 }}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor={colors.text}
+                            colors={[colors.primary]}
+                        />
+                    }
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={themed($header)}>
+                        <Pressable onPress={() => { setOpen(!open) }} style={themed($menuBtn)}>
+                            <Menu size={24} color={colors.text} />
                         </Pressable>
+                        <View style={$headerText}>
+                            <Text style={themed($greeting)}>{greeting},</Text>
+                            <Text style={themed($ownerName)}>{gymInfo?.ownerName || 'Admin'}</Text>
+                        </View>
                     </View>
 
-                    <View style={$statsGrid}>
-                        <StatCard
-                            label="Total Members"
-                            value={summary?.totalClients ?? 0}
-                            icon={<Users size={20} color={colors.primary} />}
-                            color={colors.primary}
-                            onPress={() => navigate('Clients', { filter: 'All Clients' })}
-                        />
-                        <StatCard
-                            label="Active Now"
-                            value={summary?.activeMembers?.value ?? 0}
-                            trend={summary?.activeMembers?.trend}
-                            icon={<ActivityIconLucide size={20} color={colors.success} />}
-                            color={colors.success}
-                            onPress={() => navigate('Clients', { filter: 'Active' })}
-                        />
-                    </View>
+                    <View style={{ paddingHorizontal: spacing.md }}>
+                        {isLoading ? (
+                            <View style={{ marginTop: spacing.md }}>
+                                {/* Revenue Card Skeleton */}
+                                <Skeleton width="100%" height={180} borderRadius={24} style={{ marginBottom: 24 }} />
 
-                    <View style={$statsGrid}>
-                        <StatCard
-                            label="Expiring Soon (7 Days)"
-                            value={summary?.expiringIn7Days ?? 0}
-                            icon={<Clock size={20} color={colors.error} />}
-                            color={colors.error}
-                            onPress={() => navigate('Clients', { filter: 'Expiring Soon' })}
-                        />
-                        <StatCard
-                            label="New Joinees (This month)"
-                            value={summary?.newlyJoinedThisMonth?.value ?? 0}
-                            icon={<UserPlus size={20} color={colors.palette.indigo500} />}
-                            color={colors.palette.indigo500}
-                            // Logic: Just show active, but maybe future update can support 'Joined Recently' filter
-                            onPress={() => navigate('Clients', { filter: 'All Clients' })}
-                        />
-                    </View>
+                                {/* Stats Gird Skeleton */}
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                                    <Skeleton width="48%" height={120} borderRadius={20} />
+                                    <Skeleton width="48%" height={120} borderRadius={20} />
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
+                                    <Skeleton width="48%" height={120} borderRadius={20} />
+                                    <Skeleton width="48%" height={120} borderRadius={20} />
+                                </View>
 
-                    <View style={$sectionHeader}>
-                        <Text style={themed($sectionTitle)}>Recent Activity</Text>
-                        <TouchableOpacity onPress={loadData}>
-                            <RefreshCw size={16} color={colors.primary} />
-                        </TouchableOpacity>
-                    </View>
+                                {/* Recent Activity Skeleton */}
+                                <View style={{ marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Skeleton width={150} height={24} />
+                                    <Skeleton width={20} height={20} borderRadius={10} />
+                                </View>
 
-                    <View style={$activityList}>
-                        {summary?.activities?.map((activity: any, index: number) => (
-                            <ActivityCard item={activity} key={index} />
-                        ))}
+                                {[1, 2, 3].map(i => (
+                                    <View key={i} style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                                        <Skeleton width={40} height={40} borderRadius={12} style={{ marginRight: 12 }} />
+                                        <View style={{ flex: 1 }}>
+                                            <Skeleton width="60%" height={16} style={{ marginBottom: 6 }} />
+                                            <Skeleton width="40%" height={12} />
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        ) : (
+                            <>
+                                {showBanner && (
+                                    <MotiView
+                                        from={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        style={themed($banner)}
+                                    >
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                <MessageCircle size={20} color="white" style={{ marginRight: 8 }} />
+                                                <Text preset="bold" style={{ color: 'white', fontSize: 16 }}>Premium Integration</Text>
+                                            </View>
+                                            <TouchableOpacity onPress={() => setShowBanner(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                                <X color="white" size={20} />
+                                            </TouchableOpacity>
+                                        </View>
+                                        <Text size="xs" style={{ color: 'rgba(255,255,255,0.9)', marginTop: 8, marginBottom: 12, lineHeight: 18 }}>
+                                            Automate reminders, welcome messages & engage clients seamlessly on WhatsApp.
+                                        </Text>
+                                        <Button
+                                            text="Learn More"
+                                            preset="reversed"
+                                            style={{ backgroundColor: 'white', height: 36, minHeight: 36, paddingVertical: 0, alignSelf: 'flex-start', paddingHorizontal: 16 }}
+                                            textStyle={{ color: colors.primary, fontSize: 12, fontFamily: typography.primary.bold }}
+                                            onPress={() => navigate('WhatsApp Premium')}
+                                        />
+                                    </MotiView>
+                                )}
+
+                                <View style={$revenueCardContainer}>
+                                    <Pressable onPress={() => navigate('Revenue')}>
+                                        <MotiView
+                                            from={{ opacity: 0, translateY: 10 }}
+                                            animate={{ opacity: 1, translateY: 0 }}
+                                            style={themed($revenueCard)}
+                                        >
+                                            <View style={$revenueHeader}>
+                                                <Text style={themed($revenueLabel)}>Revenue this month</Text>
+                                                <Wallet size={24} color={colors.white} opacity={0.8} />
+                                            </View>
+                                            <Text size='xl' style={themed($revenueValue)} numberOfLines={1}>
+                                                ₹{summary?.revenueThisMonth?.value ?? 0}
+                                            </Text>
+                                            <View style={$revenueFooter}>
+                                                <View style={themed($revenueTrend)}>
+                                                    <TrendingUp size={14} color={colors.white} />
+                                                    <Text style={themed($revenueTrendText)} size="xs">
+                                                        +{summary?.revenueThisMonth?.trend || 0}% from last month
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </MotiView>
+                                    </Pressable>
+                                </View>
+
+                                <View style={$statsGrid}>
+                                    <StatCard
+                                        label="Total Members"
+                                        value={summary?.totalClients ?? 0}
+                                        icon={<Users size={20} color={colors.primary} />}
+                                        color={colors.primary}
+                                        onPress={() => navigate('Clients', { filter: 'All Clients' })}
+                                    />
+                                    <StatCard
+                                        label="Active Now"
+                                        value={summary?.activeMembers?.value ?? 0}
+                                        trend={summary?.activeMembers?.trend}
+                                        icon={<ActivityIconLucide size={20} color={colors.success} />}
+                                        color={colors.success}
+                                        onPress={() => navigate('Clients', { filter: 'Active' })}
+                                    />
+                                </View>
+
+                                <View style={$statsGrid}>
+                                    <StatCard
+                                        label="Expiring Soon (7 Days)"
+                                        value={summary?.expiringIn7Days ?? 0}
+                                        icon={<Clock size={20} color={colors.error} />}
+                                        color={colors.error}
+                                        onPress={() => navigate('Clients', { filter: 'Expiring Soon' })}
+                                    />
+                                    <StatCard
+                                        label="New Joinees (This month)"
+                                        value={summary?.newlyJoinedThisMonth?.value ?? 0}
+                                        icon={<UserPlus size={20} color={colors.palette.indigo500} />}
+                                        color={colors.palette.indigo500}
+                                        // Logic: Just show active, but maybe future update can support 'Joined Recently' filter
+                                        onPress={() => navigate('Clients', { filter: 'All Clients' })}
+                                    />
+                                </View>
+
+                                <View style={$sectionHeader}>
+                                    <Text style={themed($sectionTitle)}>Recent Activity</Text>
+                                    <TouchableOpacity onPress={() => loadData(true)}>
+                                        <RefreshCw size={16} color={colors.primary} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={$activityList}>
+                                    {summary?.activities?.map((activity: any, index: number) => (
+                                        <ActivityCard item={activity} key={index} />
+                                    ))}
+                                </View>
+                            </>
+                        )}
                     </View>
-                </View>
+                </ScrollView>
             </Screen>
 
             <Pressable
