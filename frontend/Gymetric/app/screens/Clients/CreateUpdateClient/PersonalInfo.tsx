@@ -70,6 +70,7 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                     autoCapitalize="words"
                     autoCorrect={false}
                     label="Full Name"
+                    isRequired
                     placeholder="e.g. John Doe"
                     returnKeyType="next"
                     onSubmitEditing={() => phoneRef.current?.focus()}
@@ -85,6 +86,7 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                     maxLength={10}
                     autoCorrect={false}
                     label="Phone Number"
+                    isRequired
                     placeholder="Enter phone number"
                     returnKeyType="next"
                     onSubmitEditing={() => ageRef.current?.focus()}

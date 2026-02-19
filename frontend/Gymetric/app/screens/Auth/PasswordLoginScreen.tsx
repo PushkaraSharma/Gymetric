@@ -87,11 +87,10 @@ export const PasswordLoginScreen = () => {
             safeAreaEdges={["top", "bottom"]}
             backgroundColor={colors.background}
         >
+            <TouchableOpacity onPress={() => navigation.goBack()} style={{}}>
+                <ChevronLeft color={colors.text} size={24} />
+            </TouchableOpacity>
             <View style={themed($container)}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: spacing.xl, left: -5, zIndex: 10 }}>
-                    <ChevronLeft color={colors.text} size={24} />
-                </TouchableOpacity>
-
                 <Text preset="heading" text={`Welcome Back${username ? `, ${username}` : ''}!`} style={themed($title)} />
                 <Text size="md" text="Login to continue managing your gym." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
                 <View style={{ opacity: 0.5, pointerEvents: 'none' }}>
@@ -122,6 +121,7 @@ export const PasswordLoginScreen = () => {
                             />
                         </Pressable>
                     )}
+                    onSubmitEditing={handleLogin}
                 />
 
                 {error ? <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text> : null}

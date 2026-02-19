@@ -16,7 +16,7 @@ import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { useRef } from "react"
 import { VersionFooter } from "@/components/VersionFooter"
 import { ChevronLeft } from "lucide-react-native"
-import { TouchableOpacity } from "react-native"
+import { TouchableOpacity, Keyboard } from "react-native"
 
 export const OTPVerificationScreen = () => {
     const { themed, theme: { colors, spacing } } = useAppTheme()
@@ -162,6 +162,7 @@ export const OTPVerificationScreen = () => {
     const handleCodeChange = (text: string) => {
         setCode(text)
         if (text.length === 6) {
+            Keyboard.dismiss()
             handleVerify(text)
         }
     }
@@ -173,11 +174,10 @@ export const OTPVerificationScreen = () => {
             safeAreaEdges={["top", "bottom"]}
             backgroundColor={colors.background}
         >
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+                <ChevronLeft color={colors.text} size={24} />
+            </TouchableOpacity>
             <View style={themed($container)}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: spacing.xl, left: -5, zIndex: 10 }}>
-                    <ChevronLeft color={colors.text} size={24} />
-                </TouchableOpacity>
-
                 <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
                     <Image source={require("../../../assets/images/app-icon.png")} style={{ width: 80, height: 80, borderRadius: 16 }} />
                 </View>

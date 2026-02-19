@@ -24,6 +24,7 @@ export interface SelectFieldProps<T = any>
   options: T[];
   labelKey: keyof T;
   valueKey: keyof T;
+  allowEmpty?: boolean;
 }
 
 export interface SelectFieldRef {
@@ -47,6 +48,7 @@ export const SelectField = forwardRef(function SelectField(
     multiple = true,
     labelKey,
     valueKey,
+    allowEmpty = true,
     ...TextFieldProps
   } = props;
   const sheet = useRef<BottomSheetModal>(null);
@@ -77,11 +79,15 @@ export const SelectField = forwardRef(function SelectField(
       (v) => v?.[valueKey] === option?.[valueKey]
     );
     if (exists) {
-      onSelect?.(
-        multiple
-          ? value.filter((v) => v?.[valueKey] !== option?.[valueKey])
-          : []
-      );
+      if (multiple || allowEmpty) {
+        onSelect?.(
+          multiple
+            ? value.filter((v) => v?.[valueKey] !== option?.[valueKey])
+            : []
+        );
+      } else {
+        dismissOptions();
+      }
     } else {
       onSelect?.(multiple ? [...value, option] : [option]);
       if (!multiple) dismissOptions();

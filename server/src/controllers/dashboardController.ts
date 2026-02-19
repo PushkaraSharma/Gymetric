@@ -23,7 +23,7 @@ export const getDashboardSummary = async (request, reply) => {
         // Snapshot - Exactly 30 days ago
         const thirtyDaysAgo = addUtcDays(today, -30);
 
-        const [totalClients, activeCount, activeCount30DaysAgo, expiringSoon, revenueCurrent, revenueLastMTD, newlyJoinedCurrent, newlyJoinedLastMTD, recentActivities] = await Promise.all([
+        const [totalClients, activeCount, activeCount30DaysAgo, expiringSoonParams, revenueCurrent, revenueLastMTD, newlyJoinedCurrent, newlyJoinedLastMTD, recentActivities] = await Promise.all([
             // Total Lifetime Clients
             Client.countDocuments({ gymId }),
 
@@ -38,12 +38,24 @@ export const getDashboardSummary = async (request, reply) => {
             }),
 
             // Expiring Soon (Actionable: No upcoming plan)
-            Client.countDocuments({
-                gymId,
-                membershipStatus: 'active',
-                currentEndDate: { $gte: today, $lte: addUtcDays(today, 7) },
-                upcomingMembership: null
-            }),
+            Client.aggregate([
+                { $match: { gymId: new mongoose.Types.ObjectId(gymId), membershipStatus: 'active', upcomingMembership: null } },
+                {
+                    $lookup: {
+                        from: 'assignedmemberships',
+                        localField: 'activeMembership',
+                        foreignField: '_id',
+                        as: 'activePlan'
+                    }
+                },
+                { $unwind: '$activePlan' },
+                {
+                    $match: {
+                        'activePlan.endDate': { $gte: today, $lte: addUtcDays(today, 7) }
+                    }
+                },
+                { $count: 'count' }
+            ]),
 
             // Current Revenue (MTD)
             Client.aggregate([
@@ -64,17 +76,13 @@ export const getDashboardSummary = async (request, reply) => {
             // Newly Joined (Current MTD)
             Client.countDocuments({
                 gymId,
-                membershipStatus: 'active',
-                'activeMembership.startDate': { $gte: startOfCurrent },
-                'activeMembership.status': { $ne: 'trial' }
+                createdAt: { $gte: startOfCurrent }
             }),
 
             // Newly Joined (Last Month MTD)
             Client.countDocuments({
                 gymId,
-                membershipStatus: 'active',
-                'activeMembership.startDate': { $gte: startOfLast, $lte: endOfLastMTD },
-                'activeMembership.status': { $ne: 'trial' }
+                createdAt: { $gte: startOfLast, $lte: endOfLastMTD }
             }),
 
             //fetch recent activities
@@ -83,6 +91,7 @@ export const getDashboardSummary = async (request, reply) => {
 
         const revCurrentVal = revenueCurrent[0]?.total || 0;
         const revLastVal = revenueLastMTD[0]?.total || 0;
+        const expiringSoon = expiringSoonParams[0]?.count || 0;
 
         return reply.send({
             success: true,

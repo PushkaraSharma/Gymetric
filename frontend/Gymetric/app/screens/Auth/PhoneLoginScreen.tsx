@@ -31,7 +31,9 @@ export const PhoneLoginScreen = () => {
     }, []);
 
     const handleContinue = async (phone?: string) => {
-        const phoneToUse = phone || phoneNumber
+        const phoneInput = phone || phoneNumber
+        const phoneToUse = phoneInput.replace(/\s/g, '') // Sanitize input
+
         if (!phoneToUse || phoneToUse.length < 10) {
             setError("Please enter a valid phone number")
             return
@@ -43,13 +45,13 @@ export const PhoneLoginScreen = () => {
 
         try {
             // Format number to E.164 (Assuming India +91 for now, can be made dynamic)
-            const formattedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
+            const formattedNumber = phoneToUse.startsWith('+') ? phoneToUse : `+91${phoneToUse}`;
             // Check if user exists & has password
             const check = await api.checkUser(formattedNumber);
             if (check.kind === 'ok' && check.data.exists && check.data.hasPassword) {
                 // User has password -> Go to Password Login
                 navigation.navigate("PasswordLogin", {
-                    phoneNumber,
+                    phoneNumber: phoneToUse,
                     username: check.data.username
                 });
             } else {
