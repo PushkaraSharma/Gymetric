@@ -4,7 +4,7 @@ import { IClient } from "../types/models.js";
 
 const ClientSchema = new Schema<IClient>({
     name: { type: String, required: true },
-    phoneNumber: { type: String, required: true, unique: true },
+    phoneNumber: { type: String, required: true },
     age: Number,
     birthday: Date,
     anniversaryDate: Date,
@@ -27,7 +27,7 @@ const ClientSchema = new Schema<IClient>({
     }],
 }, { timestamps: true });
 
-// Index for lookup by phone and gym
-ClientSchema.index({ gymId: 1, phoneNumber: 1 });
+// Index for lookup by phone and gym (Needs to be unique per gym)
+ClientSchema.index({ gymId: 1, phoneNumber: 1 }, { unique: true });
 
 export default mongoose.models.Client || mongoose.model<IClient>('Client', ClientSchema);
