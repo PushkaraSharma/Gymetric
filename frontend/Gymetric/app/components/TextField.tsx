@@ -43,6 +43,7 @@ export interface TextFieldProps extends Omit<TextInputProps, "ref"> {
   inputWrapperStyle?: StyleProp<ViewStyle>
   RightAccessory?: ComponentType<TextFieldAccessoryProps>
   LeftAccessory?: ComponentType<TextFieldAccessoryProps>
+  isRequired?: boolean
 }
 
 export const TextField = forwardRef(function TextField(props: TextFieldProps, ref: Ref<TextInput>) {
@@ -64,6 +65,7 @@ export const TextField = forwardRef(function TextField(props: TextFieldProps, re
     style: $inputStyleOverride,
     containerStyle: $containerStyleOverride,
     inputWrapperStyle: $inputWrapperStyleOverride,
+    isRequired,
     ...TextInputProps
   } = props
   const input = useRef<TextInput>(null)
@@ -78,6 +80,8 @@ export const TextField = forwardRef(function TextField(props: TextFieldProps, re
   const placeholderContent = placeholderTx
     ? translate(placeholderTx, placeholderTxOptions)
     : placeholder
+
+  const labelContent = labelTx ? translate(labelTx, labelTxOptions) : label
 
   const $containerStyles = [$containerStyleOverride]
 
@@ -124,12 +128,12 @@ export const TextField = forwardRef(function TextField(props: TextFieldProps, re
       {!!(label || labelTx) && (
         <Text
           preset="formLabel"
-          text={label}
-          tx={labelTx}
-          txOptions={labelTxOptions}
           {...LabelTextProps}
           style={themed($labelStyles)}
-        />
+        >
+          {labelContent}
+          {isRequired && <Text text="*" style={{ color: colors.error }} />}
+        </Text>
       )}
 
       <View style={themed($inputWrapperStyles)}>

@@ -72,6 +72,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                         onSelect={(val) => { setSelectedMembership(val); handleForm('amount', val?.[0]?.price ?? 0); handleForm('dependents', []) }}
                         options={memberships}
                         multiple={false}
+                        allowEmpty={false}
                         labelKey={'label'}
                         valueKey={"_id"}
                         containerStyle={{ marginBottom: spacing.lg }}

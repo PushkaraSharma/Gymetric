@@ -69,11 +69,16 @@ const ClientDetails = ({ route }: any) => {
     };
 
     const openWhatsAppChat = async (phoneNumber: string, message = "") => {
+        if (!phoneNumber) {
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Phone number is missing' });
+            return;
+        }
         const formattedNumber = phoneNumber.replace(/\D/g, "");
         const url = `https://wa.me/${formattedNumber}?text=${encodeURIComponent(message)}`;
-        const canOpen = await Linking.canOpenURL(url);
-        if (canOpen) {
+        try {
             await Linking.openURL(url);
+        } catch (err) {
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Could not open WhatsApp' });
         }
     };
 

@@ -174,11 +174,10 @@ export const OTPVerificationScreen = () => {
             safeAreaEdges={["top", "bottom"]}
             backgroundColor={colors.background}
         >
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+                <ChevronLeft color={colors.text} size={24} />
+            </TouchableOpacity>
             <View style={themed($container)}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: spacing.xl, left: -5, zIndex: 10 }}>
-                    <ChevronLeft color={colors.text} size={24} />
-                </TouchableOpacity>
-
                 <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
                     <Image source={require("../../../assets/images/app-icon.png")} style={{ width: 80, height: 80, borderRadius: 16 }} />
                 </View>
