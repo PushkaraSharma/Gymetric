@@ -1,10 +1,9 @@
-import { Image, Platform, Pressable, ScrollView, StyleSheet, View, ViewStyle, TextInput } from 'react-native'
+import { Platform, Pressable, ScrollView, StyleSheet, View, ViewStyle, Alert } from 'react-native'
 import React, { useRef, useState } from 'react'
+import { CustomModal } from '@/components/CustomModal'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Header } from '@/components/Header'
-import HeaderbackButton from '@/components/HeaderbackButton'
-import { spacing } from '@/theme/spacing'
 import { Button } from '@/components/Button'
 import { Ionicons } from '@expo/vector-icons'
 import { TextField } from '@/components/TextField'
@@ -39,6 +38,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
   const [form, setForm] = useState<MembershipType>({ planName: membership?.planName ?? '', description: membership?.description ?? '', price: Number(membership?.price ?? 0), isTrial: membership?.isTrial ?? false, active: membership?.active ?? true, planType: membership?.planType ?? 'indivisual', membersAllowed: membership?.membersAllowed ?? 1, index: membership?.index ?? 0 });
   const [duration, setDuration] = useState<string>((membership?.durationInDays || membership?.durationInMonths || 0).toString());
   const [durationType, setDurationType] = useState<'Months' | 'Days'>(membership?.durationInDays ? 'Days' : 'Months');
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
 
   const descRef = useRef<any>(null);
   const priceRef = useRef<any>(null);
@@ -89,7 +89,13 @@ const CreateEditMembership = ({ navigation, route }: any) => {
       safeAreaEdges={["bottom"]}
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
-      <Header title={`${membership ? 'Update' : 'Create'} Membership`} backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
+      <Header
+        title={`${membership ? 'Update' : 'Create'} Membership`}
+        backgroundColor={colors.surface}
+        leftIcon="caretLeft"
+        onLeftPress={goBack}
+        RightActionComponent={membership ? <Ionicons name="trash-outline" size={24} color={colors.error} style={{ marginRight: 10 }} onPress={() => setDeleteModalVisible(true)} /> : undefined}
+      />
       <View style={{ flex: 1 }}>
         <ScrollView style={{ paddingHorizontal: 15, paddingTop: 10 }}>
           <TextField
@@ -201,6 +207,26 @@ const CreateEditMembership = ({ navigation, route }: any) => {
           <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
         </View>
       </View>
+      <CustomModal
+        visible={isDeleteModalVisible}
+        title="Delete Membership"
+        message={`Are you sure you want to delete this membership plan?\nThis action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="destructive"
+        onCancel={() => setDeleteModalVisible(false)}
+        onConfirm={async () => {
+          setDeleteModalVisible(false);
+          dispatch(setLoading({ loading: true }));
+          const response = await api.deleteMembership(membership._id);
+          if (response.kind === 'ok') {
+            dispatch(setGymInfo({ gymInfo: response.data }));
+            Toast.show({ type: 'success', text1: 'Membership deleted successfully' });
+            goBack();
+          }
+          dispatch(setLoading({ loading: false }));
+        }}
+      />
     </Screen>
   )
 }

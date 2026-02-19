@@ -92,6 +92,7 @@ export const OnboardingScreen = () => {
     }, [currentIndex])
 
     const completeOnboarding = () => {
+        storage.set("isFirstLaunch", true)
         storage.set("hasSeenOnboarding", true)
     }
 

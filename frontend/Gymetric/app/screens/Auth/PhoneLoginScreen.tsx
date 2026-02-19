@@ -1,6 +1,6 @@
 
 import React, { useState } from "react"
-import { View, ViewStyle, TextStyle, ActivityIndicator } from "react-native"
+import { View, ViewStyle, TextStyle, ActivityIndicator, Image } from "react-native"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { TextField } from "@/components/TextField"
@@ -11,6 +11,7 @@ import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { useNavigation } from "@react-navigation/native"
 
 import { api } from "@/services/Api"
+import { storage } from "@/utils/LocalStorage"
 
 export const PhoneLoginScreen = () => {
     const { themed, theme: { colors, spacing } } = useAppTheme()
@@ -27,6 +28,7 @@ export const PhoneLoginScreen = () => {
 
         setIsLoading(true)
         setError("")
+        storage.set("isFirstLaunch", false)
 
         try {
             // Format number to E.164 (Assuming India +91 for now, can be made dynamic)
@@ -59,8 +61,11 @@ export const PhoneLoginScreen = () => {
             backgroundColor={colors.background}
         >
             <View style={themed($container)}>
-                <Text preset="heading" text="What's your number?" style={themed($title)} />
-                <Text preset="subheading" text="We'll check if you have an account." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
+                <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
+                    <Image source={require("../../../assets/images/app-icon.png")} style={{ width: 80, height: 80, borderRadius: 16 }} />
+                </View>
+                <Text preset="heading" text={storage.getBoolean("isFirstLaunch") ? "Let's Get Started!" : "What's your number?"} style={[themed($title)]} />
+                <Text preset="subheading" text={storage.getBoolean("isFirstLaunch") ? "Enter your phone number to continue." : "We'll check if you have an account."} style={{ color: colors.textDim, marginBottom: spacing.xl }} />
                 <TextField
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}

@@ -119,6 +119,10 @@ export class Api {
     return await this.apiRequest('patch', '/api/membership/update', body);
   };
 
+  deleteMembership = async (id: string) => {
+    return await this.apiRequest('delete', `/api/membership/delete?id=${id}`, null);
+  };
+
   updateGym = async (body: any) => {
     return await this.apiRequest('patch', '/api/gym/update', body);
   };

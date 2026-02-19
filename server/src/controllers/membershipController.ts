@@ -3,7 +3,7 @@ import Memberships from "../models/Memberships.js";
 export const getAllMemberships = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const memberships = await Memberships.find({ gymId }).sort({index: 1});
+        const memberships = await Memberships.find({ gymId }).sort({ index: 1 });
         return reply.status(200).send({ success: true, data: memberships });
     } catch (error) {
         console.log(error)
@@ -14,7 +14,7 @@ export const getAllMemberships = async (request, reply) => {
 export const addMembership = async (request, reply) => {
     try {
         const gymId = request.user.gymId;
-        const { planName, durationInDays,durationInMonths, price, isTrial, description, active, planType, membersAllowed, index } = request.body;
+        const { planName, durationInDays, durationInMonths, price, isTrial, description, active, planType, membersAllowed, index } = request.body;
         const membership = await Memberships.create({
             planName, durationInDays, durationInMonths, price, isTrial, active, gymId, description, planType, membersAllowed
         })
@@ -42,3 +42,17 @@ export const updateMembership = async (request, reply) => {
     }
 };
 
+
+export const deleteMembership = async (request, reply) => {
+    try {
+        const gymId = request.user.gymId;
+        const { id } = request.query;
+        const deletedMembership = await Memberships.findOneAndDelete({ _id: id, gymId });
+        if (!deletedMembership) {
+            return reply.status(404).send({ success: false, message: 'Membership not found or unauthorized' });
+        }
+        return reply.send({ success: true, data: await Memberships.find({ gymId }).sort({ index: 1 }) });
+    } catch (error) {
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};

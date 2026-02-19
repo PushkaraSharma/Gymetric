@@ -75,7 +75,12 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                 );
 
                 // Log Activity
-                const primaryMember = await Client.findById(memb.primaryMemberId).select('name phoneNumber');
+                const primaryMember = await Client.findById(memb.primaryMemberId).select('name phoneNumber activeMembership');
+
+                if (primaryMember && String(primaryMember.activeMembership) !== String(memb._id)) {
+                    continue;
+                }
+
                 await Activity.create({
                     gymId: memb.gymId,
                     type: 'EXPIRY',

@@ -1,6 +1,5 @@
-import { Linking, Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native'
+import { Linking, Pressable, View, ViewStyle } from 'react-native'
 import React, { JSX } from 'react'
-import { useFocusEffect } from '@react-navigation/native';
 import { api } from '@/services/Api';
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
@@ -25,21 +24,19 @@ const Setting = () => {
   const [hasWhatsapp, setHasWhatsapp] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      const checkSettings = async () => {
-        setIsLoading(true);
-        const response = await api.getSettings();
-        if (response.kind === 'ok' && response.data?.hasWhatsappConfigured) {
-          setHasWhatsapp(true);
-        } else {
-          setHasWhatsapp(false);
-        }
-        setIsLoading(false);
-      };
-      checkSettings();
-    }, [])
-  );
+  React.useEffect(() => {
+    const checkSettings = async () => {
+      setIsLoading(true);
+      const response = await api.getSettings();
+      if (response.kind === 'ok' && response.data?.hasWhatsappConfigured) {
+        setHasWhatsapp(true);
+      } else {
+        setHasWhatsapp(false);
+      }
+      setIsLoading(false);
+    };
+    checkSettings();
+  }, []);
 
   const CardWithPrefixIcon = ({ navigateRoute, title, description, icon, noCard }: { navigateRoute: string, title: string, description?: string, icon: JSX.Element, noCard?: boolean }) => (
     <Pressable
