@@ -12,8 +12,7 @@ import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
-import { Eye, EyeOff, ChevronLeft } from "lucide-react-native"
-import { TouchableOpacity } from "react-native"
+import { EyeOff } from "lucide-react-native"
 
 export const GymOnboardingScreen = () => {
     const { themed, theme: { colors, spacing } } = useAppTheme()
@@ -81,10 +80,6 @@ export const GymOnboardingScreen = () => {
             backgroundColor={colors.background}
         >
             <View style={themed($container)}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: spacing.xl, left: -5, zIndex: 10 }}>
-                    <ChevronLeft color={colors.text} size={24} />
-                </TouchableOpacity>
-
                 <Text preset="heading" text="Setup your Gym" style={themed($title)} />
                 <Text preset="subheading" text="Just a few more details to get you started." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
 

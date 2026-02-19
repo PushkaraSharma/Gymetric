@@ -16,7 +16,7 @@ import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { useRef } from "react"
 import { VersionFooter } from "@/components/VersionFooter"
 import { ChevronLeft } from "lucide-react-native"
-import { TouchableOpacity } from "react-native"
+import { TouchableOpacity, Keyboard } from "react-native"
 
 export const OTPVerificationScreen = () => {
     const { themed, theme: { colors, spacing } } = useAppTheme()
@@ -162,6 +162,7 @@ export const OTPVerificationScreen = () => {
     const handleCodeChange = (text: string) => {
         setCode(text)
         if (text.length === 6) {
+            Keyboard.dismiss()
             handleVerify(text)
         }
     }
