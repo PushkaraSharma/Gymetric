@@ -12,9 +12,10 @@ import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
-import { Eye, EyeOff } from "lucide-react-native"
+import { EyeOff, ChevronLeft } from "lucide-react-native"
+import { TouchableOpacity } from "react-native"
 import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
-import { da } from "date-fns/locale"
+import { VersionFooter } from "@/components/VersionFooter"
 
 export const PasswordLoginScreen = () => {
     const { themed, theme: { colors, spacing } } = useAppTheme()
@@ -22,7 +23,6 @@ export const PasswordLoginScreen = () => {
     const route = useRoute<any>()
     const dispatch = useAppDispatch()
 
-    // Optional: prepopulate if coming from somewhere that knows the phone (or remembered)
     const initialPhone = route.params?.phoneNumber || ""
     const username = route.params?.username || ""
 
@@ -88,8 +88,12 @@ export const PasswordLoginScreen = () => {
             backgroundColor={colors.background}
         >
             <View style={themed($container)}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: spacing.xl, left: -5, zIndex: 10 }}>
+                    <ChevronLeft color={colors.text} size={24} />
+                </TouchableOpacity>
+
                 <Text preset="heading" text={`Welcome Back${username ? `, ${username}` : ''}!`} style={themed($title)} />
-                <Text preset="subheading" text="Login to continue managing your gym." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
+                <Text size="md" text="Login to continue managing your gym." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
                 <View style={{ opacity: 0.5, pointerEvents: 'none' }}>
                     <TextField
                         value={phoneNumber}
@@ -138,6 +142,7 @@ export const PasswordLoginScreen = () => {
                     style={{ backgroundColor: 'transparent', borderWidth: 0 }}
                     textStyle={{ color: colors.primary, fontSize: 14 }}
                 />}
+                <VersionFooter />
             </View>
         </Screen>
     )

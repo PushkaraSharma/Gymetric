@@ -19,8 +19,10 @@ if (__DEV__) {
 import "./utils/gestureHandler"
 
 import { useEffect, useState } from "react"
+import { View, Text, ActivityIndicator } from "react-native"
 import { useFonts } from "expo-font"
 import * as Linking from "expo-linking"
+import * as Updates from "expo-updates"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context"
 
@@ -86,12 +88,41 @@ export function App() {
 
   const [areFontsLoaded, fontLoadError] = useFonts(customFontsToLoad)
   const [isI18nInitialized, setIsI18nInitialized] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  useEffect(() => {
+    async function checkUpdates() {
+      if (__DEV__) return
+      try {
+        const update = await Updates.checkForUpdateAsync()
+        if (update.isAvailable) {
+          setIsUpdating(true)
+          await Updates.fetchUpdateAsync()
+          await Updates.reloadAsync()
+        }
+      } catch (e) {
+        // Error checking update, proceed as normal
+        console.log(e)
+        setIsUpdating(false)
+      }
+    }
+    checkUpdates()
+  }, [])
 
   useEffect(() => {
     initI18n()
       .then(() => setIsI18nInitialized(true))
       .then(() => loadDateFnsLocale())
   }, [])
+
+  if (isUpdating) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }}>
+        <Text style={{ marginTop: 20, fontSize: 16, marginBottom: 10 }}>Updating App</Text>
+        <ActivityIndicator />
+      </View>
+    )
+  }
 
   // Before we show the app, we have to wait for our state to be ready.
   // In the meantime, don't render anything. This will be the background

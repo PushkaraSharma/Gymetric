@@ -12,6 +12,8 @@ import { useNavigation } from "@react-navigation/native"
 
 import { api } from "@/services/Api"
 import { storage } from "@/utils/LocalStorage"
+import { VersionFooter } from "@/components/VersionFooter";
+import { Keyboard } from "react-native";
 
 export const PhoneLoginScreen = () => {
     const { themed, theme: { colors, spacing } } = useAppTheme()
@@ -20,8 +22,17 @@ export const PhoneLoginScreen = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
 
-    const handleContinue = async () => {
-        if (!phoneNumber || phoneNumber.length < 10) {
+    // Ensure we start with a clean state
+    React.useEffect(() => {
+        const auth = getAuth();
+        if (auth.currentUser) {
+            auth.signOut().catch(console.error);
+        }
+    }, []);
+
+    const handleContinue = async (phone?: string) => {
+        const phoneToUse = phone || phoneNumber
+        if (!phoneToUse || phoneToUse.length < 10) {
             setError("Please enter a valid phone number")
             return
         }
@@ -65,10 +76,17 @@ export const PhoneLoginScreen = () => {
                     <Image source={require("../../../assets/images/app-icon.png")} style={{ width: 80, height: 80, borderRadius: 16 }} />
                 </View>
                 <Text preset="heading" text={storage.getBoolean("isFirstLaunch") ? "Let's Get Started!" : "What's your number?"} style={[themed($title)]} />
-                <Text preset="subheading" text={storage.getBoolean("isFirstLaunch") ? "Enter your phone number to continue." : "We'll check if you have an account."} style={{ color: colors.textDim, marginBottom: spacing.xl }} />
+                <Text size="md" text={storage.getBoolean("isFirstLaunch") ? "Enter your phone number to continue." : "We'll check if you have an account."} style={{ color: colors.textDim, marginBottom: spacing.xl }} />
                 <TextField
                     value={phoneNumber}
-                    onChangeText={setPhoneNumber}
+                    onChangeText={(text) => {
+                        setPhoneNumber(text)
+                        if (text.length === 10) {
+                            Keyboard.dismiss()
+                            // Small delay to allow state update to propagate
+                            setTimeout(() => handleContinue(text), 100)
+                        }
+                    }}
                     label="Phone Number"
                     placeholder="9999999999"
                     placeholderTextColor={colors.palette.slate300}
@@ -83,11 +101,12 @@ export const PhoneLoginScreen = () => {
                 <Button
                     text={isLoading ? "Please wait..." : "Continue"}
                     preset="reversed"
-                    onPress={handleContinue}
+                    onPress={() => handleContinue()}
                     disabled={isLoading}
                     style={{ marginTop: spacing.md }}
                     RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
                 />
+                <VersionFooter />
             </View>
         </Screen>
     )

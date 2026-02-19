@@ -14,7 +14,7 @@ export const BG_ACTIVITY_COLOR: any = {
     'ADVANCE_RENEWAL': colors.primaryBackground
 };
 
-export const OTA_VERSION = 2
+export const OTA_VERSION = 4
 
 export const ONBOARDING_PURPOSES = [
     { label: 'Fat Loss', value: 'Fat Loss' },

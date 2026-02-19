@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react"
-import { View, ViewStyle, TextStyle, ActivityIndicator } from "react-native"
+import { View, ViewStyle, TextStyle, ActivityIndicator, Image } from "react-native"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { TextField } from "@/components/TextField"
@@ -14,6 +14,9 @@ import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
 import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { useRef } from "react"
+import { VersionFooter } from "@/components/VersionFooter"
+import { ChevronLeft } from "lucide-react-native"
+import { TouchableOpacity } from "react-native"
 
 export const OTPVerificationScreen = () => {
     const { themed, theme: { colors, spacing } } = useAppTheme()
@@ -32,6 +35,7 @@ export const OTPVerificationScreen = () => {
     const [timer, setTimer] = useState(30)
     const [canResend, setCanResend] = useState(false)
     const isVerifying = useRef(false)
+    const isFinalizing = useRef(false)
 
     useEffect(() => {
         let interval: NodeJS.Timeout
@@ -45,6 +49,18 @@ export const OTPVerificationScreen = () => {
         return () => clearInterval(interval)
     }, [timer])
 
+    // Handle Auto-Verification & Auth State Changes
+    useEffect(() => {
+        const unsubscribe = getAuth().onAuthStateChanged((user) => {
+            if (user) {
+                // Determine if we need to verify this user with backend
+                // This covers: Auto-verification OR Manual verification state change
+                finalizeLogin(user)
+            }
+        })
+        return unsubscribe
+    }, [])
+
     const handleResendOtp = async () => {
         if (!canResend) return
         setOtpSending(true)
@@ -56,9 +72,47 @@ export const OTPVerificationScreen = () => {
             setCanResend(false)
         } catch (e: any) {
             console.error("Resend error", e)
-            setError("Failed to resend OTP. Try again later.")
+            setError(e.message || "Failed to resend OTP. Try again later.")
         } finally {
             setOtpSending(false)
+        }
+    }
+
+    const finalizeLogin = async (user: any) => {
+        if (isFinalizing.current) return
+        isFinalizing.current = true
+        setIsLoading(true)
+        setError("")
+
+        try {
+            const idToken = await user.getIdToken()
+
+            // 2. Verify with Backend
+            const response = await api.verifyOtp(idToken)
+
+            if (response.kind === 'ok') {
+                if (response.data.isNewUser) {
+                    navigation.navigate("GymOnboarding", { idToken, phoneNumber })
+                } else {
+                    const { token, ...data } = response.data
+                    saveString("authToken", token)
+                    save("userData", data)
+                    api.setAuthToken(token)
+                    dispatch(setLoggedInUser(data))
+                }
+            } else {
+                setError("Verification failed.")
+                // Allow retrying if backend verification failed
+                isFinalizing.current = false
+            }
+        } catch (e: any) {
+            console.error("Backend Verification Error", e)
+            setError("Error verifying with server.")
+            isFinalizing.current = false
+        } finally {
+            setIsLoading(false)
+            // Note: We don't reset isFinalizing.current to false on success 
+            // because we don't want to re-process the same user session.
         }
     }
 
@@ -69,39 +123,35 @@ export const OTPVerificationScreen = () => {
             return
         }
 
-        // Prevent double submission
+        // Prevent double submission of the manual verification button
         if (isVerifying.current) return
         isVerifying.current = true
-
         setIsLoading(true)
         setError("")
 
         try {
             // 1. Confirm OTP with Firebase
-            const result = await confirmResult.confirm(codeToVerify);
-            const user = result.user;
-            const idToken = await user.getIdToken();
+            // If successful, onAuthStateChanged will likely fire and handle finalizeLogin.
+            // But we can also call it explicitly to be safe/swift.
+            const result = await confirmResult.confirm(codeToVerify)
 
-            // 2. Verify with Backend
-            const response = await api.verifyOtp(idToken);
-
-            if (response.kind === 'ok') {
-                if (response.data.isNewUser) {
-                    navigation.navigate("GymOnboarding", { idToken, phoneNumber });
-                } else {
-                    const { token, ...data } = response.data;
-                    saveString("authToken", token);
-                    save("userData", data);
-                    api.setAuthToken(token);
-                    dispatch(setLoggedInUser(data));
-                }
-            } else {
-                setError("Verification failed.")
+            // If confirm succeeds, we proceed. finalizeLogin has its own guard.
+            if (result && result.user) {
+                await finalizeLogin(result.user)
             }
 
         } catch (e: any) {
-            console.error(e);
-            setError("Invalid code. Please try again.")
+            console.error("Manual Verification Error", e)
+            let msg = "Invalid code. Please try again."
+            if (e.code === 'auth/invalid-verification-code') msg = "Invalid code."
+            if (e.code === 'auth/code-expired') msg = "Code expired. Resend code."
+            if (e.code === 'auth/session-expired') msg = "Session expired. Try again."
+            // If the code was auto-retrieved and used, we might get an error here?
+            // Usually if already signed in, confirm might fail or succeed. 
+            // If the underlying issue is that it WAS verified, the listener handles it.
+
+            setError(msg)
+            isFinalizing.current = false
         } finally {
             setIsLoading(false)
             isVerifying.current = false
@@ -124,8 +174,15 @@ export const OTPVerificationScreen = () => {
             backgroundColor={colors.background}
         >
             <View style={themed($container)}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: spacing.xl, left: -5, zIndex: 10 }}>
+                    <ChevronLeft color={colors.text} size={24} />
+                </TouchableOpacity>
+
+                <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
+                    <Image source={require("../../../assets/images/app-icon.png")} style={{ width: 80, height: 80, borderRadius: 16 }} />
+                </View>
                 <Text preset="heading" text="Enter Code" style={themed($title)} />
-                <Text preset="subheading" text={`We sent it to ${phoneNumber}`} style={{ color: colors.textDim, marginBottom: spacing.xl }} />
+                <Text size="md" text={`We sent it to ${phoneNumber}`} style={{ color: colors.textDim, marginBottom: spacing.xl }} />
 
                 <TextField
                     value={code}
@@ -168,6 +225,7 @@ export const OTPVerificationScreen = () => {
                             />
                         )}
                 </View>
+                <VersionFooter />
             </View>
         </Screen>
     )
