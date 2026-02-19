@@ -1,4 +1,4 @@
-import { addMembership, getAllMemberships, updateMembership } from "../controllers/membershipController.js";
+import { addMembership, getAllMemberships, updateMembership, deleteMembership } from "../controllers/membershipController.js";
 
 export async function membershipRoutes(fastify) {
     fastify.addHook('onRequest', fastify.authenticate);
@@ -11,5 +11,8 @@ export async function membershipRoutes(fastify) {
 
     //PATCH /api/membership/id=
     fastify.patch('/update', updateMembership)
+
+    // DELETE /api/membership/delete?id=
+    fastify.delete('/delete', deleteMembership)
 
 }

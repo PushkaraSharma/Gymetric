@@ -1,15 +1,16 @@
-import { Platform, ScrollView, StyleSheet, View, ViewStyle } from 'react-native'
+import { Platform, ScrollView, StyleSheet, View, ViewStyle, Alert } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Ionicons } from '@expo/vector-icons'
-import { goBack } from '@/navigators/navigationUtilities'
+import { goBack, navigate } from '@/navigators/navigationUtilities'
 import { Button } from '@/components/Button'
 import { api } from '@/services/Api'
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectLoading, setLoading } from '@/redux/state/GymStates'
 import Toast from 'react-native-toast-message'
+import { CustomModal } from '@/components/CustomModal'
 import { ClientDateType, ClientOnBoardingType, STEPS } from '@/utils/types'
 import PersonalInfo from './CreateUpdateClient/PersonalInfo'
 import OnBoardingStepsHeader from '@/components/OnBoardingStepsHeader'
@@ -34,6 +35,7 @@ const CreateClient = () => {
     const [datePicker, setDatePicker] = useState<ClientDateType>({ visible: false, type: 'startDate' });
     const [validNumber, setValidNumber] = useState<boolean>(true);
     const [duplicateNo, setDuplicateNo] = useState<string>('');
+    const [isNoMembershipModalVisible, setIsNoMembershipModalVisible] = useState(false);
 
     const translateX = useSharedValue(0);
 
@@ -105,7 +107,7 @@ const CreateClient = () => {
         const response = await api.allMemberships();
         if (response.kind === 'ok') {
             if (response.data.length === 0) {
-                Toast.show({ type: 'error', text1: 'No membership to assign', text2: 'Please create membership in settings first', visibilityTime: 2000 });
+                setIsNoMembershipModalVisible(true);
                 return;
             }
             const memberships = response.data.filter((item: any) => item.active).map((item: any) => ({ ...item, label: `${item.planName} - ₹${item.price}` }));
@@ -191,6 +193,22 @@ const CreateClient = () => {
                     <Button disabled={!validateSteps()} disabledStyle={{ opacity: 0.4 }} text={currentStep === 'Payment' ? (loader ? 'Finishing...' : 'Finish Setup') : 'Next Step'} preset="reversed" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.white} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleCreate() : moveStep('next') }} />
                 </View>
             </View>
+            <CustomModal
+                visible={isNoMembershipModalVisible}
+                title="No Memberships Found"
+                message="You need to create a membership plan before adding a client."
+                confirmText="Create"
+                cancelText="Go Back"
+                onCancel={() => {
+                    setIsNoMembershipModalVisible(false);
+                    goBack();
+                }}
+                onConfirm={() => {
+                    setIsNoMembershipModalVisible(false);
+                    goBack();
+                    navigate("Memberships");
+                }}
+            />
         </Screen>
     )
 }
