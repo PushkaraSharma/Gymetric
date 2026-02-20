@@ -107,6 +107,10 @@ export class Api {
     return await this.apiRequest('get', `/api/client/clientInfo?id=${id}`, null);
   };
 
+  deleteClient = async (id: string) => {
+    return await this.apiRequest('delete', `/api/client/delete?id=${id}`, null);
+  };
+
   renewMembership = async (body: any) => {
     return await this.apiRequest('patch', '/api/client/renew', body);
   };

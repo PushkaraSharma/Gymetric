@@ -35,8 +35,8 @@ const CreateEditMembership = ({ navigation, route }: any) => {
   const dispatch = useAppDispatch();
   const membership = route?.params?.membership;
   const loading = useAppSelector(selectLoading);
-  const [form, setForm] = useState<MembershipType>({ planName: membership?.planName ?? '', description: membership?.description ?? '', price: Number(membership?.price ?? 0), isTrial: membership?.isTrial ?? false, active: membership?.active ?? true, planType: membership?.planType ?? 'indivisual', membersAllowed: membership?.membersAllowed ?? 1, index: membership?.index ?? 0 });
-  const [duration, setDuration] = useState<string>((membership?.durationInDays || membership?.durationInMonths || 0).toString());
+  const [form, setForm] = useState<MembershipType>({ planName: membership?.planName ?? '', description: membership?.description ?? '', price: membership?.price ? membership?.price.toString() : '', isTrial: membership?.isTrial ?? false, active: membership?.active ?? true, planType: membership?.planType ?? 'indivisual', membersAllowed: membership?.membersAllowed ?? 1, index: membership?.index ?? 0 });
+  const [duration, setDuration] = useState<string>((membership?.durationInDays || membership?.durationInMonths || 1).toString());
   const [durationType, setDurationType] = useState<'Months' | 'Days'>(membership?.durationInDays ? 'Days' : 'Months');
   const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
 
@@ -70,7 +70,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
 
   const createOrUpdate = async () => {
     if (!validate()) return;
-    const body: any = { ...form, durationInDays: durationType === 'Days' ? Number(duration) : 0, durationInMonths: durationType === 'Months' ? Number(duration) : 0 };
+    const body: any = { ...form, price: Number(form.price), durationInDays: durationType === 'Days' ? Number(duration) : 0, durationInMonths: durationType === 'Months' ? Number(duration) : 0 };
     if (membership) body['id'] = membership?._id;
     dispatch(setLoading({ loading: true }));
     const response = membership ? await api.updateMembership(body) : await api.createMembership(body);
@@ -84,10 +84,9 @@ const CreateEditMembership = ({ navigation, route }: any) => {
 
   return (
     <Screen
-      preset={Platform.OS === 'android' ? "auto" : 'fixed'}
+      preset="fixed"
       contentContainerStyle={[$styles.flex1]}
       safeAreaEdges={["bottom"]}
-      {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
       <Header
         title={`${membership ? 'Update' : 'Create'} Membership`}
@@ -190,7 +189,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             returnKeyType="next"
             onSubmitEditing={() => indexRef.current?.focus()}
           />
-          <TextField
+          {/* <TextField
             ref={indexRef}
             label='Order Index'
             value={form.index.toString()}
@@ -201,7 +200,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             placeholder="Enter index for sort order"
             returnKeyType="done"
             onSubmitEditing={createOrUpdate}
-          />
+          /> */}
         </ScrollView>
         <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
           <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />

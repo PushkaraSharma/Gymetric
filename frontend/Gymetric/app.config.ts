@@ -51,13 +51,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
                 image: "./assets/images/app-icon.png",
                 resizeMode: "contain",
                 backgroundColor: "#FFFFFF",
+                dark: {
+                    image: "./assets/images/app-icon-dark.png",
+                    backgroundColor: "#020617",
+                },
             },
         ],
         [
             "react-native-edge-to-edge",
             {
                 android: {
-                    parentTheme: "Light",
+                    parentTheme: "Default",
                     enforceNavigationBarContrast: false,
                 },
             },

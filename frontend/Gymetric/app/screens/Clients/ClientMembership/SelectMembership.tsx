@@ -160,13 +160,13 @@ const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center' },
 })
 
-const $cardHeader: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+const $cardHeader: ThemedStyle<ViewStyle> = ({ spacing, colors, isDark }) => ({
     flexDirection: 'row',
     padding: spacing.lg,
     alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    backgroundColor: colors.palette.slate400,
+    backgroundColor: isDark ? colors.palette.slate800 : colors.palette.slate300,
     borderTopEndRadius: 12,
     borderTopStartRadius: 12,
 })

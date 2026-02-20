@@ -35,13 +35,12 @@ export const verifyOtp = async (request: FastifyRequest, reply: FastifyReply) =>
                 process.env.JWT_SECRET || 'secret',
                 { expiresIn: '30d' }
             );
-
             return reply.status(200).send({
                 success: true,
                 data: {
                     isNewUser: false,
                     token,
-                    username: user.username || user.phoneNumber,
+                    username: (user.gymId as any).ownerName || user.username,
                     role: user.role,
                     gymName: (user.gymId as any).name,
                     address: (user.gymId as any).address,

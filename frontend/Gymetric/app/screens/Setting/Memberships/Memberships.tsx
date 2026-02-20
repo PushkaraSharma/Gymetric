@@ -19,7 +19,7 @@ import { useAppTheme } from '@/theme/context'
 
 const Memberships = () => {
     const dispatch = useAppDispatch();
-    const { theme: { colors, spacing }, themed } = useAppTheme()
+    const { theme: { colors, spacing, isDark }, themed } = useAppTheme()
 
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
 
@@ -27,7 +27,7 @@ const Memberships = () => {
         <Pressable style={[themed($card), $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs, opacity: item.active ? 1 : 0.5 }]} onPress={() => navigate('Create Edit Membership', { membership: item })}>
             <View style={{ flex: 1, maxWidth: '85%' }}>
                 <Text preset={'formLabel'}>{item.planName}</Text>
-                <View style={{ marginTop: 5, borderRadius: 6, backgroundColor: colors.palette.slate100, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2 }}>
+                <View style={{ marginTop: 5, borderRadius: 6, backgroundColor: isDark ? colors.palette.slate800 : colors.palette.slate100, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2 }}>
                     <Text size='xxs' style={{ color: colors.textDim }}>{item.durationInDays ? `${item.durationInDays} Days` : `${item.durationInMonths} Months`}</Text>
                 </View>
             </View>

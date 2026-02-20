@@ -136,7 +136,7 @@ export const PasswordLoginScreen = () => {
                 />
 
                 {isOtpLoading ? <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 5 }} /> : <Button
-                    text="Forgot Password? / Login with OTP"
+                    text="Login with OTP"
                     preset="default"
                     onPress={handleLoginWithOtp}
                     style={{ backgroundColor: 'transparent', borderWidth: 0 }}

@@ -17,6 +17,7 @@ import NoDataFound from '@/components/NoDataFound'
 import Toast from 'react-native-toast-message'
 import ProfileInitialLogo from '@/components/ProfileInitialLogo'
 import { Skeleton } from '@/components/Skeleton'
+import { CustomModal } from '@/components/CustomModal'
 
 
 const ClientDetails = ({ route }: any) => {
@@ -27,6 +28,21 @@ const ClientDetails = ({ route }: any) => {
     const [membershipDays, setMembershipDays] = useState<{ total: number, remain: number, used: number, progress: number, endDate: string }>({ total: 0, remain: 0, used: 0, progress: 0, endDate: '-' })
     const [tab, setTab] = useState<'Memberships' | 'Payments'>('Memberships');
     const [isLoading, setIsLoading] = useState(true);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        const response = await api.deleteClient(client?._id);
+        setIsDeleting(false);
+        setShowDeleteModal(false);
+        if (response.kind === 'ok') {
+            Toast.show({ type: 'success', text1: 'Client deleted successfully' });
+            goBack();
+        } else {
+            Toast.show({ type: 'error', text1: 'Failed', text2: response.message || 'Could not delete client' });
+        }
+    }
 
     const getDaysProgress = (startStr: string, endStr: string) => {
         if (!startStr || !endStr) return;
@@ -113,12 +129,32 @@ const ClientDetails = ({ route }: any) => {
                 leftIcon="caretLeft"
                 onLeftPress={goBack}
                 RightActionComponent={
-                    <Pressable style={themed([$styles.row, { paddingHorizontal: 10 }])} onPress={() => { navigate('Update Basic Information', { client }) }}>
-                        <MaterialIcons name={'edit'} size={25} color={colors.text} />
-                    </Pressable>
+                    <View style={[$styles.row, { paddingHorizontal: 10, gap: 15 }]}>
+                        <Pressable onPress={() => { navigate('Update Basic Information', { client }) }}>
+                            <MaterialIcons name={'edit'} size={24} color={colors.tint} />
+                        </Pressable>
+                        {['expired', 'trial_expired'].includes(client?.membershipStatus) && (
+                            <Pressable onPress={() => setShowDeleteModal(true)}>
+                                <Ionicons name={'trash-outline'} size={24} color={colors.error} />
+                            </Pressable>
+                        )}
+
+                    </View>
                 }
                 backgroundColor={colors.surface}
             />
+
+            <CustomModal
+                visible={showDeleteModal}
+                title="Delete Client"
+                message={`Are you sure you want to delete ${client?.name}?`}
+                confirmText={isDeleting ? "Deleting..." : "Delete"}
+                cancelText="Cancel"
+                onConfirm={handleDelete}
+                onCancel={() => setShowDeleteModal(false)}
+                type="destructive"
+            />
+
             {isLoading ? (
                 <ScrollView contentContainerStyle={{ padding: spacing.md, alignItems: 'center' }}>
                     <Skeleton width={80} height={80} borderRadius={40} style={{ marginBottom: 16 }} />
@@ -192,9 +228,11 @@ const ClientDetails = ({ route }: any) => {
 
                                             {displayMembership ?
                                                 <View style={[themed($card), { padding: 0, marginVertical: spacing.xxs }]}>
-                                                    <View style={themed($dependentPill)}>
-                                                        <Text size='xs' style={{ color: colors.tint, textTransform: 'capitalize' }}>{client?.role}</Text>
-                                                    </View>
+                                                    {client?.role === 'dependent' &&
+                                                        <View style={themed($dependentPill)}>
+                                                            <Text size='xs' style={{ color: colors.tint, textTransform: 'capitalize' }}>Dependent</Text>
+                                                        </View>
+                                                    }
                                                     <View style={{ borderTopEndRadius: 10, overflow: 'hidden', borderTopStartRadius: 10 }}>
                                                         <Image source={require('../../../assets/images/membershipImage.jpg')} style={{ height: 150 }} />
                                                     </View>

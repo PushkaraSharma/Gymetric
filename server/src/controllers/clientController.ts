@@ -357,3 +357,30 @@ export const getClientById = async (request: any, reply: any) => {
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
+
+export const deleteClient = async (request: any, reply: any) => {
+    try {
+        const gymId = request.user.gymId;
+        const { id } = request.query;
+
+        const client = await Client.findOne({ _id: id, gymId });
+
+        if (!client) {
+            return reply.status(404).send({ success: false, message: 'Client not found' });
+        }
+
+        // Must only be able to delete if membership is expired (or trial_expired)
+        // Adjust if they don't have membership yet but still should be deleted
+        if (!['expired', 'trial_expired'].includes(client.membershipStatus) && client.membershipHistory.length > 0) {
+            return reply.status(400).send({ success: false, message: 'Cannot delete: Client membership is not expired.' });
+        }
+
+        // Process actual deletion using standard findAndDelete or remove.
+        // Also might need to clean up dependencies using similar structures as other deletions.
+        await Client.findByIdAndDelete(id);
+
+        return reply.send({ success: true, message: 'Client deleted successfully' });
+    } catch (error: any) {
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};

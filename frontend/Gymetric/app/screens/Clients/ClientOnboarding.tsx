@@ -158,7 +158,7 @@ const CreateClient = () => {
 
     return (
         <Screen
-            preset={Platform.OS === 'android' ? "auto" : 'fixed'}
+            preset="fixed"
             contentContainerStyle={[$styles.flex1]}
             safeAreaEdges={["bottom"]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}

@@ -5,7 +5,8 @@ import {
     getClientStats,
     onBoarding,
     renewMembership,
-    updateClient
+    updateClient,
+    deleteClient
 } from "../controllers/clientController.js";
 
 export async function clientRoutes(fastify: FastifyInstance) {
@@ -28,4 +29,7 @@ export async function clientRoutes(fastify: FastifyInstance) {
 
     // PATCH /api/client/renew
     fastify.patch('/renew', renewMembership);
+
+    // DELETE /api/client/delete?id=...
+    fastify.delete('/delete', deleteClient);
 }

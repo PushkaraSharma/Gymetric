@@ -94,11 +94,11 @@ export const OTPVerificationScreen = () => {
                 if (response.data.isNewUser) {
                     navigation.navigate("GymOnboarding", { idToken, phoneNumber })
                 } else {
-                    const { token, ...data } = response.data
+                    const token = response.data.token
                     saveString("authToken", token)
-                    save("userData", data)
+                    save("userData", response.data)
                     api.setAuthToken(token)
-                    dispatch(setLoggedInUser(data))
+                    dispatch(setLoggedInUser(response.data))
                 }
             } else {
                 setError("Verification failed.")
