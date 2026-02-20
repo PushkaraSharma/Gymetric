@@ -2,6 +2,7 @@ import Activity from "../models/Activity.js";
 import Client from "../models/Client.js";
 import mongoose from "mongoose";
 import { addUtcDays, utcStartOfDay, utcStartOfMonth } from "../utils/Helper.js";
+import { cache, getCacheKey } from "../utils/cache.js";
 
 const calculateTrend = (current, previous) => {
     if (!previous || previous === 0) return null;
@@ -11,6 +12,14 @@ const calculateTrend = (current, previous) => {
 export const getDashboardSummary = async (request, reply) => {
     try {
         const { gymId } = request.user;
+        const cacheKey = getCacheKey('dashboard_summary', gymId);
+
+        // Check if data is stored in the cache
+        const cachedSummary = cache.get(cacheKey);
+        if (cachedSummary) {
+            return reply.send({ success: true, data: cachedSummary });
+        }
+
         const today = utcStartOfDay();
         // Current Month (MTD)
         const startOfCurrent = utcStartOfMonth(today);
@@ -93,30 +102,35 @@ export const getDashboardSummary = async (request, reply) => {
         const revLastVal = revenueLastMTD[0]?.total || 0;
         const expiringSoon = expiringSoonParams[0]?.count || 0;
 
+        const responseData = {
+            totalClients,
+            activeMembers: {
+                value: activeCount,
+                trend: calculateTrend(activeCount, activeCount30DaysAgo),
+                comparisonText: "vs 30 days ago"
+            },
+            expiringIn7Days: expiringSoon,
+            revenueThisMonth: {
+                value: revCurrentVal,
+                trend: calculateTrend(revCurrentVal, revLastVal),
+                comparisonText: "vs previous MTD"
+            },
+            newlyJoinedThisMonth: {
+                value: newlyJoinedCurrent,
+                trend: calculateTrend(newlyJoinedCurrent, newlyJoinedLastMTD),
+                comparisonText: "vs previous MTD"
+            },
+            activities: recentActivities
+        };
+
+        // Save result to cache (automatically expires after stdTTL defined in cache.ts)
+        cache.set(cacheKey, responseData);
+
         return reply.send({
             success: true,
-            data: {
-                totalClients,
-                activeMembers: {
-                    value: activeCount,
-                    trend: calculateTrend(activeCount, activeCount30DaysAgo),
-                    comparisonText: "vs 30 days ago"
-                },
-                expiringIn7Days: expiringSoon,
-                revenueThisMonth: {
-                    value: revCurrentVal,
-                    trend: calculateTrend(revCurrentVal, revLastVal),
-                    comparisonText: "vs previous MTD"
-                },
-                newlyJoinedThisMonth: {
-                    value: newlyJoinedCurrent,
-                    trend: calculateTrend(newlyJoinedCurrent, newlyJoinedLastMTD),
-                    comparisonText: "vs previous MTD"
-                },
-                activities: recentActivities
-            }
+            data: responseData
         });
-    } catch (error) {
+    } catch (error: any) {
         console.log(error)
         return reply.status(500).send({ success: false, error: error.message });
     }

@@ -65,10 +65,13 @@ const ClientsList = ({ route }: any) => {
 
   const getClients = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
-    else setIsLoading(true);
+    // Stale-while-revalidate: only show skeleton if we have NO data to show yet
+    else if (!clients || clients.length === 0) setIsLoading(true);
+
     await api.allClients();
+
     if (isRefresh) setRefreshing(false);
-    else setIsLoading(false);
+    setIsLoading(false);
   };
 
   const onRefresh = useCallback(() => {

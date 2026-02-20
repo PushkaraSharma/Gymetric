@@ -15,6 +15,7 @@ import {
     formatShortDate,
     formatDisplayDate
 } from "../utils/timeUtils.js";
+import { cache, getCacheKey } from "../utils/cache.js";
 
 // Types for requests
 interface OnboardingBody {
@@ -40,10 +41,20 @@ interface RenewalBody {
 export const getAllClients = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        const cacheKey = getCacheKey('client_list', gymId);
+
+        const cachedClients = cache.get(cacheKey);
+        if (cachedClients) {
+            return reply.status(200).send({ success: true, data: cachedClients });
+        }
+
         const clients = await Client.find({ gymId })
             .select('name phoneNumber gender membershipStatus activeMembership')
             .populate({ path: 'activeMembership', select: 'endDate planName' })
             .sort({ name: 1 });
+
+        cache.set(cacheKey, clients);
+
         return reply.status(200).send({ success: true, data: clients });
     } catch (error: any) {
         return reply.status(500).send({ success: false, error: error.message });
@@ -165,6 +176,9 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
             const params = [primaryClient.name, gymInfo?.name || 'Gym', plan.planName, formatShortDate(customStartDate), formatShortDate(endDate)];
             sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "onboarding", params, settings?.whatsapp);
         }
+
+        // Invalidate cache
+        cache.del([getCacheKey('client_list', gymId), getCacheKey('dashboard_summary', gymId)]);
 
         return reply.status(201).send({ success: true, data: primaryClient });
     } catch (error: any) {
@@ -303,6 +317,10 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
             const params = [primaryClient.name, plan?.planName, formatShortDate(newStartDate), formatShortDate(newEndDate)];
             sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "renewal_complete", params, settings?.whatsapp, gymInfo?.name);
         }
+
+        // Invalidate cache
+        cache.del([getCacheKey('client_list', gymId), getCacheKey('dashboard_summary', gymId)]);
+
         return reply.send({ success: true, data: primaryClient });
     } catch (error: any) {
         await session.abortTransaction();
@@ -325,6 +343,10 @@ export const updateClient = async (request: any, reply: any) => {
         if (!client) {
             return reply.status(404).send({ success: false, message: 'Client not found' });
         }
+
+        // Invalidate cache
+        cache.del([getCacheKey('client_list', gymId), getCacheKey('dashboard_summary', gymId)]);
+
         return reply.send({ success: true, data: client });
     } catch (error: any) {
         return reply.status(500).send({ success: false, error: error.message });
@@ -378,6 +400,9 @@ export const deleteClient = async (request: any, reply: any) => {
         // Process actual deletion using standard findAndDelete or remove.
         // Also might need to clean up dependencies using similar structures as other deletions.
         await Client.findByIdAndDelete(id);
+
+        // Invalidate cache
+        cache.del([getCacheKey('client_list', gymId), getCacheKey('dashboard_summary', gymId)]);
 
         return reply.send({ success: true, message: 'Client deleted successfully' });
     } catch (error: any) {

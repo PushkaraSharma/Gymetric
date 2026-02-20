@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     name: "Gymetric",
     slug: "Gymetric",
     scheme: "gymetric",
-    version: "0.0.3",
+    version: "0.0.4",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
     icon: "./assets/images/app-icon.png",

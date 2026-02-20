@@ -55,20 +55,21 @@ const Home = () => {
 
     const loadData = async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true);
-        else setIsLoading(true);
+        // Stale-while-revalidate: only show skeleton if we have NO data to show yet
+        else if (!summary) setIsLoading(true);
+
         const response = await api.dashboardAPI();
         if (response.kind === 'ok') {
             setSummary(response.data);
         }
 
-        // Check if WhatsApp is configured
-        const settingsRes = await api.getSettings();
-        if (settingsRes.kind === 'ok' && !settingsRes.data?.hasWhatsappConfigured) {
-            // Show banner once per session
-            if (!hasShownBannerSession) {
+        // Check if WhatsApp is configured, only once per session
+        if (!hasShownBannerSession) {
+            const settingsRes = await api.getSettings();
+            if (settingsRes.kind === 'ok' && !settingsRes.data?.hasWhatsappConfigured) {
                 setShowBanner(true);
-                hasShownBannerSession = true;
             }
+            hasShownBannerSession = true;
         }
 
         if (isRefresh) setRefreshing(false);
@@ -83,57 +84,6 @@ const Home = () => {
         useCallback(() => {
             loadData(false);
         }, [])
-    );
-
-    const StatCard = ({ label, value, trend, icon, color, isLarge = false, onPress }: any) => (
-        <Pressable
-            style={({ pressed }) => [
-                themed($statCard),
-                isLarge && { width: '100%', marginBottom: 16 },
-                { opacity: pressed ? 0.8 : 1 }
-            ]}
-            onPress={onPress}
-        >
-            <View style={$statHeader}>
-                <View style={[themed($iconContainer), { backgroundColor: color + '15' }]}>
-                    {icon}
-                </View>
-                {trend && (
-                    <View style={[themed($trendBadge), { backgroundColor: colors.successBackground }]}>
-                        <TrendingUp size={12} color={colors.success} />
-                        <Text size="xxs" style={themed({ color: colors.success, marginLeft: 4 })}>{trend}%</Text>
-                    </View>
-                )}
-            </View>
-            <Text style={themed($statValue)}>{value}</Text>
-            <Text style={themed($statLabel)}>{label}</Text>
-        </Pressable>
-    );
-
-    const ActivityCard = ({ item }: { item: any }) => (
-        <MotiView
-            from={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-        >
-            <Pressable
-                style={themed($activityCard)}
-                onPress={() => item?.memberId && navigate('Client Profile', { data: { _id: item.memberId } })}
-            >
-                <View style={themed($activityIconWrapper)}>
-                    {ActivityIcons[item?.type] || <ActivityIconLucide size={20} color={colors.primary} />}
-                </View>
-                <View style={$activityContent}>
-                    <View style={$activityTopRow}>
-                        <Text style={themed($activityTitle)}>{item?.title}</Text>
-                        <Text style={themed($activityTime)}>{formatDistanceToNow(new Date(item?.createdAt), { addSuffix: true })}</Text>
-                    </View>
-                    <Text style={themed($activityDesc)} numberOfLines={1}>{item?.description}</Text>
-                    {item?.amount && (
-                        <Text style={themed($activityAmount)}>₹{item?.amount}</Text>
-                    )}
-                </View>
-            </Pressable>
-        </MotiView>
     );
 
     return (
@@ -299,14 +249,11 @@ const Home = () => {
 
                                 <View style={$sectionHeader}>
                                     <Text style={themed($sectionTitle)}>Recent Activity</Text>
-                                    <TouchableOpacity onPress={() => loadData(true)}>
-                                        <RefreshCw size={16} color={colors.primary} />
-                                    </TouchableOpacity>
                                 </View>
 
                                 <View style={$activityList}>
                                     {summary?.activities?.map((activity: any, index: number) => (
-                                        <ActivityCard item={activity} key={index} />
+                                        <ActivityCard item={activity} key={activity._id || index} />
                                     ))}
                                 </View>
                             </>
@@ -324,6 +271,72 @@ const Home = () => {
         </Drawer>
     )
 }
+
+const StatCard = React.memo(({ label, value, trend, icon, color, isLarge = false, onPress }: any) => {
+    const { themed, theme: { colors } } = useAppTheme();
+    return (
+        <Pressable
+            style={({ pressed }) => [
+                themed($statCard),
+                isLarge && { width: '100%', marginBottom: 16 },
+                { opacity: pressed ? 0.8 : 1 }
+            ]}
+            onPress={onPress}
+        >
+            <View style={$statHeader}>
+                <View style={[themed($iconContainer), { backgroundColor: color + '15' }]}>
+                    {icon}
+                </View>
+                {trend && (
+                    <View style={[themed($trendBadge), { backgroundColor: colors.successBackground }]}>
+                        <TrendingUp size={12} color={colors.success} />
+                        <Text size="xxs" style={themed({ color: colors.success, marginLeft: 4 })}>{trend}%</Text>
+                    </View>
+                )}
+            </View>
+            <Text style={themed($statValue)}>{value}</Text>
+            <Text style={themed($statLabel)}>{label}</Text>
+        </Pressable>
+    );
+});
+
+const ActivityCard = React.memo(({ item }: { item: any }) => {
+    const { themed, theme: { colors } } = useAppTheme();
+
+    const ActivityIcons: { [key: string]: JSX.Element } = {
+        'ONBOARDING': <UserPlus size={20} color={colors.success} />,
+        'RENEWAL': <RefreshCw size={20} color={colors.primary} />,
+        'EXPIRY': <AlertCircle size={20} color={colors.error} />,
+        'PAYMENT': <Wallet size={20} color={colors.success} />,
+        'ADVANCE_RENEWAL': <RefreshCw size={20} color={colors.primary} />
+    };
+
+    return (
+        <MotiView
+            from={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+        >
+            <Pressable
+                style={themed($activityCard)}
+                onPress={() => item?.memberId && navigate('Client Profile', { data: { _id: item.memberId } })}
+            >
+                <View style={themed($activityIconWrapper)}>
+                    {ActivityIcons[item?.type] || <ActivityIconLucide size={20} color={colors.primary} />}
+                </View>
+                <View style={$activityContent}>
+                    <View style={$activityTopRow}>
+                        <Text style={themed($activityTitle)}>{item?.title}</Text>
+                        <Text style={themed($activityTime)}>{formatDistanceToNow(new Date(item?.date || new Date()), { addSuffix: true })}</Text>
+                    </View>
+                    <Text style={themed($activityDesc)} numberOfLines={1}>{item?.description}</Text>
+                    {item?.amount ? (
+                        <Text style={themed($activityAmount)}>₹{item?.amount}</Text>
+                    ) : null}
+                </View>
+            </Pressable>
+        </MotiView>
+    );
+});
 
 export default Home
 
