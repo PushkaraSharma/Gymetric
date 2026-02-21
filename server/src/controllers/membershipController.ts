@@ -1,17 +1,18 @@
+import { FastifyRequest, FastifyReply } from 'fastify';
 import Memberships from "../models/Memberships.js";
 
-export const getAllMemberships = async (request, reply) => {
+export const getAllMemberships = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
         const memberships = await Memberships.find({ gymId }).sort({ index: 1 });
         return reply.status(200).send({ success: true, data: memberships });
-    } catch (error) {
-        console.log(error)
+    } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
 
-export const addMembership = async (request, reply) => {
+export const addMembership = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
         const { planName, durationInDays, durationInMonths, price, isTrial, description, active, planType, membersAllowed, index } = request.body;
@@ -19,12 +20,13 @@ export const addMembership = async (request, reply) => {
             planName, durationInDays, durationInMonths, price, isTrial, active, gymId, description, planType, membersAllowed
         })
         return reply.status(201).send({ success: true, data: membership });
-    } catch (error) {
+    } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
 
-export const updateMembership = async (request, reply) => {
+export const updateMembership = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
         const updatedData = request.body;
@@ -37,13 +39,14 @@ export const updateMembership = async (request, reply) => {
             return reply.status(404).send({ success: false, message: 'Membership not found' });
         }
         return reply.send({ success: true, data: updatedMembership });
-    } catch (error) {
+    } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
 
 
-export const deleteMembership = async (request, reply) => {
+export const deleteMembership = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
         const { id } = request.query;
@@ -52,7 +55,8 @@ export const deleteMembership = async (request, reply) => {
             return reply.status(404).send({ success: false, message: 'Membership not found or unauthorized' });
         }
         return reply.send({ success: true, data: await Memberships.find({ gymId }).sort({ index: 1 }) });
-    } catch (error) {
+    } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };

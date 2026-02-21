@@ -32,7 +32,7 @@ export const setSettings = async (request: any, reply: any) => {
         );
         return reply.status(200).send({ success: true, data: settings });
     } catch (error: any) {
-        console.log(error)
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
@@ -57,6 +57,7 @@ export const getSettings = async (request: any, reply: any) => {
             data: { ...rawSettings, hasWhatsappConfigured }
         });
     } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };

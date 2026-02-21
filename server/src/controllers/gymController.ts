@@ -1,6 +1,7 @@
+import { FastifyRequest, FastifyReply } from 'fastify';
 import Gym from "../models/Gym.js";
 
-export const getGymInfo = async (request, reply) => {
+export const getGymInfo = async (request: any, reply: any) => {
     try {
         const { gymId } = request.user;
         const gymInfo = await Gym.findOne({ _id: gymId });
@@ -8,12 +9,13 @@ export const getGymInfo = async (request, reply) => {
             return reply.status(404).send({ success: false, error: 'Gym not found' });
         }
         return reply.send({ success: true, data: gymInfo });
-    } catch (error) {
+    } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
 
-export const updateGymInfo = async (request, reply) => {
+export const updateGymInfo = async (request: any, reply: any) => {
     try {
         const { gymId } = request.user;
         const updatedData = request.body;
@@ -27,7 +29,8 @@ export const updateGymInfo = async (request, reply) => {
         }
         return reply.send({ success: true, data: updatedGym });
 
-    } catch (error) {
+    } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 }
