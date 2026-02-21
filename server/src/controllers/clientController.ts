@@ -51,12 +51,14 @@ export const getAllClients = async (request: FastifyRequest, reply: FastifyReply
         const clients = await Client.find({ gymId })
             .select('name phoneNumber gender membershipStatus activeMembership')
             .populate({ path: 'activeMembership', select: 'endDate planName' })
-            .sort({ name: 1 });
+            .sort({ name: 1 })
+            .lean();
 
         cache.set(cacheKey, clients);
 
         return reply.status(200).send({ success: true, data: clients });
     } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
@@ -183,7 +185,7 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
         return reply.status(201).send({ success: true, data: primaryClient });
     } catch (error: any) {
         await session.abortTransaction();
-        console.error('Onboarding Error:', error);
+        request.log.error({ err: error }, 'Onboarding Error');
         return reply.status(500).send({ success: false, error: error.message });
     } finally {
         session.endSession();
@@ -211,6 +213,7 @@ export const getClientStats = async (request: FastifyRequest, reply: FastifyRepl
             }
         });
     } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
@@ -324,7 +327,7 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
         return reply.send({ success: true, data: primaryClient });
     } catch (error: any) {
         await session.abortTransaction();
-        console.error('Renewal Error:', error);
+        request.log.error({ err: error }, 'Renewal Error');
         return reply.status(500).send({ success: false, error: error.message });
     } finally {
         session.endSession();
@@ -349,6 +352,7 @@ export const updateClient = async (request: any, reply: any) => {
 
         return reply.send({ success: true, data: client });
     } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
@@ -369,13 +373,14 @@ export const getClientById = async (request: any, reply: any) => {
             path: 'membershipHistory',
             select: 'startDate endDate status planName totalAmount',
             options: { sort: { startDate: -1 } }
-        });
+        }).lean();
 
         if (!client) {
             return reply.status(404).send({ success: false, error: "Client not found" });
         }
         return reply.send({ success: true, data: client });
     } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
@@ -406,6 +411,7 @@ export const deleteClient = async (request: any, reply: any) => {
 
         return reply.send({ success: true, message: 'Client deleted successfully' });
     } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };

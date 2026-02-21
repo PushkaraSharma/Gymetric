@@ -60,7 +60,7 @@ export const verifyOtp = async (request: FastifyRequest, reply: FastifyReply) =>
         }
 
     } catch (error: any) {
-        console.log("eror:", error)
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 }
@@ -128,6 +128,7 @@ export const onboard = async (request: FastifyRequest, reply: FastifyReply) => {
         });
 
     } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 }
@@ -169,7 +170,7 @@ export const passwordLogin = async (request: FastifyRequest, reply: FastifyReply
         });
 
     } catch (error: any) {
-        console.log("error", error)
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 }
@@ -199,6 +200,7 @@ export const setupGymAndAdmin = async (request: FastifyRequest, reply: FastifyRe
             message: "Gym and Admin created successfully"
         })
     } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 }
@@ -226,6 +228,7 @@ export const loginAdmin = async (request: FastifyRequest, reply: FastifyReply) =
             }
         })
     } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 
@@ -257,6 +260,7 @@ export const resetPassword = async (request: FastifyRequest, reply: FastifyReply
             message: "Password reset successfully"
         });
     } catch (error: any) {
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
@@ -286,7 +290,7 @@ export const checkUser = async (request: FastifyRequest, reply: FastifyReply) =>
             });
         }
     } catch (error: any) {
-        console.log("here, ", error)
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };

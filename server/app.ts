@@ -24,7 +24,11 @@ const start = async () => {
     }
     await connectDB(process.env.MONGO_URI);
 
-    const app: FastifyInstance = fastify({ logger: false });
+    const app: FastifyInstance = fastify({
+        logger: {
+            level: 'error'
+        }
+    });
 
     await app.register(cors, { origin: true });
     await app.register(multipart, {

@@ -21,6 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         allowBackup: false,
         edgeToEdgeEnabled: true,
         googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
+        versionCode: 2,
     },
     ios: {
         googleServicesFile: process.env.GOOGLE_SERVICES_PLIST ?? "./GoogleService-Info.plist",

@@ -1,17 +1,18 @@
+import { FastifyRequest, FastifyReply } from 'fastify';
 import Activity from "../models/Activity.js";
 import Client from "../models/Client.js";
 import mongoose from "mongoose";
 import { addUtcDays, utcStartOfDay, utcStartOfMonth } from "../utils/Helper.js";
 import { cache, getCacheKey } from "../utils/cache.js";
 
-const calculateTrend = (current, previous) => {
+const calculateTrend = (current: number, previous: number) => {
     if (!previous || previous === 0) return null;
     return parseFloat(((current - previous) / previous * 100).toFixed(1));
 };
 
-export const getDashboardSummary = async (request, reply) => {
+export const getDashboardSummary = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const { gymId } = request.user;
+        const { gymId } = request.user as any;
         const cacheKey = getCacheKey('dashboard_summary', gymId);
 
         // Check if data is stored in the cache
@@ -131,14 +132,14 @@ export const getDashboardSummary = async (request, reply) => {
             data: responseData
         });
     } catch (error: any) {
-        console.log(error)
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
 
-export const getRevenueStats = async (request, reply) => {
+export const getRevenueStats = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const { gymId } = request.user;
+        const { gymId } = request.user as any;
         const today = utcStartOfDay();
         const startOfCurrent = utcStartOfMonth(today);
 
@@ -223,7 +224,7 @@ export const getRevenueStats = async (request, reply) => {
         });
 
     } catch (error: any) {
-        console.error("Revenue Stats Error:", error);
+        request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };

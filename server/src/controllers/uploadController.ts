@@ -72,7 +72,7 @@ export const uploadClientProfilePicture = async (request: FastifyRequest, reply:
             }
         });
     } catch (error: any) {
-        console.error('Upload error:', error);
+        request.log.error({ err: error }, 'Upload error');
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
@@ -121,7 +121,7 @@ export const uploadGymLogo = async (request: FastifyRequest, reply: FastifyReply
             }
         });
     } catch (error: any) {
-        console.error('Upload error:', error);
+        request.log.error({ err: error }, 'Upload error');
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
@@ -148,7 +148,7 @@ export const deleteClientProfilePicture = async (request: FastifyRequest, reply:
 
         return reply.send({ success: true, message: 'Profile picture deleted' });
     } catch (error: any) {
-        console.error('Delete error:', error);
+        request.log.error({ err: error }, 'Delete error');
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
