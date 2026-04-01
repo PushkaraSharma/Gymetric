@@ -1,9 +1,9 @@
 import { ExpoConfig, ConfigContext } from "expo/config"
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
-    name: "Gymetric",
-    slug: "Gymetric",
-    scheme: "gymetric",
+    name: "GymKarta",
+    slug: "GymKarta",
+    scheme: "gymkarta",
     version: "0.0.4",
     orientation: "portrait",
     userInterfaceStyle: "automatic",

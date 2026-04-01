@@ -36,7 +36,7 @@ const SideDrawer = () => {
                     )}
                 </View>
                 <View style={$headerText}>
-                    <Text style={themed($gymName)}>{gymInfo?.name || 'Gymetric'}</Text>
+                    <Text style={themed($gymName)}>{gymInfo?.name || 'GymKarta'}</Text>
                     <View style={$addressContainer}>
                         <MapPin size={12} color={colors.textDim} />
                         <Text style={themed($gymAddress)} numberOfLines={1}>{gymInfo?.address || '--'}</Text>

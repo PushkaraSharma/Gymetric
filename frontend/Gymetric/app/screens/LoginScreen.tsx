@@ -77,7 +77,7 @@ export const LoginScreen = () => {
         </View>
 
         <View style={$headerTextContainer}>
-          <Text preset="heading">Gymetric</Text>
+          <Text preset="heading">GymKarta</Text>
           <Text
             preset="subheading"
             text="Welcome Back"

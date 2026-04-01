@@ -38,7 +38,7 @@ const Slide = memo(({ item, width, colors, typography }: any) => {
                 transition={{ delay: 200, type: 'timing' }}
                 style={[$title, { color: colors.text, fontFamily: typography.secondary.bold, fontSize: 32 }]}
             >
-                Gymetric
+                GymKarta
             </MotiText>
             <MotiView
                 from={{ opacity: 0, scale: 0.9 }}

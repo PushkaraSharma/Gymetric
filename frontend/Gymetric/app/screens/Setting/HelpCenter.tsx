@@ -45,13 +45,13 @@ const HelpCenter = () => {
 
             <View style={themed($container)}>
                 <Text preset="heading" style={themed($title)}>Get in Touch</Text>
-                <Text style={themed($subtitle)}>We're here to help you with any questions or issues regarding Gymetric.</Text>
+                <Text style={themed($subtitle)}>We're here to help you with any questions or issues regarding GymKarta.</Text>
 
                 <View style={$list}>
                     <SupportItem
                         icon={<Mail size={22} color={colors.primary} />}
                         title="Email Support"
-                        value="support@gymetric.com"
+                        value="support@gymkarta.com"
                         onPress={handleEmail}
                     />
                     <SupportItem

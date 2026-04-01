@@ -62,7 +62,7 @@ const start = async () => {
 
     try {
         await app.listen({ port: Number(PORT), host: '0.0.0.0' });
-        console.log(`Gymetric server is running on port ${PORT}`);
+        console.log(`GymKarta server is running on port ${PORT}`);
     } catch (err: any) {
         app.log.error(err);
         process.exit(1);
