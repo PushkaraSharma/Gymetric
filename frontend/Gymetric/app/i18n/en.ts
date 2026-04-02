@@ -33,7 +33,7 @@ const en = {
     invalidEmail: "Invalid email address.",
   },
   loginScreen: {
-    appName: "Gymetric",
+    appName: "GymKarta",
     enterDetails:
       "Enter your details below to unlock top secret info. You'll never guess what we've got waiting. Or maybe you will; it's not rocket science here.",
     emailFieldLabel: "Email",

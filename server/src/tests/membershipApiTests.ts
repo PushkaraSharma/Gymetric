@@ -36,7 +36,7 @@ dotenv.config();
 
 // CONFIGURATION
 const BASE_URL = 'http://localhost:8080/api';
-const ADMIN_EMAIL = 'test@gymetric.com';
+const ADMIN_EMAIL = 'test@gymkarta.com';
 const ADMIN_PASSWORD = 'TestPassword123!';
 
 // REAL CUSTOMER DATA (as provided)
@@ -130,7 +130,7 @@ async function setup() {
         // Create gym and admin via API
         try {
             const setupResponse = await api.post('/auth/setup', {
-                gymName: 'Test Gymetric',
+                gymName: 'Test GymKarta',
                 adminName: 'Test Admin',
                 username: ADMIN_EMAIL,
                 password: ADMIN_PASSWORD,

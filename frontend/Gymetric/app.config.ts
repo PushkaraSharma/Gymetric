@@ -1,10 +1,10 @@
 import { ExpoConfig, ConfigContext } from "expo/config"
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
-    name: "Gymetric",
+    name: "GymKarta",
     slug: "Gymetric",
-    scheme: "gymetric",
-    version: "0.0.4",
+    scheme: "gymkarta",
+    version: "1.0.0",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
     icon: "./assets/images/app-icon.png",
@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         allowBackup: false,
         edgeToEdgeEnabled: true,
         googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
-        versionCode: 2,
+        versionCode: 3,
     },
     ios: {
         googleServicesFile: process.env.GOOGLE_SERVICES_PLIST ?? "./GoogleService-Info.plist",

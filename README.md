@@ -1,1 +1,1 @@
-# Gymetric
+# GymKarta
