@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, ActionSheetIOS } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 export interface ImagePickerResult {
@@ -8,26 +8,29 @@ export interface ImagePickerResult {
 }
 
 export const useImagePicker = () => {
-    const requestPermissions = async () => {
+    const pickImageFromGallery = async (): Promise<ImagePickerResult | null> => {
         if (Platform.OS !== 'web') {
-            const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-            const mediaPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            let mediaPermission = await ImagePicker.getMediaLibraryPermissionsAsync();
+            if (!mediaPermission?.granted && mediaPermission?.canAskAgain) {
+                await new Promise((resolve) => {
+                    Alert.alert(
+                        'Photo Library Access',
+                        'We need access to your photo library to let you choose and upload a profile photo. Please proceed to grant the permission.',
+                        [{ text: 'Continue', onPress: resolve }]
+                    );
+                });
+                mediaPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            }
 
-            if (cameraPermission.status !== 'granted' || mediaPermission.status !== 'granted') {
+            if (!mediaPermission?.granted) {
                 Alert.alert(
                     'Permission Required',
-                    'Please grant camera and photo library permissions to upload images.',
+                    'Please enable photo library permissions in your device settings to upload images.',
                     [{ text: 'OK' }]
                 );
-                return false;
+                return null;
             }
         }
-        return true;
-    };
-
-    const pickImageFromGallery = async (): Promise<ImagePickerResult | null> => {
-        const hasPermission = await requestPermissions();
-        if (!hasPermission) return null;
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
@@ -47,8 +50,28 @@ export const useImagePicker = () => {
     };
 
     const pickImageFromCamera = async (): Promise<ImagePickerResult | null> => {
-        const hasPermission = await requestPermissions();
-        if (!hasPermission) return null;
+        if (Platform.OS !== 'web') {
+            let cameraPermission = await ImagePicker.getCameraPermissionsAsync();
+            if (!cameraPermission?.granted && cameraPermission?.canAskAgain) {
+                await new Promise((resolve) => {
+                    Alert.alert(
+                        'Camera Access',
+                        'We need camera access to let you capture and upload a profile photo. Please proceed to grant the permission.',
+                        [{ text: 'Continue', onPress: resolve }]
+                    );
+                });
+                cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+            }
+
+            if (!cameraPermission?.granted) {
+                Alert.alert(
+                    'Permission Required',
+                    'Please enable camera permissions in your device settings to take photos.',
+                    [{ text: 'OK' }]
+                );
+                return null;
+            }
+        }
 
         const result = await ImagePicker.launchCameraAsync({
             allowsEditing: true,
@@ -67,35 +90,57 @@ export const useImagePicker = () => {
     };
 
     const showImagePickerOptions = (onImageSelected: (uri: string) => void) => {
-        Alert.alert(
-            'Select Photo',
-            'Choose an option to upload your photo',
-            [
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
                 {
-                    text: 'Take Photo',
-                    onPress: async () => {
+                    options: ['Cancel', 'Take Photo', 'Choose from Gallery'],
+                    cancelButtonIndex: 0,
+                },
+                async (buttonIndex) => {
+                    if (buttonIndex === 1) {
                         const result = await pickImageFromCamera();
                         if (result && !result.canceled) {
                             onImageSelected(result.uri);
                         }
-                    },
-                },
-                {
-                    text: 'Choose from Gallery',
-                    onPress: async () => {
+                    } else if (buttonIndex === 2) {
                         const result = await pickImageFromGallery();
                         if (result && !result.canceled) {
                             onImageSelected(result.uri);
                         }
+                    }
+                }
+            );
+        } else {
+            Alert.alert(
+                'Select Photo',
+                'Choose an option to upload your photo',
+                [
+                    {
+                        text: 'Take Photo',
+                        onPress: async () => {
+                            const result = await pickImageFromCamera();
+                            if (result && !result.canceled) {
+                                onImageSelected(result.uri);
+                            }
+                        },
                     },
-                },
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                },
-            ],
-            { cancelable: true }
-        );
+                    {
+                        text: 'Choose from Gallery',
+                        onPress: async () => {
+                            const result = await pickImageFromGallery();
+                            if (result && !result.canceled) {
+                                onImageSelected(result.uri);
+                            }
+                        },
+                    },
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                ],
+                { cancelable: true }
+            );
+        }
     };
 
     return {

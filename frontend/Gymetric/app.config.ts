@@ -24,6 +24,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         versionCode: 3,
     },
     ios: {
+        buildNumber: '2',
         googleServicesFile: process.env.GOOGLE_SERVICES_PLIST ?? "./GoogleService-Info.plist",
         icon: "./assets/images/app-icon.png",
         supportsTablet: true,
