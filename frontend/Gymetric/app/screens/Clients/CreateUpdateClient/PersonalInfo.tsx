@@ -23,7 +23,7 @@ type Props = {
 
 const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, validNumber }) => {
     const { theme: { colors, spacing }, themed } = useAppTheme();
-    const { showImagePickerOptions } = useImagePicker();
+    const { showImagePickerOptions, ImagePickerSheet } = useImagePicker();
 
     const phoneRef = useRef<any>(null);
     const ageRef = useRef<any>(null);
@@ -146,6 +146,7 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
                     containerStyle={{ paddingBottom: spacing.xl }}
                 />
             </View>
+            <ImagePickerSheet />
         </View>
     )
 }
