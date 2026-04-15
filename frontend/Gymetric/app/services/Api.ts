@@ -8,7 +8,7 @@ import { ApiConfig, ApiResult, BackendResponse } from "@/utils/types"
 
 export const DEFAULT_API_CONFIG: ApiConfig = {
   url: Config.API_URL,
-  timeout: 10000,
+  timeout: 15000,
 }
 
 export class Api {
@@ -34,9 +34,17 @@ export class Api {
     }
   }
 
-  async apiRequest<T>(method: "get" | "post" | "put" | "patch" | "delete", url: string, body?: any, params?: any): Promise<ApiResult> {
+  async apiRequest<T>(method: "get" | "post" | "put" | "patch" | "delete", url: string, body?: any, params?: any, retries = 0): Promise<ApiResult> {
     const response: ApiResponse<BackendResponse<T>> = await this.apisauce[method](url, body, { params });
     if (!response.ok) {//Network fail
+      const isRetryable = response.problem === 'TIMEOUT_ERROR' || response.problem === 'CONNECTION_ERROR' || response.problem === 'NETWORK_ERROR';
+
+      if (isRetryable && retries < 2) {
+        // Wait 2 seconds before retrying
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return this.apiRequest(method, url, body, params, retries + 1);
+      }
+
       const message = response?.data?.message ?? "Network error";
       Toast.show({ type: 'error', text1: response.status == 401 ? 'Session Expired' : 'Internal error', text2: message, visibilityTime: 2000 });
       if (response.status === 401) remove('authToken');

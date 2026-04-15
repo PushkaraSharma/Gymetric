@@ -32,7 +32,7 @@ const BusinessProfile = () => {
   const gymDetails = useAppSelector(selectGymInfo);
   const [form, setForm] = useState<GymFormType>({ name: gymDetails?.name, ownerName: gymDetails?.ownerName, address: gymDetails?.address, contactNumber: gymDetails?.contactNumber, email: gymDetails?.email })
   const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
-  const { showImagePickerOptions } = useImagePicker();
+  const { showImagePickerOptions, ImagePickerSheet } = useImagePicker();
 
   const phoneRef = useRef<any>(null);
   const ownerRef = useRef<any>(null);
@@ -168,6 +168,7 @@ const BusinessProfile = () => {
           <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={updateGym} />
         </View>
       </View>
+      <ImagePickerSheet />
     </Screen>
   )
 }
