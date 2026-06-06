@@ -12,6 +12,8 @@ import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
+import { trackEvent, AnalyticsEvents, setAnalyticsUser } from '@/services/analyticsService'
+import { setCrashlyticsUser } from '@/services/crashlyticsService'
 import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { useRef } from "react"
 import { VersionFooter } from "@/components/VersionFooter"
@@ -99,6 +101,9 @@ export const OTPVerificationScreen = () => {
                     save("userData", response.data)
                     api.setAuthToken(token)
                     dispatch(setLoggedInUser(response.data))
+                    trackEvent(AnalyticsEvents.SIGN_IN)
+                    setAnalyticsUser({ id: response.data?.userId ?? response.data?.phoneNumber, username: response.data?.username ?? '' })
+                    setCrashlyticsUser(response.data?.userId ?? null)
                 }
             } else {
                 setError("Verification failed.")

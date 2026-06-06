@@ -12,6 +12,8 @@ import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
+import { trackEvent, AnalyticsEvents, setAnalyticsUser } from '@/services/analyticsService'
+import { setCrashlyticsUser } from '@/services/crashlyticsService'
 import { EyeOff, ChevronLeft } from "lucide-react-native"
 import { TouchableOpacity } from "react-native"
 import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
@@ -68,6 +70,9 @@ export const PasswordLoginScreen = () => {
                 api.setAuthToken(response.data.token);
                 save("userData", response.data);
                 dispatch(setLoggedInUser(response.data));
+                trackEvent(AnalyticsEvents.SIGN_IN)
+                setAnalyticsUser({ id: response.data?.userId ?? formattedNumber, username: response.data?.username ?? '' })
+                setCrashlyticsUser(response.data?.userId ?? null)
             } else {
                 setError("Invalid credentials")
             }

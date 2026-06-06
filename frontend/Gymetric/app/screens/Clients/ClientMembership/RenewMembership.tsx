@@ -15,6 +15,8 @@ import { useAppDispatch, useAppSelector } from '@/redux/Hooks';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { goBack } from '@/navigators/navigationUtilities';
+import { incrementActionAndReview } from '@/services/storeReviewService';
+import { trackEvent, AnalyticsEvents } from '@/services/analyticsService';
 import { addDays, format } from 'date-fns';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DEVICE_WIDTH } from '@/utils/Constants';
@@ -100,6 +102,8 @@ const RenewMembership = ({ route }: any) => {
         dispatch(setLoading({ loading: false }));
         if (response.kind == 'ok') {
             Toast.show({ type: 'success', text1: 'Membership renewed successfully' });
+            trackEvent(AnalyticsEvents.MEMBERSHIP_RENEWED);
+            incrementActionAndReview();
             goBack();
         }
     };

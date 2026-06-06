@@ -53,10 +53,6 @@ export class Api {
     return { kind: 'ok', data: response?.data?.data as T };
   };
 
-  async loginAPI(username: string, password: string) {
-    return this.apiRequest('post', '/api/auth/login', { username, password });
-  }
-
   verifyOtp = async (firebaseIdToken: string) => {
     return await this.apiRequest('post', '/api/auth/verify-otp', { firebaseIdToken });
   };

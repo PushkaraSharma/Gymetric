@@ -1,4 +1,4 @@
-import { NavigationContainer } from "@react-navigation/native"
+import { NavigationContainer, NavigationState } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import Config from "@/config"
@@ -31,6 +31,14 @@ import { ActivityIndicator, TextStyle, View } from "react-native"
 import { ThemedStyle } from "@/theme/types"
 import Revenue from "@/screens/Revenue/Revenue"
 import { WhatsAppPremium } from "@/screens/Setting/WhatsAppPremium"
+import { trackScreenView } from "@/services/analyticsService"
+
+const getActiveRouteName = (state: NavigationState | undefined): string | undefined => {
+  if (!state) return undefined
+  const route = state.routes[state.index]
+  if (route.state) return getActiveRouteName(route.state as NavigationState)
+  return route.name
+}
 
 const exitRoutes = Config.exitRoutes
 
@@ -101,8 +109,14 @@ export const AppNavigator = (props: NavigationProps) => {
 
   useBackButtonHandler((routeName) => exitRoutes.includes(routeName))
 
+  const handleStateChange = (state: NavigationState | undefined) => {
+    const routeName = getActiveRouteName(state)
+    if (routeName) trackScreenView(routeName)
+    props.onStateChange?.(state)
+  }
+
   return (
-    <NavigationContainer ref={navigationRef} theme={navigationTheme} {...props}>
+    <NavigationContainer ref={navigationRef} theme={navigationTheme} {...props} onStateChange={handleStateChange}>
       <ErrorBoundary catchErrors={Config.catchErrors}>
         <AppStack />
       </ErrorBoundary>

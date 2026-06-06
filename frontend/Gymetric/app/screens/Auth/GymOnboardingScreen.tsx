@@ -12,6 +12,8 @@ import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
+import { trackEvent, AnalyticsEvents, setAnalyticsUser } from '@/services/analyticsService'
+import { setCrashlyticsUser } from '@/services/crashlyticsService'
 import { EyeOff } from "lucide-react-native"
 
 export const GymOnboardingScreen = () => {
@@ -60,6 +62,9 @@ export const GymOnboardingScreen = () => {
                 save("userData", response.data);
                 api.setAuthToken(token);
                 dispatch(setLoggedInUser(response.data));
+                trackEvent(AnalyticsEvents.SIGN_IN)
+                setAnalyticsUser({ id: response.data?.userId ?? phoneNumber, username: response.data?.username ?? ownerName })
+                setCrashlyticsUser(response.data?.userId ?? null)
             } else {
                 setError("Onboarding failed")
             }

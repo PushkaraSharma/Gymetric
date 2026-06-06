@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useCallback } from "react"
 import { Animated, Image, ImageStyle, Platform, StyleProp, View, ViewStyle } from "react-native"
 
 import { iconRegistry } from "@/components/Icon"
-import { isRTL } from "@/i18n"
 import { useAppTheme } from "@/theme/context"
 import { $styles } from "@/theme/styles"
 import type { ThemedStyle } from "@/theme/types"
@@ -113,7 +112,7 @@ function SwitchInput(props: SwitchInputProps) {
     }
   })()
 
-  const rtlAdjustment = isRTL ? -1 : 1
+  const rtlAdjustment = 1
   const $themedSwitchInner = useMemo(() => themed([$styles.toggleInner, $switchInner]), [themed])
 
   const offsetLeft = ($innerStyleOverride?.paddingStart ||
@@ -130,9 +129,7 @@ function SwitchInput(props: SwitchInputProps) {
 
   const outputRange =
     Platform.OS === "web"
-      ? isRTL
-        ? [+(knobWidth || 0) + offsetRight, offsetLeft]
-        : [offsetLeft, +(knobWidth || 0) + offsetRight]
+      ? [offsetLeft, +(knobWidth || 0) + offsetRight]
       : [rtlAdjustment * offsetLeft, rtlAdjustment * (+(knobWidth || 0) + offsetRight)]
 
   const $animatedSwitchKnob = animate.current.interpolate({

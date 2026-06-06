@@ -2,7 +2,6 @@ import { View, StyleSheet, ScrollView, ViewStyle, TextStyle, FlatList, Platform 
 import React, { useCallback, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { Header } from '@/components/Header'
-import HeaderbackButton from '@/components/HeaderbackButton'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { Text } from '@/components/Text'

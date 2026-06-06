@@ -21,6 +21,8 @@ import { DEVICE_WIDTH } from '@/utils/Constants'
 import { alreadyExists } from '@/utils/Helper'
 import { differenceInYears, format } from 'date-fns'
 import { useAppTheme } from '@/theme/context'
+import { incrementActionAndReview } from '@/services/storeReviewService'
+import { trackEvent, AnalyticsEvents } from '@/services/analyticsService'
 
 const CreateClient = () => {
     const dispatch = useAppDispatch();
@@ -146,6 +148,8 @@ const CreateClient = () => {
 
             dispatch(setLoading({ loading: false }));
             Toast.show({ type: 'success', text1: 'Client onboarded successfully' });
+            trackEvent(AnalyticsEvents.CLIENT_ADDED);
+            incrementActionAndReview();
             goBack();
         } else {
             dispatch(setLoading({ loading: false }));

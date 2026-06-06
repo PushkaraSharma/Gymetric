@@ -5,7 +5,6 @@ import PersonalInfo from './PersonalInfo';
 import { Screen } from '@/components/Screen';
 import { $styles } from '@/theme/styles';
 import { Header } from '@/components/Header';
-import HeaderbackButton from '@/components/HeaderbackButton';
 import { Button } from '@/components/Button';
 import { useAppTheme } from '@/theme/context';
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks';

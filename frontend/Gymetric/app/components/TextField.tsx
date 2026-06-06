@@ -10,8 +10,6 @@ import {
   ViewStyle,
 } from "react-native"
 
-import { isRTL } from "@/i18n"
-import { translate } from "@/i18n/translate"
 import { useAppTheme } from "@/theme/context"
 import { $styles } from "@/theme/styles"
 import type { ThemedStyle, ThemedStyleArray } from "@/theme/types"
@@ -28,16 +26,10 @@ export interface TextFieldAccessoryProps {
 export interface TextFieldProps extends Omit<TextInputProps, "ref"> {
   status?: "error" | "disabled"
   label?: TextProps["text"]
-  labelTx?: TextProps["tx"]
-  labelTxOptions?: TextProps["txOptions"]
   LabelTextProps?: TextProps
   helper?: TextProps["text"]
-  helperTx?: TextProps["tx"]
-  helperTxOptions?: TextProps["txOptions"]
   HelperTextProps?: TextProps
   placeholder?: TextProps["text"]
-  placeholderTx?: TextProps["tx"]
-  placeholderTxOptions?: TextProps["txOptions"]
   style?: StyleProp<TextStyle>
   containerStyle?: StyleProp<ViewStyle>
   inputWrapperStyle?: StyleProp<ViewStyle>
@@ -48,15 +40,9 @@ export interface TextFieldProps extends Omit<TextInputProps, "ref"> {
 
 export const TextField = forwardRef(function TextField(props: TextFieldProps, ref: Ref<TextInput>) {
   const {
-    labelTx,
     label,
-    labelTxOptions,
-    placeholderTx,
     placeholder,
-    placeholderTxOptions,
     helper,
-    helperTx,
-    helperTxOptions,
     status,
     RightAccessory,
     LeftAccessory,
@@ -77,11 +63,8 @@ export const TextField = forwardRef(function TextField(props: TextFieldProps, re
 
   const disabled = TextInputProps.editable === false || status === "disabled"
 
-  const placeholderContent = placeholderTx
-    ? translate(placeholderTx, placeholderTxOptions)
-    : placeholder
-
-  const labelContent = labelTx ? translate(labelTx, labelTxOptions) : label
+  const placeholderContent = placeholder
+  const labelContent = label
 
   const $containerStyles = [$containerStyleOverride]
 
@@ -100,7 +83,6 @@ export const TextField = forwardRef(function TextField(props: TextFieldProps, re
   const $inputStyles: ThemedStyleArray<TextStyle> = [
     $inputStyle,
     disabled && { color: colors.textDim },
-    isRTL && { textAlign: "right" as TextStyle["textAlign"] },
     TextInputProps.multiline && { height: "auto" },
     $inputStyleOverride,
   ]
@@ -125,7 +107,7 @@ export const TextField = forwardRef(function TextField(props: TextFieldProps, re
       onPress={focusInput}
       accessibilityState={{ disabled }}
     >
-      {!!(label || labelTx) && (
+      {!!label && (
         <Text
           preset="formLabel"
           {...LabelTextProps}
@@ -167,12 +149,10 @@ export const TextField = forwardRef(function TextField(props: TextFieldProps, re
         )}
       </View>
 
-      {!!(helper || helperTx) && (
+      {!!helper && (
         <Text
           preset="formHelper"
           text={helper}
-          tx={helperTx}
-          txOptions={helperTxOptions}
           {...HelperTextProps}
           style={themed($helperStyles)}
         />

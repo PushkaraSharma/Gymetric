@@ -14,6 +14,8 @@ import { useAppTheme } from '@/theme/context'
 import { api } from '@/services/Api'
 import Toast from 'react-native-toast-message'
 import { goBack } from '@/navigators/navigationUtilities'
+import { incrementActionAndReview } from '@/services/storeReviewService'
+import { trackEvent, AnalyticsEvents } from '@/services/analyticsService'
 import { Switch } from '@/components/Toggle/Switch'
 import { Checkbox } from '@/components/Toggle/Checkbox'
 import { Text } from '@/components/Text'
@@ -77,6 +79,10 @@ const CreateEditMembership = ({ navigation, route }: any) => {
     if (response.kind === 'ok') {
       dispatch(setGymInfo({ gymInfo: response.data }));
       Toast.show({ type: 'success', text1: `Membership ${membership ? 'updated' : 'created'} successfully` });
+      if (!membership) {
+        trackEvent(AnalyticsEvents.MEMBERSHIP_PLAN_CREATED);
+        incrementActionAndReview();
+      }
       goBack();
     }
     dispatch(setLoading({ loading: false }));

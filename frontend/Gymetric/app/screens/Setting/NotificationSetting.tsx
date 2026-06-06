@@ -173,7 +173,7 @@ const NotificationSetting = ({ navigation }: any) => {
                                         <View style={{ marginTop: spacing.xs }}>
                                             <TextField
                                                 label="Days before expiry"
-                                                labelTxOptions={{ style: { fontSize: 12, color: colors.textDim } }}
+                                                LabelTextProps={{ style: { fontSize: 12, color: colors.textDim } }}
                                                 value={settings.reminderDays}
                                                 onChangeText={(val: string) => updateSetting('reminderDays', val)}
                                                 keyboardType="numeric"

@@ -14,11 +14,6 @@ export interface ErrorDetailsProps {
   onReset(): void
 }
 
-/**
- * Renders the error details screen.
- * @param {ErrorDetailsProps} props - The props for the `ErrorDetails` component.
- * @returns {JSX.Element} The rendered `ErrorDetails` component.
- */
 export function ErrorDetails(props: ErrorDetailsProps) {
   const { themed } = useAppTheme()
   return (
@@ -29,8 +24,8 @@ export function ErrorDetails(props: ErrorDetailsProps) {
     >
       <View style={$topSection}>
         <Icon icon="ladybug" size={64} />
-        <Text style={themed($heading)} preset="subheading" tx="errorScreen:title" />
-        <Text tx="errorScreen:friendlySubtitle" />
+        <Text style={themed($heading)} preset="subheading" text="Something went wrong!" />
+        <Text text="This is the screen that your users will see in production when an error is thrown." />
       </View>
 
       <ScrollView
@@ -49,7 +44,7 @@ export function ErrorDetails(props: ErrorDetailsProps) {
         preset="reversed"
         style={themed($resetButton)}
         onPress={props.onReset}
-        tx="errorScreen:reset"
+        text="Reset"
       />
     </Screen>
   )
