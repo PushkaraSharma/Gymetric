@@ -127,8 +127,8 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             blurOnSubmit={false}
           />
           <View style={{ marginBottom: 20 }}>
-            <Text preset='formLabel'>Plan Type</Text>
-            <View style={[$styles.flexRow, { marginTop: 10 }]}>
+            <Text style={themed($label)}>Plan Type</Text>
+            <View style={[$styles.flexRow]}>
               {
                 ['Indivisual', 'Couple', 'Group'].map((type: string, index: number) => (
                   <Pressable key={index} style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => { handleForm('planType', type.toLowerCase()) }}>
@@ -176,8 +176,8 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             </View>
           </View>
           <View style={{ marginTop: 5, marginBottom: 15 }}>
-            <Text preset='formLabel'>Duration Settings</Text>
-            <View style={[$styles.flexRow, { marginTop: 10, backgroundColor: colors.surface, padding: 4, borderRadius: 10, borderWidth: 1, borderColor: colors.border }]}>
+            <Text style={themed($label)}>Duration Settings</Text>
+            <View style={[$styles.flexRow, { backgroundColor: colors.surface, padding: 4, borderRadius: 10, borderWidth: 1, borderColor: colors.border }]}>
               {['Months', 'Days'].map((type: string, index: number) => (
                 <Pressable key={index} style={{ width: '48%', alignItems: 'center', padding: 8, backgroundColor: type === durationType ? colors.tint : colors.surface, borderRadius: 8 }} onPress={() => { setDurationType(type as 'Months') }}>
                   <Text weight='medium' style={{ color: type === durationType ? colors.surface : colors.textDim }}>{type}</Text>
@@ -251,4 +251,11 @@ const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   marginBottom: spacing.md,
   borderWidth: 1,
   borderColor: colors.border,
+})
+
+const $label: ThemedStyle<ViewStyle> = ({ colors, spacing, typography }) => ({
+  fontSize: typography.s,
+  color: colors.textDim,
+  marginBottom: spacing.xs,
+  fontWeight: typography.medium,
 })

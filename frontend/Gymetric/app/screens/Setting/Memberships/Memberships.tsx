@@ -23,7 +23,7 @@ const Memberships = () => {
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
 
     const MembershipCards = ({ item }: { item: any }) => (
-        <Pressable style={[themed($card), $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs, opacity: item.active ? 1 : 0.5 }]} onPress={() => navigate('Create Edit Membership', { membership: item })}>
+        <Pressable style={[themed($card), $styles.flexRow, { padding: spacing.sm, opacity: item.active ? 1 : 0.5 }]} onPress={() => navigate('Create Edit Membership', { membership: item })}>
             <View style={{ flex: 1, maxWidth: '85%' }}>
                 <Text preset={'formLabel'}>{item.planName}</Text>
                 <View style={{ marginTop: 5, borderRadius: 6, backgroundColor: isDark ? colors.palette.slate800 : colors.palette.slate100, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2 }}>
@@ -90,7 +90,7 @@ const $footer: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
 const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     backgroundColor: colors.surface,
     borderRadius: 16,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
 })
