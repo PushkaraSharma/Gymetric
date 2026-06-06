@@ -90,8 +90,8 @@ const ChangePassword = () => {
                 />
 
                 <Button
-                    text="Update Password"
-                    preset="reversed"
+                    title="Update Password"
+                    variant="primary"
                     style={{ marginTop: spacing.xl }}
                     onPress={handleUpdate}
                     disabled={!newPassword || !confirmPassword}

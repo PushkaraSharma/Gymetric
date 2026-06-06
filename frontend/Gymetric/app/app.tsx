@@ -6,7 +6,6 @@ import "./utils/gestureHandler"
 
 import { useEffect, useState } from "react"
 import { View, Text, ActivityIndicator } from "react-native"
-import { useFonts } from "expo-font"
 import * as Updates from "expo-updates"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context"
@@ -14,7 +13,6 @@ import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-c
 import { AppNavigator } from "./navigators/AppNavigator"
 import { useNavigationPersistence } from "./navigators/navigationUtilities"
 import { ThemeProvider } from "./theme/context"
-import { customFontsToLoad } from "./theme/typography"
 import { loadDateFnsLocale } from "./utils/formatDate"
 import * as storage from "./utils/LocalStorage"
 import Toast from 'react-native-toast-message';
@@ -45,7 +43,6 @@ export function App() {
     isRestored: isNavigationStateRestored,
   } = useNavigationPersistence(storage, NAVIGATION_PERSISTENCE_KEY)
 
-  const [areFontsLoaded, fontLoadError] = useFonts(customFontsToLoad)
   const [isReady, setIsReady] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -82,7 +79,7 @@ export function App() {
     )
   }
 
-  if (!isNavigationStateRestored || !isReady || (!areFontsLoaded && !fontLoadError)) {
+  if (!isNavigationStateRestored || !isReady) {
     return null
   }
 

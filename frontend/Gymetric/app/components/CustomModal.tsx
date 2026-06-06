@@ -44,16 +44,15 @@ export const CustomModal = ({
 
                             <View style={$buttonContainer}>
                                 <Button
-                                    text={cancelText}
-                                    preset="default"
+                                    title={cancelText}
+                                    variant="outline"
                                     style={{ flex: 1, marginRight: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
                                     textStyle={{ color: colors.text }}
                                     onPress={onCancel}
                                 />
                                 <Button
-                                    text={confirmText}
+                                    title={confirmText}
                                     textStyle={{ color: colors.white }}
-                                    preset={type === 'destructive' ? 'filled' : 'filled'}
                                     style={{ flex: 1, marginLeft: spacing.sm, backgroundColor: type === 'destructive' ? colors.error : colors.primary }}
                                     onPress={onConfirm}
                                 />

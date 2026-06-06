@@ -1,271 +1,138 @@
-import { ReactElement } from "react"
-import {
-  StyleProp,
-  TextStyle,
-  TouchableOpacity,
-  TouchableOpacityProps,
-  View,
-  ViewStyle,
-} from "react-native"
-
-import { useAppTheme } from "@/theme/context"
-import { $styles } from "@/theme/styles"
-import type { ThemedStyle } from "@/theme/types"
-import { ExtendedEdge, useSafeAreaInsetsStyle } from "@/utils/useSafeAreaInsetsStyle"
-
-import { IconTypes, PressableIcon } from "./Icon"
-import { Text, TextProps } from "./Text"
+import React from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { ArrowLeft } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useAppTheme } from '@/theme/context';
 
 export interface HeaderProps {
-  /**
-   * The layout of the title relative to the action components.
-   * - `center` will force the title to always be centered relative to the header. If the title or the action buttons are too long, the title will be cut off.
-   * - `flex` will attempt to center the title relative to the action buttons. If the action buttons are different widths, the title will be off-center relative to the header.
-   */
-  titleMode?: "center" | "flex"
-  /**
-   * Optional title style override.
-   */
-  titleStyle?: StyleProp<TextStyle>
-  /**
-   * Optional outer title container style override.
-   */
-  titleContainerStyle?: StyleProp<ViewStyle>
-  /**
-   * Optional inner header wrapper style override.
-   */
-  style?: StyleProp<ViewStyle>
-  /**
-   * Optional outer header container style override.
-   */
-  containerStyle?: StyleProp<ViewStyle>
-  /**
-   * Background color
-   */
-  backgroundColor?: string
-  /**
-   * Title text to display if not using `tx` or nested components.
-   */
-  title?: TextProps["text"]
-  leftIcon?: IconTypes
-  /**
-   * An optional tint color for the left icon
-   */
-  leftIconColor?: string
-  /**
-   * Left action text to display if not using `leftTx`.
-   * Can be used with `onLeftPress`. Overrides `leftIcon`.
-   */
-  leftText?: TextProps["text"]
-  LeftActionComponent?: ReactElement
-  onLeftPress?: TouchableOpacityProps["onPress"]
-  /**
-   * Icon that should appear on the right.
-   * Can be used with `onRightPress`.
-   */
-  rightIcon?: IconTypes
-  /**
-   * An optional tint color for the right icon
-   */
-  rightIconColor?: string
-  /**
-   * Right action text to display if not using `rightTx`.
-   * Can be used with `onRightPress`. Overrides `rightIcon`.
-   */
-  rightText?: TextProps["text"]
-  RightActionComponent?: ReactElement
-  onRightPress?: TouchableOpacityProps["onPress"]
-  /**
-   * Override the default edges for the safe area.
-   */
-  safeAreaEdges?: ExtendedEdge[]
+    title?: string;
+    subTitle?: string;
+    centerAction?: React.ReactNode;
+    leftAction?: React.ReactNode;
+    onBack?: () => void;
+    rightAction?: React.ReactNode;
+    showBack?: boolean;
+
+    // Legacy support to prevent TS errors on old screens
+    leftIcon?: string;
+    onLeftPress?: () => void;
+    backgroundColor?: string;
+    RightActionComponent?: React.ReactNode;
 }
 
-interface HeaderActionProps {
-  backgroundColor?: string
-  icon?: IconTypes
-  iconColor?: string
-  text?: TextProps["text"]
-  onPress?: TouchableOpacityProps["onPress"]
-  ActionComponent?: ReactElement
-}
-
-/**
- * Header that appears on many screens. Will hold navigation buttons and screen title.
- * The Header is meant to be used with the `screenOptions.header` option on navigators, routes, or screen components via `navigation.setOptions({ header })`.
- * @see [Documentation and Examples]{@link https://docs.infinite.red/ignite-cli/boilerplate/app/components/Header/}
- * @param {HeaderProps} props - The props for the `Header` component.
- * @returns {JSX.Element} The rendered `Header` component.
- */
-export function Header(props: HeaderProps) {
-  const {
-    theme: { colors },
-    themed,
-  } = useAppTheme()
-  const {
-    backgroundColor = colors.background,
-    LeftActionComponent,
-    leftIcon,
-    leftIconColor,
-    leftText,
-    onLeftPress,
-    onRightPress,
-    RightActionComponent,
-    rightIcon,
-    rightIconColor,
-    rightText,
-    safeAreaEdges = ["top"],
+export function Header({
     title,
-    titleMode = "center",
-    titleContainerStyle: $titleContainerStyleOverride,
-    style: $styleOverride,
-    titleStyle: $titleStyleOverride,
-    containerStyle: $containerStyleOverride,
-  } = props
+    subTitle,
+    centerAction,
+    leftAction,
+    onBack,
+    rightAction,
+    showBack = true,
+    leftIcon,
+    onLeftPress,
+    backgroundColor,
+    RightActionComponent,
+}: HeaderProps) {
+    const navigation = useNavigation();
+    const { theme } = useAppTheme();
+    const styles = getStyles(theme);
 
-  const $containerInsets = useSafeAreaInsetsStyle(safeAreaEdges)
+    const handleBack = () => {
+        if (onBack) {
+            onBack();
+        } else if (onLeftPress) {
+            onLeftPress();
+        } else if (navigation.canGoBack()) {
+            navigation.goBack();
+        }
+    };
 
-  const titleContent = title
+    const finalRightAction = rightAction || RightActionComponent;
 
-  return (
-    <View style={[$container, $containerInsets, { backgroundColor }, $containerStyleOverride]}>
-      <View style={[$styles.row, $wrapper, $styleOverride]}>
-        <HeaderAction
-          text={leftText}
-          icon={leftIcon}
-          iconColor={leftIconColor}
-          onPress={onLeftPress}
-          backgroundColor={backgroundColor}
-          ActionComponent={LeftActionComponent}
-        />
-
-        {!!titleContent && (
-          <View
-            style={[
-              $titleWrapperPointerEvents,
-              titleMode === "center" && themed($titleWrapperCenter),
-              titleMode === "flex" && $titleWrapperFlex,
-              $titleContainerStyleOverride,
-            ]}
-          >
-            <Text
-              weight="medium"
-              size="md"
-              text={titleContent}
-              style={[$title, $titleStyleOverride]}
-            />
-          </View>
-        )}
-
-        <HeaderAction
-          text={rightText}
-          icon={rightIcon}
-          iconColor={rightIconColor}
-          onPress={onRightPress}
-          backgroundColor={backgroundColor}
-          ActionComponent={RightActionComponent}
-        />
-      </View>
-    </View>
-  )
-}
-
-/**
- * @param {HeaderActionProps} props - The props for the `HeaderAction` component.
- * @returns {JSX.Element} The rendered `HeaderAction` component.
- */
-function HeaderAction(props: HeaderActionProps) {
-  const { backgroundColor, icon, text, onPress, ActionComponent, iconColor } = props
-  const { themed } = useAppTheme()
-
-  const content = text
-
-  if (ActionComponent) return ActionComponent
-
-  if (content) {
     return (
-      <TouchableOpacity
-        style={themed([$actionTextContainer, { backgroundColor }])}
-        onPress={onPress}
-        disabled={!onPress}
-        activeOpacity={0.8}
-      >
-        <Text weight="medium" size="md" text={content} style={themed($actionText)} />
-      </TouchableOpacity>
-    )
-  }
+        <View style={[styles.header, backgroundColor ? { backgroundColor } : null]}>
+            <View style={styles.left}>
+                {leftAction ? (
+                    leftAction
+                ) : (showBack || leftIcon) ? (
+                    <Pressable onPress={handleBack} style={styles.backBtn}>
+                        <ArrowLeft size={24} color={theme.colors.text} />
+                    </Pressable>
+                ) : (
+                    <View style={styles.placeholder} />
+                )}
+            </View>
 
-  if (icon) {
-    return (
-      <PressableIcon
-        size={30}
-        icon={icon}
-        color={iconColor}
-        onPress={onPress}
-        containerStyle={themed([$actionIconContainer, { backgroundColor }])}
-        style={{}}
-      />
-    )
-  }
+            <View style={styles.center}>
+                {centerAction ? (
+                    centerAction
+                ) : (
+                    <>
+                        <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
+                        {subTitle ? (
+                            <Text style={styles.headerSubtitle} numberOfLines={1}>{subTitle}</Text>
+                        ) : null}
+                    </>
+                )}
+            </View>
 
-  return <View style={[$actionFillerContainer, { backgroundColor }]} />
+            <View style={styles.right}>
+                {finalRightAction ? (
+                    <View style={styles.rightAction}>
+                        {finalRightAction}
+                    </View>
+                ) : (
+                    <View style={styles.placeholder} />
+                )}
+            </View>
+        </View>
+    );
 }
 
-const $wrapper: ViewStyle = {
-  height: 56,
-  alignItems: "center",
-  justifyContent: "space-between",
-}
-
-const $container: ViewStyle = {
-  width: "100%",
-}
-
-const $title: TextStyle = {
-  textAlign: "center",
-}
-
-const $actionTextContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexGrow: 0,
-  alignItems: "center",
-  justifyContent: "center",
-  height: "100%",
-  paddingHorizontal: spacing.md,
-  zIndex: 2,
-})
-
-const $actionText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.tint,
-})
-
-const $actionIconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexGrow: 0,
-  alignItems: "center",
-  justifyContent: "center",
-  height: "100%",
-  paddingLeft: 10,
-  zIndex: 2,
-})
-
-const $actionFillerContainer: ViewStyle = {
-  width: 16,
-}
-
-const $titleWrapperPointerEvents: ViewStyle = {
-  pointerEvents: "none",
-}
-
-const $titleWrapperCenter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  alignItems: "center",
-  justifyContent: "center",
-  height: "100%",
-  width: "100%",
-  position: "absolute",
-  paddingHorizontal: spacing.xxl,
-  zIndex: 1,
-})
-
-const $titleWrapperFlex: ViewStyle = {
-  justifyContent: "center",
-  flexGrow: 1,
-}
+const getStyles = (theme: any) => StyleSheet.create({
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: theme.spacing.md,
+        paddingBottom: theme.spacing.md,
+        height: 60,
+    },
+    left: {
+        width: 44,
+    },
+    center: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    right: {
+        width: 44,
+    },
+    backBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: theme.typography.bold,
+        color: theme.colors.text,
+        textAlign: 'center',
+    },
+    headerSubtitle: {
+        fontSize: 12,
+        color: theme.colors.textDim,
+        textAlign: 'center',
+        marginTop: -2,
+    },
+    rightAction: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'flex-end',
+    },
+    placeholder: {
+        width: 44,
+    }
+});

@@ -1,10 +1,7 @@
-import { ScrollView, Pressable, RefreshControl, View, ViewStyle, TextStyle } from 'react-native'
+import { ScrollView, Pressable, RefreshControl, View, StyleSheet, Text } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import React, { useCallback, useMemo, useState } from 'react'
 import { useAppTheme } from '@/theme/context'
-import { ThemedStyle } from '@/theme/types'
-import { Screen } from '@/components/Screen'
-import { $styles } from '@/theme/styles'
-import { Text } from '@/components/Text'
 import { Plus, Users, Activity as ActivityIconLucide, Clock, UserPlus, UserX } from 'lucide-react-native'
 import { useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo } from '@/redux/state/GymStates'
@@ -40,7 +37,8 @@ export interface DashboardSummary {
 }
 
 const Home = () => {
-  const { themed, theme: { colors, spacing, isDark } } = useAppTheme()
+  const { theme, isDark } = useAppTheme()
+  const styles = getStyles(theme)
   const gymInfo = useAppSelector(selectGymInfo)
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [showBanner, setShowBanner] = useState(false)
@@ -100,41 +98,41 @@ const Home = () => {
       label: 'Active Now',
       value: summary?.activeMembers?.value ?? 0,
       trend: summary?.activeMembers?.trend,
-      icon: <ActivityIconLucide size={20} color={colors.success} />,
-      color: colors.success,
+      icon: <ActivityIconLucide size={20} color={theme.colors.success} />,
+      color: theme.colors.success,
       filter: 'Active',
     },
     {
       label: 'Expired',
       value: summary?.expiredMembers ?? 0,
-      icon: <UserX size={20} color={colors.error} />,
-      color: colors.error,
+      icon: <UserX size={20} color={theme.colors.error} />,
+      color: theme.colors.error,
       filter: 'Expired',
     },
     {
       label: 'Expiring Soon',
       value: summary?.expiringIn7Days ?? 0,
-      icon: <Clock size={20} color={colors.palette.indigo500} />,
-      color: colors.palette.indigo500,
+      icon: <Clock size={20} color={theme.colors.palette.indigo500} />,
+      color: theme.colors.palette.indigo500,
       filter: 'Expiring Soon',
     },
     {
       label: 'New Joinees',
       value: summary?.newlyJoinedThisMonth?.value ?? 0,
       trend: summary?.newlyJoinedThisMonth?.trend,
-      icon: <UserPlus size={20} color={colors.primary} />,
-      color: colors.primary,
+      icon: <UserPlus size={20} color={theme.colors.primary} />,
+      color: theme.colors.primary,
       filter: 'All Clients',
     },
-  ], [summary, colors])
+  ], [summary, theme.colors])
 
   const handleStatPress = (filter: string) => navigate('Clients', { filter })
 
   return (
-    <Screen preset="fixed" safeAreaEdges={['top']} backgroundColor={colors.background} contentContainerStyle={[$styles.flex1]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={{ flex: 1 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.text} colors={[colors.primary]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.text} colors={[theme.colors.primary]} />}
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
@@ -144,9 +142,9 @@ const Home = () => {
           isDark={isDark}
         />
 
-        <View style={{ paddingHorizontal: spacing.md }}>
+        <View style={{ paddingHorizontal: theme.spacing.md }}>
           {isLoading ? (
-            <View style={{ marginTop: spacing.md }}>
+            <View style={{ marginTop: theme.spacing.md }}>
               <Skeleton width="100%" height={180} borderRadius={24} style={{ marginBottom: 24 }} />
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
                 <Skeleton width="48%" height={120} borderRadius={20} />
@@ -191,7 +189,7 @@ const Home = () => {
                 />
               )}
 
-              <View style={{ marginBottom: spacing.md }}>
+              <View style={{ marginBottom: theme.spacing.md }}>
                 <RevenueCard
                   value={summary?.revenueThisMonth?.value ?? 0}
                   trend={summary?.revenueThisMonth?.trend ?? null}
@@ -205,8 +203,8 @@ const Home = () => {
 
               <RevenueTrendChart trends={summary?.revenueTrend ?? []} />
 
-              <View style={$sectionHeader}>
-                <Text style={themed($sectionTitle)} text="Recent Activity" />
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Activity</Text>
               </View>
 
               <ActivityFeed activities={summary?.activities ?? []} />
@@ -215,19 +213,46 @@ const Home = () => {
         </View>
       </ScrollView>
 
-      <Pressable style={themed($fab)} onPress={() => navigate('Add Client')}>
-        <Plus size={28} color={colors.background} />
+      <Pressable style={styles.fab} onPress={() => navigate('Add Client')}>
+        <Plus size={28} color={theme.colors.background} />
       </Pressable>
-    </Screen>
+    </SafeAreaView>
   )
 }
 
 export default Home
 
-const $sectionHeader: ViewStyle = { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 16 }
-const $sectionTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontFamily: typography.secondary.bold, fontSize: 20, color: colors.text })
-const $fab: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  position: 'absolute', bottom: 24, right: 24, width: 60, height: 60, borderRadius: 30,
-  backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
-  shadowColor: colors.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+const getStyles = (theme: any) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontWeight: theme.typography.bold,
+    fontSize: 20,
+    color: theme.colors.text,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
 })

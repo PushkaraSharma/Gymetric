@@ -7,7 +7,7 @@ import type { ThemedStyle, ThemedStyleArray } from "@/theme/types"
 import { typography } from "@/theme/typography"
 
 type Sizes = keyof typeof $sizeStyles
-type Weights = keyof typeof typography.primary
+type Weights = "normal" | "medium" | "semiBold" | "bold"
 type Presets = "default" | "bold" | "heading" | "subheading" | "formLabel" | "formHelper"
 
 export interface TextProps extends RNTextProps {
@@ -50,9 +50,12 @@ const $sizeStyles = {
   xxs: { fontSize: 12, lineHeight: 18 } satisfies TextStyle,
 }
 
-const $fontWeightStyles = Object.entries(typography.primary).reduce((acc, [weight, fontFamily]) => {
-  return { ...acc, [weight]: { fontFamily } }
-}, {}) as Record<Weights, TextStyle>
+const $fontWeightStyles: Record<Weights, TextStyle> = {
+  normal: { fontWeight: '400' },
+  medium: { fontWeight: '500' },
+  semiBold: { fontWeight: '600' },
+  bold: { fontWeight: '700' },
+}
 
 const $baseStyle: ThemedStyle<TextStyle> = (theme) => ({
   ...$sizeStyles.sm,

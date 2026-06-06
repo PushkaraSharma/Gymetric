@@ -1,12 +1,9 @@
-
 import React, { useState } from "react"
-import { View, ViewStyle, TextStyle, ActivityIndicator } from "react-native"
-import { Screen } from "@/components/Screen"
-import { Text } from "@/components/Text"
+import { View, ActivityIndicator, StyleSheet, Text, ScrollView } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { TextField } from "@/components/TextField"
 import { Button } from "@/components/Button"
 import { useAppTheme } from "@/theme/context"
-import { ThemedStyle } from "@/theme/types"
 import { useNavigation, useRoute } from "@react-navigation/native"
 import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
@@ -17,7 +14,8 @@ import { setCrashlyticsUser } from '@/services/crashlyticsService'
 import { EyeOff } from "lucide-react-native"
 
 export const GymOnboardingScreen = () => {
-    const { themed, theme: { colors, spacing } } = useAppTheme()
+    const { theme } = useAppTheme()
+    const styles = getStyles(theme)
     const navigation = useNavigation<any>()
     const route = useRoute<any>()
     const dispatch = useAppDispatch()
@@ -78,22 +76,17 @@ export const GymOnboardingScreen = () => {
     }
 
     return (
-        <Screen
-            preset="scroll"
-            contentContainerStyle={themed($screenContentContainer)}
-            safeAreaEdges={["top", "bottom"]}
-            backgroundColor={colors.background}
-        >
-            <View style={themed($container)}>
-                <Text preset="heading" text="Setup your Gym" style={themed($title)} />
-                <Text preset="subheading" text="Just a few more details to get you started." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
+        <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+            <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                <Text style={styles.title}>Setup your Gym</Text>
+                <Text style={styles.subtitle}>Just a few more details to get you started.</Text>
 
                 <TextField
                     value={gymName}
                     onChangeText={setGymName}
                     label="Gym Name"
                     placeholder="e.g. Spartan Fitness"
-                    containerStyle={{ marginBottom: spacing.md }}
+                    containerStyle={{ marginBottom: theme.spacing.md }}
                 />
 
                 <TextField
@@ -101,7 +94,7 @@ export const GymOnboardingScreen = () => {
                     onChangeText={setOwnerName}
                     label="Your Name"
                     placeholder="John Doe"
-                    containerStyle={{ marginBottom: spacing.md }}
+                    containerStyle={{ marginBottom: theme.spacing.md }}
                 />
 
                 <TextField
@@ -109,7 +102,7 @@ export const GymOnboardingScreen = () => {
                     onChangeText={setGymAddress}
                     label="Gym Address (Optional)"
                     placeholder="123 Fitness St."
-                    containerStyle={{ marginBottom: spacing.md }}
+                    containerStyle={{ marginBottom: theme.spacing.md }}
                 />
 
                 <TextField
@@ -118,12 +111,12 @@ export const GymOnboardingScreen = () => {
                     label="Create Password"
                     placeholder="Min 6 characters"
                     secureTextEntry={!isPasswordVisible}
-                    containerStyle={{ marginBottom: spacing.lg }}
+                    containerStyle={{ marginBottom: theme.spacing.lg }}
                     RightAccessory={() => (
                         <View style={{ paddingRight: 12 }}>
                             <EyeOff
                                 size={20}
-                                color={colors.textDim}
+                                color={theme.colors.textDim}
                                 onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                                 style={{ opacity: isPasswordVisible ? 0.5 : 1 }}
                             />
@@ -131,33 +124,45 @@ export const GymOnboardingScreen = () => {
                     )}
                 />
 
-                {error ? <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text> : null}
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                 <Button
-                    text={isLoading ? "Setting up..." : "Complete Setup"}
-                    preset="reversed"
+                    title={isLoading ? "Setting up..." : "Complete Setup"}
+                    variant="primary"
                     onPress={handleOnboard}
                     disabled={isLoading}
-                    style={{ marginTop: spacing.md }}
-                    RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
+                    style={{ marginTop: theme.spacing.md }}
+                    icon={isLoading ? <ActivityIndicator size="small" color="white" /> : undefined}
                 />
-            </View>
-        </Screen>
+            </ScrollView>
+        </SafeAreaView>
     )
 }
 
-const $screenContentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    paddingVertical: spacing.xl,
-})
-
-const $container: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    flex: 1,
-    justifyContent: 'center',
-})
-
-const $title: ThemedStyle<TextStyle> = ({ spacing }) => ({
-    marginBottom: spacing.xs,
-})
+const getStyles = (theme: any) => StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: theme.colors.background,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.xl,
+        justifyContent: 'center',
+    },
+    title: {
+        fontSize: theme.typography.xxl,
+        fontWeight: theme.typography.bold,
+        color: theme.colors.text,
+        marginBottom: theme.spacing.xs,
+    },
+    subtitle: {
+        fontSize: theme.typography.m,
+        color: theme.colors.textDim,
+        marginBottom: theme.spacing.xl,
+    },
+    errorText: {
+        color: theme.colors.error,
+        marginBottom: theme.spacing.md,
+    },
+});

@@ -81,13 +81,13 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                         selectedMembership?.[0]?.planType === 'indivisual' ?
                             <View style={[themed($card), { padding: 0 }]}>
                                 <View style={themed($cardHeader)}>
-                                    <View style={themed({ backgroundColor: colors.palette.indigo100, padding: 8, borderRadius: 20 })}>
+                                    <View style={{ backgroundColor: colors.palette.indigo100, padding: 8, borderRadius: 20 }}>
                                         <MaterialIcons name='card-membership' size={25} color={colors.tint} />
                                     </View>
                                     <View style={{ marginLeft: 15 }}>
                                         <Text weight='medium' size='md'>{selectedMembership?.[0]?.planName}</Text>
-                                        <View style={themed({ padding: 2, marginTop: 5, paddingHorizontal: 5, backgroundColor: colors.activeBg, borderWidth: 0.5, borderColor: colors.activeTxt, borderRadius: 5, alignSelf: 'flex-start' })}>
-                                            <Text size='xxs' style={themed({ color: colors.activeTxt })}>Active Selection</Text>
+                                        <View style={{ padding: 2, marginTop: 5, paddingHorizontal: 5, backgroundColor: colors.activeBg, borderWidth: 0.5, borderColor: colors.activeTxt, borderRadius: 5, alignSelf: 'flex-start' }}>
+                                            <Text size='xxs' style={{ color: colors.activeTxt }}>Active Selection</Text>
                                         </View>
                                     </View>
                                 </View>
@@ -147,7 +147,7 @@ const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership
                             <Ionicons name='calendar-outline' size={20} color={colors.textDim} />
                         </Pressable>
                     </View>
-                    <Text size='xs' style={themed({ color: colors.textDim, textAlign: 'center' })}>Prices may vary based on promotional codes applied at the final step.</Text>
+                    <Text size='xs' style={{ color: colors.textDim, textAlign: 'center' }}>Prices may vary based on promotional codes applied at the final step.</Text>
                 </View>
             </View>
         </View>

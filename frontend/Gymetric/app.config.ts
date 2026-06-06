@@ -45,7 +45,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     plugins: [
         "@react-native-community/datetimepicker",
-        "expo-localization",
         "expo-font",
         [
             "expo-splash-screen",
@@ -93,9 +92,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         tsconfigPaths: true,
     },
     extra: {
-        ignite: {
-            version: "11.4.0",
-        },
         eas: {
             projectId: "2e469ab5-5d58-49e3-afe3-b245dfa7d3c7",
         },

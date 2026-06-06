@@ -27,8 +27,8 @@ const HelpCenter = () => {
                     {icon}
                 </View>
                 <View>
-                    <Text size="xs" style={themed({ color: colors.textDim })}>{title}</Text>
-                    <Text weight="semiBold" style={themed({ color: colors.text })}>{value}</Text>
+                    <Text size="xs" style={{ color: colors.textDim }}>{title}</Text>
+                    <Text weight="semiBold" style={{ color: colors.text }}>{value}</Text>
                 </View>
             </View>
             <ChevronRight size={20} color={colors.textDim} />
@@ -42,8 +42,8 @@ const HelpCenter = () => {
         >
             <Header title="Help Center" leftIcon="caretLeft" onLeftPress={goBack} backgroundColor={colors.surface} />
 
-            <View style={themed($container)}>
-                <Text preset="heading" style={themed($title)}>Get in Touch</Text>
+            <View style={$container}>
+                <Text preset="heading" style={$title}>Get in Touch</Text>
                 <Text style={themed($subtitle)}>We're here to help you with any questions or issues regarding GymKarta.</Text>
 
                 <View style={$list}>

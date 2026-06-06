@@ -35,7 +35,7 @@ const PersonalInfo: FC<Props> = ({ handleForm, form, setDatePicker, isUpdate, va
     return (
         <View style={{ marginTop: 15 }}>
             <Text preset='heading'>Personal Details</Text>
-            <Text weight='light'>Please {isUpdate ? 'update' : 'enter'} client's basic information.</Text>
+            <Text>Please {isUpdate ? 'update' : 'enter'} client's basic information.</Text>
 
             {/* Profile Picture Upload */}
             <View style={{ alignItems: 'center', marginTop: spacing.md }}>

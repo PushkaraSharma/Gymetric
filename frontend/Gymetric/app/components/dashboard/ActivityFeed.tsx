@@ -104,7 +104,7 @@ const $activityIconWrapper: ThemedStyle<ViewStyle> = ({ colors }) => ({
 })
 const $activityContent: ViewStyle = { flex: 1 }
 const $activityTopRow: ViewStyle = { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }
-const $activityTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontFamily: typography.primary.semiBold, fontSize: 14, color: colors.text })
+const $activityTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontWeight: typography.semiBold, fontSize: 14, color: colors.text })
 const $activityTime: ThemedStyle<TextStyle> = ({ colors }) => ({ fontSize: 10, color: colors.textDim })
 const $activityDesc: ThemedStyle<TextStyle> = ({ colors }) => ({ fontSize: 12, color: colors.textDim })
-const $activityAmount: ThemedStyle<TextStyle> = ({ colors, typography }) => ({ fontSize: 14, fontFamily: typography.primary.bold, color: colors.text, marginTop: 4 })
+const $activityAmount: ThemedStyle<TextStyle> = ({ colors, typography }) => ({ fontSize: 14, fontWeight: typography.bold, color: colors.text, marginTop: 4 })

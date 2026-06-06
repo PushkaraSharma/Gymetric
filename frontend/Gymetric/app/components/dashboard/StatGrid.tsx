@@ -28,11 +28,11 @@ function StatCard({ label, value, trend, icon, color, onPress }: StatItem & { on
       onPress={onPress}
     >
       <View style={$statHeader}>
-        <View style={[themed($iconContainer), { backgroundColor: color + '15' }]}>{icon}</View>
+        <View style={[$iconContainer, { backgroundColor: color + '15' }]}>{icon}</View>
         {trend != null && (
-          <View style={[themed($trendBadge), { backgroundColor: colors.successBackground }]}>
+          <View style={[$trendBadge, { backgroundColor: colors.successBackground }]}>
             <TrendingUp size={12} color={colors.success} />
-            <Text size="xxs" style={themed({ color: colors.success, marginLeft: 4 })} text={`${trend}%`} />
+            <Text size="xxs" style={{ color: colors.success, marginLeft: 4 }} text={`${trend}%`} />
           </View>
         )}
       </View>
@@ -79,5 +79,5 @@ const $statCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $statHeader: ViewStyle = { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }
 const $iconContainer: ViewStyle = { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }
 const $trendBadge: ViewStyle = { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }
-const $statValue: ThemedStyle<TextStyle> = ({ colors, typography }) => ({ fontSize: 24, fontFamily: typography.secondary.bold, color: colors.text, marginBottom: 4 })
+const $statValue: ThemedStyle<TextStyle> = ({ colors, typography }) => ({ fontSize: 24, fontWeight: typography.bold, color: colors.text, marginBottom: 4 })
 const $statLabel: ThemedStyle<TextStyle> = ({ colors }) => ({ fontSize: 11, color: colors.textDim, letterSpacing: 0.3 })

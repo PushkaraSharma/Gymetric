@@ -192,15 +192,15 @@ const ClientDetails = ({ route }: any) => {
                         </Pressable>
                         <Text weight='semiBold' size='xl'>{client?.name}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <View style={themed({ marginRight: 15, backgroundColor: ['active'].includes(client?.membershipStatus) ? colors.activeBg : ['trial', 'future'].includes(client?.membershipStatus) ? colors.palette.indigo200 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 })}>
-                                <Text size='xs' weight='medium' style={themed({ color: ['active'].includes(client?.membershipStatus) ? colors.activeTxt : ['trial', 'future'].includes(client?.membershipStatus) ? colors.tint : colors.error, textTransform: 'capitalize' })}>{client?.membershipStatus}</Text>
+                            <View style={{ marginRight: 15, backgroundColor: ['active'].includes(client?.membershipStatus) ? colors.activeBg : ['trial', 'future'].includes(client?.membershipStatus) ? colors.palette.indigo200 : colors.errorBackground, paddingVertical: spacing.xxs, paddingHorizontal: spacing.xs, borderRadius: 20 }}>
+                                <Text size='xs' weight='medium' style={{ color: ['active'].includes(client?.membershipStatus) ? colors.activeTxt : ['trial', 'future'].includes(client?.membershipStatus) ? colors.tint : colors.error, textTransform: 'capitalize' }}>{client?.membershipStatus}</Text>
                             </View>
                             <Text size='xs' style={{ color: colors.textDim }}>Member since {client ? formatDate(client?.createdAt, 'MMM yyyy') : '-'}</Text>
                         </View>
                     </View>
                     <View style={[$styles.flexRow, { justifyContent: 'space-around', paddingHorizontal: 15 }]}>
-                        <Button text='Whatsapp' onPress={() => { openWhatsAppChat(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={() => <Ionicons name="logo-whatsapp" size={20} style={{ marginRight: 10 }} color={colors.text} />} />
-                        <Button text='Call' onPress={() => { callNumber(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={() => <Feather name="phone" size={20} style={{ marginRight: 10 }} color={colors.text} />} />
+                        <Button title='Whatsapp' onPress={() => { openWhatsAppChat(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={({ style }) => <Ionicons name="logo-whatsapp" size={20} style={[style, { marginRight: 10 }]} color={colors.text} />} />
+                        <Button title='Call' onPress={() => { callNumber(client?.phoneNumber) }} style={styles.actionBtn} LeftAccessory={({ style }) => <Feather name="phone" size={20} style={[style, { marginRight: 10 }]} color={colors.text} />} />
                     </View>
                     <View style={[$styles.flexRow, { borderBottomWidth: 0.5, borderColor: colors.border, marginVertical: spacing.lg, justifyContent: 'space-around' }]}>
                         {
@@ -223,7 +223,7 @@ const ClientDetails = ({ route }: any) => {
                                             {client?.activeMembership && client?.upcomingMembership && <Text style={{ color: colors.tint, marginBottom: 10 }} weight='medium'>Upcoming plan starts on {formatDate(client?.upcomingMembership?.startDate ?? new Date(), 'dd MMM yyyy')}</Text>}
 
                                             <Text preset='subheading'>{displayMembership ? (client?.activeMembership ? 'Current Plan' : 'Upcoming Plan') : 'Membership'}
-                                                {displayMembership && membershipDays?.used === 0 && <Text size='xs' style={themed({ color: colors.tint })}>(Will start from {formatDate(displayMembership?.startDate, 'dd MMM')})</Text>}
+                                                {displayMembership && membershipDays?.used === 0 && <Text size='xs' style={{ color: colors.tint }}>(Will start from {formatDate(displayMembership?.startDate, 'dd MMM')})</Text>}
                                             </Text>
 
                                             {displayMembership ?
@@ -259,7 +259,7 @@ const ClientDetails = ({ route }: any) => {
                                                                 <Text weight='medium' style={{ color: membershipDays?.remain > 0 ? colors.textDim : colors.error }}>{membershipDays?.remain > 0 ? "Expires On" : "Expired On"}</Text>
                                                                 <Text weight='medium' size='md'>{membershipDays?.endDate}</Text>
                                                             </View>
-                                                            <Button disabled={membershipDays?.used === 0 && client?.activeMembership} text={"Renew"} style={themed({ minHeight: 45, borderRadius: 10, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, width: '45%' })} disabledStyle={{ opacity: 0.4 }} preset="reversed" onPress={() => { client?.upcomingMembership ? Toast.show({ type: 'error', text1: 'Client already have upcoming plan' }) : navigate('Renew Membership', { client: client }) }} />
+                                                            <Button disabled={membershipDays?.used === 0 && client?.activeMembership} title={"Renew"} style={{ minHeight: 45, borderRadius: 10, backgroundColor: membershipDays?.remain > 0 ? colors.tint : colors.error, width: '45%' }} variant="primary" onPress={() => { client?.upcomingMembership ? Toast.show({ type: 'error', text1: 'Client already have upcoming plan' }) : navigate('Renew Membership', { client: client }) }} />
                                                         </View>
                                                     </View>
                                                 </View> :

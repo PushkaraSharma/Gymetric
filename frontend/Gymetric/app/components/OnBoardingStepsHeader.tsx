@@ -29,7 +29,7 @@ const OnBoardingStepsHeader: FC<Props> = ({ steps, currentStep, moveStep, renew 
     return (
         <View>
             <Header title={renew ? 'Renew Membership' : 'Add Client'}
-                LeftActionComponent={
+                leftAction={
                     <Pressable style={themed([$styles.row, { paddingHorizontal: 10 }])} onPress={() => { currentStep === steps[0] ? goBack() : moveStep('prev') }}>
                         <Ionicons name={currentStep === steps[0] ? 'close' : 'chevron-back'} size={25} color={colors.text} />
                     </Pressable>

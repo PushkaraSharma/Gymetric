@@ -29,7 +29,7 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
         </View>
         <Text style={themed($value)} text={`₹${value.toLocaleString()}`} />
         <View style={$footer}>
-          <View style={themed($trendBadge)}>
+          <View style={$trendBadge}>
             <TrendingUp size={14} color={colors.white} />
             <Text style={themed($trendText)} size="xs" text={trendText} />
           </View>
@@ -68,12 +68,12 @@ const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 
 const $header: ViewStyle = { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }
 const $label: ThemedStyle<TextStyle> = () => ({ color: 'rgba(255,255,255,0.7)', fontSize: 11, letterSpacing: 1, fontWeight: '700' })
-const $value: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', fontSize: 32, fontFamily: typography.secondary.bold, marginBottom: 12 })
+const $value: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', fontSize: 32, fontWeight: typography.bold, marginBottom: 12 })
 const $footer: ViewStyle = { flexDirection: 'row', alignItems: 'center' }
 const $trendBadge: ViewStyle = { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }
-const $trendText: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', marginLeft: 4, fontFamily: typography.primary.medium, fontSize: 12 })
+const $trendText: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', marginLeft: 4, fontWeight: typography.medium, fontSize: 12 })
 const $statsRow: ThemedStyle<ViewStyle> = () => ({ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingVertical: 10 })
 const $statItem: ThemedStyle<ViewStyle> = () => ({ flex: 1, alignItems: 'center' })
 const $statBorder: ThemedStyle<ViewStyle> = () => ({ borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(255,255,255,0.2)' })
-const $statValue: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', fontSize: 16, fontFamily: typography.primary.bold })
+const $statValue: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', fontSize: 16, fontWeight: typography.bold })
 const $statLabel: ThemedStyle<TextStyle> = () => ({ color: 'rgba(255,255,255,0.7)', fontSize: 10, marginTop: 2 })

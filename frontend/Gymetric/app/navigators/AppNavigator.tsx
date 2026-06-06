@@ -1,4 +1,4 @@
-import { NavigationContainer, NavigationState } from "@react-navigation/native"
+import { NavigationContainer, NavigationState, DefaultTheme, DarkTheme } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import Config from "@/config"
@@ -105,7 +105,7 @@ const AppStack = () => {
 }
 
 export const AppNavigator = (props: NavigationProps) => {
-  const { navigationTheme } = useAppTheme()
+  const { theme, isDark } = useAppTheme()
 
   useBackButtonHandler((routeName) => exitRoutes.includes(routeName))
 
@@ -115,8 +115,23 @@ export const AppNavigator = (props: NavigationProps) => {
     props.onStateChange?.(state)
   }
 
+  const baseTheme = isDark ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...baseTheme,
+    dark: isDark,
+    colors: {
+      ...baseTheme.colors,
+      primary: theme.colors.primary,
+      background: theme.colors.background,
+      card: theme.colors.surface,
+      text: theme.colors.text,
+      border: theme.colors.border,
+      notification: theme.colors.primary,
+    },
+  };
+
   return (
-    <NavigationContainer ref={navigationRef} theme={navigationTheme} {...props} onStateChange={handleStateChange}>
+    <NavigationContainer ref={navigationRef} theme={navTheme} {...props} onStateChange={handleStateChange}>
       <ErrorBoundary catchErrors={Config.catchErrors}>
         <AppStack />
       </ErrorBoundary>

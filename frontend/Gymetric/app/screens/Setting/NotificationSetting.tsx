@@ -106,10 +106,7 @@ const NotificationSetting = ({ navigation }: any) => {
                     <>
                         <View style={[themed($card), { marginBottom: spacing.lg }]}>
                             <Switch
-                                inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
-                                labelPosition='left'
                                 label="Enable WhatsApp Integration"
-                                labelStyle={{ fontSize: 16, fontWeight: '600', color: colors.text }}
                                 value={settings.active}
                                 onValueChange={(val: boolean) => updateSetting('active', val)}
                             />
@@ -124,46 +121,29 @@ const NotificationSetting = ({ navigation }: any) => {
 
                                 <View style={[themed($card)]}>
                                     <Switch
-                                        inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
-                                        labelPosition='left'
                                         label="Welcome Message"
-                                        helper="Send when a new member is onboarded"
-                                        HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
                                         value={settings.sendOnOnboarding}
                                         onValueChange={(val: boolean) => updateSetting('sendOnOnboarding', val)}
-                                        containerStyle={{ marginBottom: spacing.sm }}
                                     />
                                     <View style={[themed($divider), { marginVertical: spacing.sm }]} />
 
                                     <Switch
-                                        inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
-                                        labelPosition='left'
                                         label="Renewal Confirmation"
-                                        helper="Send when a membership is renewed"
-                                        HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
                                         value={settings.sendOnRenewal}
                                         onValueChange={(val: boolean) => updateSetting('sendOnRenewal', val)}
-                                        containerStyle={{ marginBottom: spacing.sm }}
                                     />
                                     <View style={[themed($divider), { marginVertical: spacing.sm }]} />
 
                                     <Switch
-                                        inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
-                                        labelPosition='left'
                                         label="Expiry Notification"
-                                        helper="Send when a membership expires"
-                                        HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
                                         value={settings.sendOnExpiry}
                                         onValueChange={(val: boolean) => updateSetting('sendOnExpiry', val)}
-                                        containerStyle={{ marginBottom: spacing.sm }}
                                     />
                                     <View style={[themed($divider), { marginVertical: spacing.sm }]} />
+
                                     <Switch
-                                        inputOuterStyle={{ transform: [{ scale: 0.8 }] }}
-                                        labelPosition='left'
-                                        label="Expiration Reminder"
+                                        label="Reminder Notification"
                                         helper="Send a reminder before membership expires"
-                                        HelperTextProps={{ style: { fontSize: 14, color: colors.textDim } }}
                                         value={settings.sendOnReminder}
                                         onValueChange={(val: boolean) => updateSetting('sendOnReminder', val)}
                                         containerStyle={{ marginBottom: spacing.sm }}
@@ -173,7 +153,6 @@ const NotificationSetting = ({ navigation }: any) => {
                                         <View style={{ marginTop: spacing.xs }}>
                                             <TextField
                                                 label="Days before expiry"
-                                                LabelTextProps={{ style: { fontSize: 12, color: colors.textDim } }}
                                                 value={settings.reminderDays}
                                                 onChangeText={(val: string) => updateSetting('reminderDays', val)}
                                                 keyboardType="numeric"
@@ -198,8 +177,8 @@ const NotificationSetting = ({ navigation }: any) => {
 
             <View style={themed($footer)}>
                 <Button
-                    text={loading ? 'Saving...' : 'Save Changes'}
-                    preset="reversed"
+                    title={loading ? 'Saving...' : 'Save Changes'}
+                    variant="primary"
                     LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />}
                     onPress={handleSave}
                 />

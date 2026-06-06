@@ -145,7 +145,7 @@ const RenewMembership = ({ route }: any) => {
                 </Animated.View>
 
                 <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-                    <Button disabled={!validateSteps()} disabledStyle={{ opacity: 0.4 }} text={currentStep === 'Payment' ? (loader ? 'Renewing...' : 'Renew Membership') : 'Next Step'} preset="reversed" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.background} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleRenew() : moveStep('next') }} />
+                    <Button disabled={!validateSteps()} title={currentStep === 'Payment' ? (loader ? 'Renewing...' : 'Renew Membership') : 'Next Step'} variant="primary" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.background} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleRenew() : moveStep('next') }} />
                 </View>
             </View>
         </Screen>

@@ -38,26 +38,24 @@ export const ImagePickerSheet = ({ isVisible, onSelect }: ImagePickerSheetProps)
 
                     <View style={$optionsContainer}>
                         <Button
-                            preset="default"
+                            title="Take Photo"
+                            variant="outline"
                             style={themed($optionButton)}
                             onPress={() => onSelect('camera')}
-                            LeftAccessory={() => (
-                                <Ionicons name="camera-outline" size={24} color={colors.primary} style={{ marginRight: spacing.md }} />
+                            LeftAccessory={({ style }) => (
+                                <Ionicons name="camera-outline" size={24} color={colors.primary} style={[style, { marginRight: spacing.md }]} />
                             )}
-                        >
-                            <Text weight="medium">Take Photo</Text>
-                        </Button>
+                        />
 
                         <Button
-                            preset="default"
+                            title="Choose from Gallery"
+                            variant="outline"
                             style={[themed($optionButton), { marginTop: spacing.md }]}
                             onPress={() => onSelect('gallery')}
-                            LeftAccessory={() => (
-                                <Ionicons name="images-outline" size={24} color={colors.primary} style={{ marginRight: spacing.md }} />
+                            LeftAccessory={({ style }) => (
+                                <Ionicons name="images-outline" size={24} color={colors.primary} style={[style, { marginRight: spacing.md }]} />
                             )}
-                        >
-                            <Text weight="medium">Choose from Gallery</Text>
-                        </Button>
+                        />
                     </View>
                 </View>
             </View>

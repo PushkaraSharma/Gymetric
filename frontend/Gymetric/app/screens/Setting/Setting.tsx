@@ -268,13 +268,13 @@ const $logoContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
 const $logo: ImageStyle = { width: '100%', height: '100%' }
 
 const $gymName: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
-  fontFamily: typography.secondary.semiBold,
+  fontWeight: typography.semiBold,
   fontSize: 17,
   color: colors.text,
 })
 
 const $userRow: ViewStyle = { flexDirection: 'row', alignItems: 'center', gap: 6 }
-const $username: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontFamily: typography.primary.medium, fontSize: 13, color: colors.text })
+const $username: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontWeight: typography.medium, fontSize: 13, color: colors.text })
 
 const $roleBadge: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.primaryBackground,
@@ -286,14 +286,14 @@ const $roleBadge: ThemedStyle<ViewStyle> = ({ colors }) => ({
 const $roleText: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
   fontSize: 9,
   color: colors.primary,
-  fontFamily: typography.primary.bold,
+  fontWeight: typography.bold,
   textTransform: 'uppercase',
 })
 
 const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing, typography }) => ({
   fontSize: 12,
   letterSpacing: 1,
-  fontFamily: typography.primary.semiBold,
+  fontWeight: typography.semiBold,
   color: colors.textDim,
   marginBottom: spacing.xxs,
   marginLeft: 4,
@@ -318,7 +318,7 @@ const $item: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $itemLeft: ViewStyle = { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14 }
 const $itemRight: ViewStyle = { marginLeft: 8 }
 const $itemIconBox: ThemedStyle<ViewStyle> = () => ({ width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' })
-const $itemLabel: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontFamily: typography.primary.semiBold, fontSize: 15, color: colors.text })
+const $itemLabel: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontWeight: typography.semiBold, fontSize: 15, color: colors.text })
 const $itemDesc: ThemedStyle<TextStyle> = ({ colors }) => ({ color: colors.textDim, marginTop: 2 })
 
 const $divider: ThemedStyle<ViewStyle> = ({ colors }) => ({
@@ -340,7 +340,7 @@ const $logoutBtn: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 
 const $logoutText: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
   color: colors.error,
-  fontFamily: typography.primary.semiBold,
+  fontWeight: typography.semiBold,
   fontSize: 16,
 })
 

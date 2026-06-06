@@ -59,12 +59,12 @@ const $headerText: ViewStyle = { flex: 1, marginLeft: 14 }
 
 const $greetingLabel: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
   fontSize: 10,
-  fontFamily: typography.primary.semiBold,
+  fontWeight: typography.semiBold,
   color: colors.textDim,
 })
 
 const $greeting: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
-  fontFamily: typography.secondary.bold,
+  fontWeight: typography.bold,
   fontSize: 20,
   color: colors.text,
 })

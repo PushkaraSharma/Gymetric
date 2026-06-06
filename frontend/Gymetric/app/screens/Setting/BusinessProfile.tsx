@@ -164,7 +164,7 @@ const BusinessProfile = () => {
           />
         </ScrollView>
         <View style={themed($footer)}>
-          <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={updateGym} />
+          <Button title={loading ? 'Saving...' : 'Save Changes'} variant="primary" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={updateGym} />
         </View>
       </View>
       <ImagePickerSheet />

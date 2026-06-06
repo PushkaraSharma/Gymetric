@@ -103,7 +103,7 @@ const UpdateClientbasicInfo = ({ route }: any) => {
         <PersonalInfo handleForm={handleForm} form={form} setDatePicker={setDatePicker} isUpdate validNumber={validNumber} />
       </ScrollView>
       <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-        <Button preset='reversed' disabled={(form?.phoneNumber.length !== 10) || !form.name || !validNumber} disabledStyle={{ opacity: 0.4 }} text={loading ? 'Updating...' : 'Update'} onPress={handleUpdate} />
+        <Button variant="primary" disabled={(form?.phoneNumber.length !== 10) || !form.name || !validNumber} title={loading ? 'Updating...' : 'Update'} onPress={handleUpdate} />
       </View>
     </Screen>
   )

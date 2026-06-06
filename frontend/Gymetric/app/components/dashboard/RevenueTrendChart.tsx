@@ -82,7 +82,7 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderColor: colors.border,
 })
 const $title: ThemedStyle<TextStyle> = ({ typography, colors, spacing }) => ({
-  fontFamily: typography.secondary.bold,
+  fontWeight: typography.bold,
   fontSize: 16,
   color: colors.text,
   marginBottom: spacing.sm,
@@ -99,9 +99,9 @@ const $statsRow: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 })
 const $statItem: ThemedStyle<ViewStyle> = () => ({ flex: 1, alignItems: 'center' })
 const $statBorder: ThemedStyle<ViewStyle> = ({ colors }) => ({ borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border })
-const $statValue: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontSize: 16, fontFamily: typography.primary.bold, color: colors.text })
+const $statValue: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontSize: 16, fontWeight: typography.bold, color: colors.text })
 const $statLabel: ThemedStyle<TextStyle> = ({ colors }) => ({ fontSize: 10, color: colors.textDim, marginTop: 2 })
 const $emptyState: ThemedStyle<ViewStyle> = ({ spacing }) => ({ alignItems: 'center', paddingVertical: spacing.lg })
 const $emptyIconBox: ThemedStyle<ViewStyle> = ({ spacing }) => ({ width: 56, height: 56, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md })
-const $emptyTitle: ThemedStyle<TextStyle> = ({ typography, colors, spacing }) => ({ fontFamily: typography.primary.bold, fontSize: 16, color: colors.text, marginBottom: spacing.xs })
+const $emptyTitle: ThemedStyle<TextStyle> = ({ typography, colors, spacing }) => ({ fontWeight: typography.bold, fontSize: 16, color: colors.text, marginBottom: spacing.xs })
 const $emptyText: ThemedStyle<TextStyle> = ({ colors }) => ({ fontSize: 13, color: colors.textDim, textAlign: 'center', lineHeight: 20 })

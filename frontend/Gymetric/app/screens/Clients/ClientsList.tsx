@@ -92,7 +92,7 @@ const ClientsList = ({ route }: any) => {
         style={[themed($chip), isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }]}
         onPress={() => setSelectedFilter(filter)}
       >
-        <Text style={themed({ color: isSelected ? colors.background : colors.textDim, fontFamily: isSelected ? typography.primary.semiBold : typography.primary.normal })} size="xs">
+        <Text style={{ color: isSelected ? colors.background : colors.textDim, fontWeight: isSelected ? typography.semiBold : typography.regular }} size="xs">
           {filter}
         </Text>
       </TouchableOpacity>
@@ -109,8 +109,8 @@ const ClientsList = ({ route }: any) => {
     else if (st === 'expired' || st === 'trial_expired') { bg = colors.errorBackground; txt = colors.error; }
 
     return (
-      <View style={[themed($statusChip), { backgroundColor: bg }]}>
-        <Text size='xxs' style={themed({ color: txt, fontFamily: typography.primary.bold, textTransform: 'uppercase' })}>{st}</Text>
+      <View style={[$statusChip, { backgroundColor: bg }]}>
+        <Text size='xxs' style={{ color: txt, fontWeight: typography.bold, textTransform: 'uppercase' }}>{st}</Text>
       </View>
     );
   };
@@ -211,7 +211,7 @@ const ClientsList = ({ route }: any) => {
           contentContainerStyle={themed($listContent)}
           ListEmptyComponent={
             <View style={$emptyContainer}>
-              <Text style={themed({ color: colors.textDim })}>No members found</Text>
+              <Text style={{ color: colors.textDim }}>No members found</Text>
             </View>
           }
         />
@@ -231,7 +231,7 @@ const $header: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 })
 
 const $headerTitle: ThemedStyle<TextStyle> = ({ typography }) => ({
-  fontFamily: typography.secondary.bold,
+  fontWeight: typography.bold,
   fontSize: 32,
 })
 
@@ -308,7 +308,7 @@ const $itemTextContainer: ViewStyle = {
 }
 
 const $itemName: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
-  fontFamily: typography.primary.semiBold,
+  fontWeight: typography.semiBold,
   fontSize: 15,
   color: colors.text,
 })

@@ -72,7 +72,7 @@ const Memberships = () => {
                     }
                 </ScrollView>
                 <View style={themed($footer)}>
-                    <Button text={'Add New Membership'} preset="reversed" LeftAccessory={() => <FontAwesome6 name='circle-plus' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={() => { navigate('Create Edit Membership') }} />
+                    <Button title={'Add New Membership'} variant="primary" LeftAccessory={() => <FontAwesome6 name='circle-plus' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={() => { navigate('Create Edit Membership') }} />
                 </View>
             </View>
         </Screen>

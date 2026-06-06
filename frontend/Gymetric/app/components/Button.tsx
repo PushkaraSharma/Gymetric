@@ -1,208 +1,94 @@
-import { ComponentType } from "react"
-import {
-  Pressable,
-  PressableProps,
-  PressableStateCallbackType,
-  StyleProp,
-  TextStyle,
-  ViewStyle,
-} from "react-native"
+import React from 'react';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, StyleProp } from 'react-native';
+import { useAppTheme } from '@/theme/context';
+import { hapticsLight } from '@/utils/haptics';
 
-import { useAppTheme } from "@/theme/context"
-import { $styles } from "@/theme/styles"
-import type { ThemedStyle, ThemedStyleArray } from "@/theme/types"
-
-import { Text, TextProps } from "./Text"
-
-type Presets = "default" | "filled" | "reversed" | "primary" | "dark"
-
-export interface ButtonAccessoryProps {
-  style: StyleProp<any>
-  pressableState: PressableStateCallbackType
-  disabled?: boolean
+export interface ButtonProps {
+    title: string;
+    onPress?: () => void;
+    variant?: 'primary' | 'outline' | 'ghost';
+    loading?: boolean;
+    disabled?: boolean;
+    style?: StyleProp<ViewStyle>;
+    textStyle?: StyleProp<TextStyle>;
+    icon?: React.ReactNode;
+    LeftAccessory?: React.ComponentType<{ style: any }>;
+    RightAccessory?: React.ComponentType<{ style: any }>;
 }
 
-export interface ButtonProps extends PressableProps {
-  text?: TextProps["text"]
-  style?: StyleProp<ViewStyle>
-  pressedStyle?: StyleProp<ViewStyle>
-  textStyle?: StyleProp<TextStyle>
-  pressedTextStyle?: StyleProp<TextStyle>
-  disabledTextStyle?: StyleProp<TextStyle>
-  preset?: Presets
-  RightAccessory?: ComponentType<ButtonAccessoryProps>
-  LeftAccessory?: ComponentType<ButtonAccessoryProps>
-  children?: React.ReactNode
-  disabled?: boolean
-  disabledStyle?: StyleProp<ViewStyle>
-}
-
-export function Button(props: ButtonProps) {
-  const {
-    text,
-    style: $viewStyleOverride,
-    pressedStyle: $pressedViewStyleOverride,
-    textStyle: $textStyleOverride,
-    pressedTextStyle: $pressedTextStyleOverride,
-    disabledTextStyle: $disabledTextStyleOverride,
-    children,
-    RightAccessory,
+export function Button({
+    title,
+    onPress,
+    variant = 'primary',
+    loading = false,
+    disabled = false,
+    style,
+    textStyle,
+    icon,
     LeftAccessory,
-    disabled,
-    disabledStyle: $disabledViewStyleOverride,
-    ...rest
-  } = props
+    RightAccessory
+}: ButtonProps) {
+    const { theme } = useAppTheme();
+    const styles = getStyles(theme);
 
-  const { themed } = useAppTheme()
+    const getBackgroundColor = () => {
+        if (disabled) return theme.colors.palette.slate400;
+        if (variant === 'primary') return theme.colors.primary;
+        return 'transparent';
+    };
 
-  const preset: Presets = props.preset ?? "default"
+    const getBorderColor = () => {
+        if (disabled) return theme.colors.palette.slate400;
+        if (variant === 'outline') return theme.colors.border;
+        return 'transparent';
+    };
 
-  function $viewStyle({ pressed }: PressableStateCallbackType): StyleProp<ViewStyle> {
-    return [
-      themed($viewPresets[preset]),
-      $viewStyleOverride,
-      !!pressed && themed([$pressedViewPresets[preset], $pressedViewStyleOverride]),
-      !!disabled && [themed($disabledViewPresets[preset]), $disabledViewStyleOverride],
-    ]
-  }
+    const getTextColor = () => {
+        if (variant === 'primary') return '#FFFFFF';
+        if (variant === 'ghost') return theme.colors.textDim;
+        return theme.colors.text;
+    };
 
-  function $textStyle({ pressed }: PressableStateCallbackType): StyleProp<TextStyle> {
-    return [
-      themed($textPresets[preset]),
-      $textStyleOverride,
-      !!pressed && themed([$pressedTextPresets[preset], $pressedTextStyleOverride]),
-      !!disabled && [themed($disabledTextPresets[preset]), $disabledTextStyleOverride],
-    ]
-  }
-
-  return (
-    <Pressable
-      style={$viewStyle}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled }}
-      {...rest}
-      disabled={disabled}
-    >
-      {(state) => (
-        <>
-          {!!LeftAccessory && (
-            <LeftAccessory style={$leftAccessoryStyle} pressableState={state} disabled={disabled} />
-          )}
-
-          <Text text={text} style={$textStyle(state)}>
-            {children}
-          </Text>
-
-          {!!RightAccessory && (
-            <RightAccessory
-              style={$rightAccessoryStyle}
-              pressableState={state}
-              disabled={disabled}
-            />
-          )}
-        </>
-      )}
-    </Pressable>
-  )
+    return (
+        <TouchableOpacity
+            style={[
+                styles.container,
+                {
+                    backgroundColor: getBackgroundColor(),
+                    borderColor: getBorderColor(),
+                    borderWidth: variant === 'outline' ? 1 : 0,
+                },
+                style,
+            ]}
+            onPress={() => { hapticsLight(); onPress?.(); }}
+            disabled={disabled || loading}
+            activeOpacity={0.8}
+        >
+            {loading ? (
+                <ActivityIndicator color={getTextColor()} />
+            ) : (
+                <>
+                    {LeftAccessory && <LeftAccessory style={{ marginRight: 8 }} />}
+                    {icon && <>{icon}</>}
+                    <Text style={[styles.text, { color: getTextColor(), marginLeft: icon || LeftAccessory ? 8 : 0, marginRight: RightAccessory ? 8 : 0 }, textStyle]}>{title}</Text>
+                    {RightAccessory && <RightAccessory style={{ marginLeft: 8 }} />}
+                </>
+            )}
+        </TouchableOpacity>
+    );
 }
 
-const $baseViewStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  minHeight: 52,
-  borderRadius: 12, // More professional soft corners
-  justifyContent: "center",
-  alignItems: "center",
-  paddingVertical: spacing.sm,
-  paddingHorizontal: spacing.md,
-  overflow: "hidden",
-})
-
-const $baseTextStyle: ThemedStyle<TextStyle> = ({ typography }) => ({
-  fontSize: 16,
-  lineHeight: 20,
-  fontFamily: typography.primary.semiBold,
-  textAlign: "center",
-  flexShrink: 1,
-  flexGrow: 0,
-  zIndex: 2,
-})
-
-const $rightAccessoryStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginStart: spacing.xs,
-  zIndex: 1,
-})
-const $leftAccessoryStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginEnd: spacing.xs,
-  zIndex: 1,
-})
-
-const $viewPresets: Record<Presets, ThemedStyleArray<ViewStyle>> = {
-  default: [
-    $styles.row,
-    $baseViewStyle,
-    ({ colors }) => ({
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
-    }),
-  ],
-  primary: [
-    $styles.row,
-    $baseViewStyle,
-    ({ colors }) => ({ backgroundColor: colors.primary }),
-  ],
-  filled: [
-    $styles.row,
-    $baseViewStyle,
-    ({ colors }) => ({ backgroundColor: colors.palette.slate200 }),
-  ],
-  reversed: [
-    $styles.row,
-    $baseViewStyle,
-    ({ colors }) => ({ backgroundColor: colors.palette.slate900 }),
-  ],
-  dark: [
-    $styles.row,
-    $baseViewStyle,
-    ({ colors }) => ({ backgroundColor: colors.black }),
-  ],
-}
-
-const $textPresets: Record<Presets, ThemedStyleArray<TextStyle>> = {
-  default: [$baseTextStyle, ({ colors }) => ({ color: colors.text })],
-  primary: [$baseTextStyle, ({ colors }) => ({ color: colors.textContrast })],
-  filled: [$baseTextStyle, ({ colors }) => ({ color: colors.text })],
-  reversed: [$baseTextStyle, ({ colors }) => ({ color: colors.textContrast })],
-  dark: [$baseTextStyle, ({ colors }) => ({ color: colors.white })],
-}
-
-const $pressedViewPresets: Record<Presets, ThemedStyle<ViewStyle>> = {
-  default: ({ colors }) => ({ backgroundColor: colors.palette.slate100 }),
-  primary: ({ colors }) => ({ opacity: 0.85 }),
-  filled: ({ colors }) => ({ backgroundColor: colors.palette.slate300 }),
-  reversed: ({ colors }) => ({ opacity: 0.85 }),
-  dark: ({ colors }) => ({ opacity: 0.9 }),
-}
-
-const $pressedTextPresets: Record<Presets, ThemedStyle<TextStyle>> = {
-  default: () => ({ opacity: 0.9 }),
-  primary: () => ({ opacity: 0.9 }),
-  filled: () => ({ opacity: 0.9 }),
-  reversed: () => ({ opacity: 0.9 }),
-  dark: () => ({ opacity: 0.9 }),
-}
-
-const $disabledViewPresets: Record<Presets, ThemedStyle<ViewStyle>> = {
-  default: ({ colors }) => ({ opacity: 0.5 }),
-  primary: ({ colors }) => ({ opacity: 0.5 }),
-  filled: ({ colors }) => ({ opacity: 0.5 }),
-  reversed: ({ colors }) => ({ opacity: 0.5 }),
-  dark: ({ colors }) => ({ opacity: 0.5 }),
-}
-
-const $disabledTextPresets: Record<Presets, ThemedStyle<TextStyle>> = {
-  default: () => ({ opacity: 0.5 }),
-  primary: () => ({ opacity: 0.5 }),
-  filled: () => ({ opacity: 0.5 }),
-  reversed: () => ({ opacity: 0.5 }),
-  dark: () => ({ opacity: 0.5 }),
-}
+const getStyles = (theme: any) => StyleSheet.create({
+    container: {
+        flexDirection: 'row',
+        height: 48,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: theme.spacing.lg,
+    },
+    text: {
+        fontSize: theme.typography.m,
+        fontWeight: theme.typography.semiBold,
+    },
+});

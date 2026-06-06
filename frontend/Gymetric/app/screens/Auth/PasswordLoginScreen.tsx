@@ -1,12 +1,9 @@
-
 import React, { useState } from "react"
-import { View, ViewStyle, TextStyle, Pressable, ActivityIndicator } from "react-native"
-import { Screen } from "@/components/Screen"
-import { Text } from "@/components/Text"
+import { View, Pressable, ActivityIndicator, TouchableOpacity, StyleSheet, Text, ScrollView } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { TextField } from "@/components/TextField"
 import { Button } from "@/components/Button"
 import { useAppTheme } from "@/theme/context"
-import { ThemedStyle } from "@/theme/types"
 import { useNavigation, useRoute } from "@react-navigation/native"
 import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
@@ -15,12 +12,12 @@ import { saveString, save } from "@/utils/LocalStorage"
 import { trackEvent, AnalyticsEvents, setAnalyticsUser } from '@/services/analyticsService'
 import { setCrashlyticsUser } from '@/services/crashlyticsService'
 import { EyeOff, ChevronLeft } from "lucide-react-native"
-import { TouchableOpacity } from "react-native"
 import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { VersionFooter } from "@/components/VersionFooter"
 
 export const PasswordLoginScreen = () => {
-    const { themed, theme: { colors, spacing } } = useAppTheme()
+    const { theme } = useAppTheme()
+    const styles = getStyles(theme)
     const navigation = useNavigation<any>()
     const route = useRoute<any>()
     const dispatch = useAppDispatch()
@@ -60,8 +57,6 @@ export const PasswordLoginScreen = () => {
         setError("")
 
         try {
-            // Ensure E.164 format if needed, but backend expects whatever format we store
-            // Assuming user enters raw number or +91... let's stick to raw input for now unless we enforce formatting
             const formattedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
 
             const response = await api.passwordLogin(formattedNumber, password)
@@ -86,18 +81,15 @@ export const PasswordLoginScreen = () => {
     }
 
     return (
-        <Screen
-            preset="scroll"
-            contentContainerStyle={themed($screenContentContainer)}
-            safeAreaEdges={["top", "bottom"]}
-            backgroundColor={colors.background}
-        >
-            <TouchableOpacity onPress={() => navigation.goBack()} style={{}}>
-                <ChevronLeft color={colors.text} size={24} />
-            </TouchableOpacity>
-            <View style={themed($container)}>
-                <Text preset="heading" text={`Welcome Back${username ? `, ${username}` : ''}!`} style={themed($title)} />
-                <Text size="md" text="Login to continue managing your gym." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
+        <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <ChevronLeft color={theme.colors.text} size={32} />
+                </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                <Text style={styles.title}>Welcome Back{username ? `, ${username}` : ''}!</Text>
+                <Text style={styles.subtitle}>Login to continue managing your gym.</Text>
                 <View style={{ opacity: 0.5, pointerEvents: 'none' }}>
                     <TextField
                         value={phoneNumber}
@@ -105,8 +97,8 @@ export const PasswordLoginScreen = () => {
                         label="Phone Number"
                         placeholder="9999999999"
                         keyboardType="phone-pad"
-                        containerStyle={{ marginBottom: spacing.md }}
-                        LeftAccessory={() => <Text style={{ paddingLeft: 12, color: colors.textDim }}>+91</Text>}
+                        containerStyle={{ marginBottom: theme.spacing.md }}
+                        LeftAccessory={() => <Text style={{ paddingLeft: 12, color: theme.colors.textDim }}>+91</Text>}
                     />
                 </View>
 
@@ -116,12 +108,12 @@ export const PasswordLoginScreen = () => {
                     label="Password"
                     placeholder="Enter your password"
                     secureTextEntry={!isPasswordVisible}
-                    containerStyle={{ marginBottom: spacing.lg }}
+                    containerStyle={{ marginBottom: theme.spacing.lg }}
                     RightAccessory={() => (
                         <Pressable style={{ paddingRight: 12 }} onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
                             <EyeOff
                                 size={20}
-                                color={colors.textDim}
+                                color={theme.colors.textDim}
                                 style={{ opacity: isPasswordVisible ? 0.5 : 1 }}
                             />
                         </Pressable>
@@ -129,41 +121,61 @@ export const PasswordLoginScreen = () => {
                     onSubmitEditing={handleLogin}
                 />
 
-                {error ? <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text> : null}
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                 <Button
-                    text={isLoading ? "Logging in..." : "Login"}
-                    preset="reversed"
+                    title={isLoading ? "Logging in..." : "Login"}
+                    variant="primary"
                     onPress={handleLogin}
                     disabled={isLoading || isOtpLoading}
-                    style={{ marginBottom: spacing.md }}
-                    RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
+                    style={{ marginBottom: theme.spacing.md }}
+                    icon={isLoading ? <ActivityIndicator size="small" color="white" /> : undefined}
                 />
 
-                {isOtpLoading ? <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 5 }} /> : <Button
-                    text="Login with OTP"
-                    preset="default"
+                {isOtpLoading ? <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginTop: 5 }} /> : <Button
+                    title="Login with OTP"
+                    variant="ghost"
                     onPress={handleLoginWithOtp}
-                    style={{ backgroundColor: 'transparent', borderWidth: 0 }}
-                    textStyle={{ color: colors.primary, fontSize: 14 }}
+                    textStyle={{ color: theme.colors.primary, fontSize: 14 }}
                 />}
                 <VersionFooter />
-            </View>
-        </Screen>
+            </ScrollView>
+        </SafeAreaView>
     )
 }
 
-const $screenContentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-})
-
-const $container: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    flex: 1,
-    justifyContent: 'center',
-})
-
-const $title: ThemedStyle<TextStyle> = ({ spacing }) => ({
-    marginBottom: spacing.xs,
-})
+const getStyles = (theme: any) => StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: theme.colors.background,
+    },
+    header: {
+        paddingHorizontal: theme.spacing.lg,
+        paddingTop: theme.spacing.md,
+    },
+    backButton: {
+        padding: theme.spacing.xs,
+        marginLeft: -theme.spacing.xs,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.md,
+        justifyContent: 'center',
+    },
+    title: {
+        fontSize: theme.typography.xxl,
+        fontWeight: theme.typography.bold,
+        color: theme.colors.text,
+        marginBottom: theme.spacing.xs,
+    },
+    subtitle: {
+        fontSize: theme.typography.m,
+        color: theme.colors.textDim,
+        marginBottom: theme.spacing.xl,
+    },
+    errorText: {
+        color: theme.colors.error,
+        marginBottom: theme.spacing.md,
+    },
+});

@@ -41,10 +41,10 @@ export function ErrorDetails(props: ErrorDetailsProps) {
       </ScrollView>
 
       <Button
-        preset="reversed"
+        variant="primary"
         style={themed($resetButton)}
         onPress={props.onReset}
-        text="Reset"
+        title="Reset"
       />
     </Screen>
   )

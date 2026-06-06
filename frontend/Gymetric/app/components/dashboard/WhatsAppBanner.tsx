@@ -32,10 +32,10 @@ export function WhatsAppBanner({ onDismiss }: WhatsAppBannerProps) {
         text="Automate reminders, welcome messages & engage clients seamlessly on WhatsApp."
       />
       <Button
-        text="Learn More"
-        preset="reversed"
+        title="Learn More"
+        variant="primary"
         style={{ backgroundColor: 'white', height: 36, minHeight: 36, paddingVertical: 0, alignSelf: 'flex-start', paddingHorizontal: 16 }}
-        textStyle={{ color: colors.primary, fontSize: 12, fontFamily: typography.primary.bold }}
+        textStyle={{ color: colors.primary, fontSize: 12, fontWeight: typography.bold }}
         onPress={() => navigate('WhatsApp Premium')}
       />
     </MotiView>

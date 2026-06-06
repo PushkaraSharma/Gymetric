@@ -97,11 +97,11 @@ const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderColor: colors.border,
 })
 const $header: ViewStyle = { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }
-const $title: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontFamily: typography.secondary.bold, fontSize: 18, color: colors.text })
+const $title: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontWeight: typography.bold, fontSize: 18, color: colors.text })
 const $subtitle: ThemedStyle<TextStyle> = ({ colors }) => ({ fontSize: 12, color: colors.textDim, marginTop: 2 })
 const $progressTrack: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({ height: 6, backgroundColor: colors.background, borderRadius: 3, marginBottom: spacing.md, overflow: 'hidden' })
 const $progressFill: ThemedStyle<ViewStyle> = ({ colors }) => ({ height: '100%', backgroundColor: colors.primary, borderRadius: 3 })
 const $stepRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({ flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, gap: 12 })
 const $stepIcon: ThemedStyle<ViewStyle> = ({ colors }) => ({ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.primaryBackground, alignItems: 'center', justifyContent: 'center' })
-const $stepLabel: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontFamily: typography.primary.semiBold, fontSize: 14, color: colors.text })
+const $stepLabel: ThemedStyle<TextStyle> = ({ typography, colors }) => ({ fontWeight: typography.semiBold, fontSize: 14, color: colors.text })
 const $stepDesc: ThemedStyle<TextStyle> = ({ colors }) => ({ fontSize: 12, color: colors.textDim, marginTop: 2 })
