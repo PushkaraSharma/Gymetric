@@ -91,3 +91,5 @@ app-dependency-graph.png
 
 google-services.json
 GoogleService-Info.plist
+
+.expo/

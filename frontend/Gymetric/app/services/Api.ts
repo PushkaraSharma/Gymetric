@@ -35,6 +35,8 @@ export class Api {
   }
 
   async apiRequest<T>(method: "get" | "post" | "put" | "patch" | "delete", url: string, body?: any, params?: any, retries = 0): Promise<ApiResult> {
+    const baseURL = this.apisauce.axiosInstance.defaults.baseURL ?? ''
+    console.log(`\n🌐 [API] ${method.toUpperCase()} ${url}\n   Base URL : ${baseURL}\n   Full URL : ${baseURL}${url}${params ? `\n   Params   : ${JSON.stringify(params)}` : ''}\n`)
     const response: ApiResponse<BackendResponse<T>> = await this.apisauce[method](url, body, { params });
     if (!response.ok) {//Network fail
       const isRetryable = response.problem === 'TIMEOUT_ERROR' || response.problem === 'CONNECTION_ERROR' || response.problem === 'NETWORK_ERROR';
@@ -66,6 +68,7 @@ export class Api {
   };
 
   checkUser = async (phoneNumber: string) => {
+    console.log("calling api")
     return await this.apiRequest('post', '/api/auth/check-user', { phoneNumber });
   };
 

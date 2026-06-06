@@ -108,7 +108,7 @@ const BusinessProfile = () => {
             placeholder="Enter gym name"
             returnKeyType="next"
             onSubmitEditing={() => phoneRef.current?.focus()}
-            RightAccessory={() => <MaterialCommunityIcons name='dumbbell' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            LeftAccessory={() => <MaterialCommunityIcons name='dumbbell' size={20} color={colors.tintInactive} />}
           />
           <TextField
             ref={phoneRef}
@@ -121,7 +121,7 @@ const BusinessProfile = () => {
             placeholder="Enter contact number"
             returnKeyType="next"
             onSubmitEditing={() => ownerRef.current?.focus()}
-            RightAccessory={() => <MaterialCommunityIcons name='phone' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            LeftAccessory={() => <MaterialCommunityIcons name='phone' size={20} color={colors.tintInactive} />}
           />
           <TextField
             ref={ownerRef}
@@ -133,7 +133,7 @@ const BusinessProfile = () => {
             placeholder="Enter owner name"
             returnKeyType="next"
             onSubmitEditing={() => emailRef.current?.focus()}
-            RightAccessory={() => <Octicons name='person' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            LeftAccessory={() => <Octicons name='person' size={20} color={colors.tintInactive} />}
           />
           <TextField
             ref={emailRef}
@@ -146,7 +146,7 @@ const BusinessProfile = () => {
             keyboardType="email-address"
             returnKeyType="next"
             onSubmitEditing={() => addressRef.current?.focus()}
-            RightAccessory={() => <MaterialCommunityIcons name='email' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            LeftAccessory={() => <MaterialCommunityIcons name='email' size={20} color={colors.tintInactive} />}
           />
           <TextField
             ref={addressRef}
@@ -160,7 +160,7 @@ const BusinessProfile = () => {
             returnKeyType="done"
             onSubmitEditing={updateGym}
             blurOnSubmit={true}
-            RightAccessory={() => <Ionicons name='location-sharp' size={20} color={colors.tintInactive} style={{ marginRight: 10, marginTop: 10 }} />}
+            LeftAccessory={() => <Ionicons name='location-sharp' size={20} color={colors.tintInactive} />}
           />
         </ScrollView>
         <View style={themed($footer)}>

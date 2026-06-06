@@ -85,7 +85,7 @@ export function App() {
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <GestureHandlerRootView>
+      <GestureHandlerRootView style={{ flex: 1 }}>
         <KeyboardProvider>
           <Provider store={store}>
             <ThemeProvider>

@@ -45,10 +45,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         return typeof styleOrStyleArray === 'function' ? (styleOrStyleArray as Function)(theme) : styleOrStyleArray;
     };
 
-    const setThemeContextOverride = () => {}; // Dummy
+    const setThemeContextOverride = (ctx: ThemeMode) => {
+        setMode(ctx);
+    };
+
+    const themeContext = isDark ? 'dark' : 'light';
 
     return (
-        <ThemeContext.Provider value={{ theme, isDark, mode, setMode, themed, setThemeContextOverride, themeContext: 'default' }}>
+        <ThemeContext.Provider value={{ theme, isDark, mode, setMode, themed, setThemeContextOverride, themeContext }}>
             {children}
         </ThemeContext.Provider>
     );

@@ -70,6 +70,7 @@ const Revenue = () => {
     return (
         <Screen
             preset="fixed"
+            safeAreaEdges={['top']}
             contentContainerStyle={[$styles.flex1]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >

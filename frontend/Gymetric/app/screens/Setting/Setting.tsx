@@ -54,6 +54,7 @@ const Setting = () => {
   const toggleTheme = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     const nextDark = themeContext !== 'dark'
+    console.log("heheheh", nextDark, themeContext)
     setThemeContextOverride(nextDark ? 'dark' : 'light')
     setEnrichedUserProperties({ darkMode: nextDark })
     trackEvent(AnalyticsEvents.DARK_MODE_TOGGLED, { enabled: nextDark })
@@ -135,21 +136,13 @@ const Setting = () => {
           <ChevronRight size={20} color={colors.textDim} />
         </Pressable>
 
-        <Section title="ACCOUNT & SECURITY">
+        <Section title="GYM MANAGEMENT">
           <SettingItem
             icon={CreditCard}
             label="Manage Membership"
             description="Plans, pricing and durations"
             onPress={() => navigate('Memberships')}
             color="#6366F1"
-          />
-          <View style={themed($divider)} />
-          <SettingItem
-            icon={Key}
-            label="Change Password"
-            description="Update your account password"
-            onPress={() => navigate('Change Password')}
-            color="#F59E0B"
           />
         </Section>
 
@@ -190,6 +183,16 @@ const Setting = () => {
                 thumbColor={colors.white}
               />
             }
+          />
+        </Section>
+
+        <Section title="ACCOUNT & SECURITY">
+          <SettingItem
+            icon={Key}
+            label="Change Password"
+            description="Update your account password"
+            onPress={() => navigate('Change Password')}
+            color="#F59E0B"
           />
         </Section>
 

@@ -17,7 +17,7 @@ import { VersionFooter } from "@/components/VersionFooter"
 import { ChevronLeft } from "lucide-react-native"
 
 export const OTPVerificationScreen = () => {
-    const { theme } = useAppTheme()
+    const { theme, isDark } = useAppTheme()
     const styles = getStyles(theme)
     const navigation = useNavigation<any>()
     const route = useRoute<any>()
@@ -159,7 +159,7 @@ export const OTPVerificationScreen = () => {
             </View>
             <View style={styles.container}>
                 <View style={styles.logoContainer}>
-                    <Image source={require("../../../assets/images/app-icon.png")} style={styles.logo} />
+                    <Image source={isDark ? require("../../../assets/images/app-icon-dark.png") : require("../../../assets/images/app-icon.png")} style={styles.logo} />
                 </View>
                 <Text style={styles.title}>Enter Code</Text>
                 <Text style={styles.subtitle}>We sent it to {phoneNumber}</Text>

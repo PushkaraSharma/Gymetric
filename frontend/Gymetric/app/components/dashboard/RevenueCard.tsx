@@ -68,7 +68,7 @@ const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 
 const $header: ViewStyle = { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }
 const $label: ThemedStyle<TextStyle> = () => ({ color: 'rgba(255,255,255,0.7)', fontSize: 11, letterSpacing: 1, fontWeight: '700' })
-const $value: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', fontSize: 32, fontWeight: typography.bold, marginBottom: 12 })
+const $value: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', fontSize: 32, lineHeight: 40, fontWeight: typography.bold, marginBottom: 12 })
 const $footer: ViewStyle = { flexDirection: 'row', alignItems: 'center' }
 const $trendBadge: ViewStyle = { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }
 const $trendText: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', marginLeft: 4, fontWeight: typography.medium, fontSize: 12 })
