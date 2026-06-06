@@ -78,7 +78,7 @@ const BusinessProfile = () => {
       safeAreaEdges={["bottom"]}
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
-      <Header title='Business Profile' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
+      <Header title='Business Profile' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} safeAreaTop={true} />
       <View style={{ flex: 1 }}>
         <ScrollView style={{ paddingHorizontal: 15 }}>
           <View>

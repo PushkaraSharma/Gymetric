@@ -99,6 +99,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
         backgroundColor={colors.surface}
         leftIcon="caretLeft"
         onLeftPress={goBack}
+        safeAreaTop={true}
         RightActionComponent={membership ? <Ionicons name="trash-outline" size={24} color={colors.error} style={{ marginRight: 10 }} onPress={() => setDeleteModalVisible(true)} /> : undefined}
       />
       <View style={{ flex: 1 }}>
@@ -162,7 +163,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             placeholder="0.00"
             returnKeyType="next"
             onSubmitEditing={() => durationRef.current?.focus()}
-            LeftAccessory={() => <Text style={{ alignSelf: 'center', marginLeft: 15, color: colors.textDim }} size='md'>₹</Text>}
+            LeftAccessory={() => <Text style={{ alignSelf: 'center', color: colors.textDim }} size='md'>₹</Text>}
           />
           <View style={[themed($card), { padding: spacing.md, paddingHorizontal: 0 }]}>
             <View style={[$styles.flexRow, { paddingHorizontal: spacing.md, borderBottomWidth: 1, paddingBottom: 10, borderColor: colors.border }]}>

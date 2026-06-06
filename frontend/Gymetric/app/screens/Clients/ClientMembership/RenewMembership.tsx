@@ -30,7 +30,7 @@ const RenewMembership = ({ route }: any) => {
     const loader = useAppSelector(selectLoading);
 
     const [datePicker, setDatePicker] = useState<boolean>(false);
-    const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { id: client?._id, name: client?.name, phoneNumber: client?.phoneNumber, gender: client?.gender }, amount: 0, method: 'Cash', paymentReceived: true, startDate: newStartDate, dependents: [] });
+    const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { id: client?._id, name: client?.name, phoneNumber: client?.phoneNumber, gender: client?.gender }, amount: 0, amountReceived: 0, method: 'Cash', startDate: newStartDate, dependents: [] });
     const Steps = ["Membership", "Payment"] as STEPS[];
     const [currentStep, setCurrentStep] = useState<STEPS>("Membership");
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
@@ -81,7 +81,8 @@ const RenewMembership = ({ route }: any) => {
         if (currentStep === 'Membership') {
             return !duplicateNo && !(form.dependents.length + 1 < selectedMembership?.[0]?.membersAllowed);
         }
-        return true;
+        const received = form.amountReceived ?? 0;
+        return received >= 0 && received <= (form.amount || 0);
     };
 
     const getMemberships = async () => {
@@ -91,6 +92,7 @@ const RenewMembership = ({ route }: any) => {
             const defaultMem = memberships.find((item: any) => item._id === client?.activeMembership?.planId) ?? memberships?.[0];
             setSelectedMembership([defaultMem]);
             handleForm('amount', defaultMem?.price);
+            handleForm('amountReceived', defaultMem?.price);
             setMemberships(memberships);
         }
     };
@@ -122,7 +124,7 @@ const RenewMembership = ({ route }: any) => {
             <DateTimePickerModal
                 isVisible={datePicker}
                 mode="date"
-                minimumDate={newStartDate}
+                minimumDate={new Date(new Date().setFullYear(new Date().getFullYear() - 1))}
                 date={form.startDate ?? new Date()}
                 onConfirm={async (date) => {
                     handleForm('startDate', date);

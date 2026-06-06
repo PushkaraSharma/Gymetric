@@ -11,10 +11,11 @@ interface RevenueCardProps {
   trend: number | null
   retentionRate?: number
   avgRevenuePerMember?: number
+  todayCollection?: number
   onPress: () => void
 }
 
-export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, onPress }: RevenueCardProps) {
+export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, todayCollection, onPress }: RevenueCardProps) {
   const { themed, theme: { colors, spacing } } = useAppTheme()
   const trendText = trend !== null && trend !== undefined
     ? `${trend >= 0 ? '+' : ''}${trend}% vs last month`
@@ -34,8 +35,14 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
             <Text style={themed($trendText)} size="xs" text={trendText} />
           </View>
         </View>
-        {(retentionRate !== undefined || avgRevenuePerMember !== undefined) && (
+        {(todayCollection !== undefined || retentionRate !== undefined || avgRevenuePerMember !== undefined) && (
           <View style={[themed($statsRow), { marginTop: spacing.sm }]}>
+            {todayCollection !== undefined && (
+              <View style={themed($statItem)}>
+                <Text style={themed($statValue)} text={`₹${todayCollection.toLocaleString()}`} />
+                <Text style={themed($statLabel)} text="Today" />
+              </View>
+            )}
             {retentionRate !== undefined && (
               <View style={themed($statItem)}>
                 <Text style={themed($statValue)} text={`${retentionRate}%`} />

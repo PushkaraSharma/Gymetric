@@ -87,6 +87,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "@react-native-firebase/app",
         "@react-native-firebase/auth",
         "@react-native-firebase/crashlytics",
+        [
+            "expo-notifications",
+            {
+                icon: "./assets/images/app-icon.png",
+                color: "#4F46E5",
+            },
+        ],
     ],
     experiments: {
         tsconfigPaths: true,

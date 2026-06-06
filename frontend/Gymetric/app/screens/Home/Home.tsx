@@ -2,7 +2,7 @@ import { ScrollView, Pressable, RefreshControl, View, StyleSheet, Text } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React, { useCallback, useMemo, useState } from 'react'
 import { useAppTheme } from '@/theme/context'
-import { Plus, Users, Activity as ActivityIconLucide, Clock, UserPlus, UserX } from 'lucide-react-native'
+import { Plus, Users, Activity as ActivityIconLucide, Clock, UserPlus, UserX, Wallet, IndianRupee } from 'lucide-react-native'
 import { useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
@@ -28,11 +28,17 @@ export interface DashboardSummary {
   activeMembers: { value: number; trend: number | null }
   expiredMembers: number
   expiringIn7Days: number
+  expiringToday?: number
   retentionRate: number
   avgRevenuePerMember: number
   revenueTrend: { label: string; amount: number }[]
   revenueThisMonth: { value: number; trend: number | null }
   newlyJoinedThisMonth: { value: number; trend: number | null }
+  todayCollection?: number
+  totalOutstanding?: number
+  clientsWithBalance?: number
+  paymentMethodsToday?: { method: string; amount: number; count: number }[]
+  topBalanceClients?: { _id: string; name: string; balance: number }[]
   activities: any[]
 }
 
@@ -195,9 +201,32 @@ const Home = () => {
                   trend={summary?.revenueThisMonth?.trend ?? null}
                   retentionRate={summary?.retentionRate}
                   avgRevenuePerMember={summary?.avgRevenuePerMember}
+                  todayCollection={summary?.todayCollection}
                   onPress={() => navigate('Revenue')}
                 />
               </View>
+
+              {(summary?.totalOutstanding ?? 0) > 0 && (
+                <ActionAlertCard
+                  label="OUTSTANDING"
+                  title={`₹${summary?.totalOutstanding}`}
+                  description={`from ${summary?.clientsWithBalance} client(s) with pending dues`}
+                  primaryAction="View Balances"
+                  onPrimaryPress={() => navigate('Clients', { filter: 'Has Balance' })}
+                  variant="warning"
+                />
+              )}
+
+              {(summary?.expiringToday ?? 0) > 0 && (
+                <ActionAlertCard
+                  label="EXPIRING TODAY"
+                  title={String(summary?.expiringToday)}
+                  description="memberships expiring today"
+                  primaryAction="View"
+                  onPrimaryPress={() => navigate('Clients', { filter: 'Expiring Soon' })}
+                  variant="danger"
+                />
+              )}
 
               <StatGrid stats={statItems} onStatPress={handleStatPress} />
 

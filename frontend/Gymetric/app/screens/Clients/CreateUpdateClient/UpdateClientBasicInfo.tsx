@@ -98,7 +98,7 @@ const UpdateClientbasicInfo = ({ route }: any) => {
         }}
         onCancel={() => setDatePicker({ visible: false, type: 'birthday' })}
       />
-      <Header title='Update Client' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
+      <Header title='Update Client' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} safeAreaTop />
       <ScrollView style={{ paddingHorizontal: 15, flex: 1 }}>
         <PersonalInfo handleForm={handleForm} form={form} setDatePicker={setDatePicker} isUpdate validNumber={validNumber} />
       </ScrollView>

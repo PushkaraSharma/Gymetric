@@ -37,6 +37,24 @@ export const setSettings = async (request: any, reply: any) => {
     }
 };
 
+export const setReceiptSettings = async (request: any, reply: any) => {
+    try {
+        const gymId = request.user.gymId;
+        const { receipt } = request.body;
+
+        const settings = await Settings.findOneAndUpdate(
+            { gymId },
+            { $set: { receipt, gymId } },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+
+        return reply.status(200).send({ success: true, data: settings?.receipt });
+    } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};
+
 export const getSettings = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;

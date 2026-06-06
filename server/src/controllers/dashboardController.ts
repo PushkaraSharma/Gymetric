@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import Activity from "../models/Activity.js";
 import Client from "../models/Client.js";
 import mongoose from "mongoose";
-import { addUtcDays, utcStartOfDay, utcStartOfMonth } from "../utils/Helper.js";
+import { addUtcDays, utcStartOfDay, utcStartOfMonth } from "../utils/timeUtils.js";
 import { cache, getCacheKey } from "../utils/cache.js";
 
 const calculateTrend = (current: number, previous: number) => {
@@ -55,6 +55,8 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
         const thirtyDaysAgo = addUtcDays(today, -30);
         const sevenDaysFromNow = addUtcDays(today, 7);
 
+        const tomorrow = addUtcDays(today, 1);
+
         const [
             totalClients,
             activeCount,
@@ -67,7 +69,13 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             newlyJoinedCurrent,
             newlyJoinedLastMTD,
             recentActivities,
-            revenueTrend
+            revenueTrend,
+            todayCollection,
+            totalOutstanding,
+            clientsWithBalance,
+            expiringToday,
+            paymentMethodsToday,
+            topBalanceClients,
         ] = await Promise.all([
             Client.countDocuments({ gymId }),
             Client.countDocuments({ gymId, membershipStatus: 'active' }),
@@ -136,7 +144,36 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             Client.countDocuments({ gymId, createdAt: { $gte: startOfCurrent } }),
             Client.countDocuments({ gymId, createdAt: { $gte: startOfLast, $lte: endOfLastMTD } }),
             Activity.find({ gymId }).sort({ date: -1 }).limit(10).lean(),
-            getRevenueTrend(gymId, today)
+            getRevenueTrend(gymId, today),
+            Client.aggregate([
+                { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
+                { $unwind: "$paymentHistory" },
+                { $match: { "paymentHistory.date": { $gte: today, $lt: tomorrow } } },
+                { $group: { _id: null, total: { $sum: "$paymentHistory.amount" } } }
+            ]),
+            Client.aggregate([
+                { $match: { gymId: new mongoose.Types.ObjectId(gymId), balance: { $gt: 0 } } },
+                { $group: { _id: null, total: { $sum: "$balance" }, count: { $sum: 1 } } }
+            ]),
+            Client.countDocuments({ gymId, balance: { $gt: 0 } }),
+            Client.aggregate([
+                { $match: { gymId: new mongoose.Types.ObjectId(gymId), membershipStatus: 'active' } },
+                { $lookup: { from: 'assignedmemberships', localField: 'activeMembership', foreignField: '_id', as: 'activePlan' } },
+                { $unwind: '$activePlan' },
+                { $match: { 'activePlan.endDate': { $gte: today, $lt: tomorrow } } },
+                { $count: 'count' }
+            ]),
+            Client.aggregate([
+                { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
+                { $unwind: "$paymentHistory" },
+                { $match: { "paymentHistory.date": { $gte: today, $lt: tomorrow } } },
+                { $group: { _id: "$paymentHistory.method", total: { $sum: "$paymentHistory.amount" }, count: { $sum: 1 } } }
+            ]),
+            Client.find({ gymId, balance: { $gt: 0 } })
+                .select('name balance')
+                .sort({ balance: -1 })
+                .limit(3)
+                .lean(),
         ]);
 
         const revCurrentVal = revenueCurrent[0]?.total || 0;
@@ -182,7 +219,21 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
                 trend: calculateTrend(newlyJoinedCurrent, newlyJoinedLastMTD),
                 comparisonText: "vs previous MTD"
             },
-            activities: recentActivities
+            activities: recentActivities,
+            todayCollection: todayCollection[0]?.total || 0,
+            totalOutstanding: totalOutstanding[0]?.total || 0,
+            clientsWithBalance: clientsWithBalance || totalOutstanding[0]?.count || 0,
+            expiringToday: expiringToday[0]?.count || 0,
+            paymentMethodsToday: paymentMethodsToday.map((p: any) => ({
+                method: p._id,
+                amount: p.total,
+                count: p.count,
+            })),
+            topBalanceClients: topBalanceClients.map((c: any) => ({
+                _id: c._id,
+                name: c.name,
+                balance: c.balance,
+            })),
         };
 
         cache.set(cacheKey, responseData);
@@ -256,11 +307,13 @@ export const getRevenueStats = async (request: FastifyRequest, reply: FastifyRep
             { $limit: 20 },
             {
                 $project: {
+                    clientId: "$_id",
                     clientName: "$name",
                     amount: "$paymentHistory.amount",
                     date: "$paymentHistory.date",
                     method: "$paymentHistory.method",
-                    remarks: "$paymentHistory.remarks"
+                    remarks: "$paymentHistory.remarks",
+                    type: "$paymentHistory.type",
                 }
             }
         ]);

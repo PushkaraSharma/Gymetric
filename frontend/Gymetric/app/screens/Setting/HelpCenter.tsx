@@ -40,7 +40,7 @@ const HelpCenter = () => {
             preset="fixed"
             safeAreaEdges={[]}
         >
-            <Header title="Help Center" leftIcon="caretLeft" onLeftPress={goBack} backgroundColor={colors.surface} />
+            <Header title="Help Center" leftIcon="caretLeft" onLeftPress={goBack} backgroundColor={colors.surface} safeAreaTop />
 
             <View style={$container}>
                 <Text preset="heading" style={$title}>Get in Touch</Text>
@@ -50,13 +50,13 @@ const HelpCenter = () => {
                     <SupportItem
                         icon={<Mail size={22} color={colors.primary} />}
                         title="Email Support"
-                        value="support@gymkarta.com"
+                        value="indierootsapps@gmail.com"
                         onPress={handleEmail}
                     />
                     <SupportItem
                         icon={<Phone size={22} color={colors.primary} />}
                         title="Call Us"
-                        value="+91 9711583364"
+                        value="+91 9354454113"
                         onPress={handlePhone}
                     />
                 </View>

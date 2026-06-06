@@ -39,7 +39,7 @@ export const CustomModal = ({
                 <View style={themed($overlay)}>
                     <TouchableWithoutFeedback>
                         <View style={themed($modalContainer)}>
-                            <Text preset="subheading" weight="bold" style={{ marginBottom: spacing.xs, textAlign: 'center' }}>{title}</Text>
+                            <Text preset="subheading" weight="bold" style={{ marginBottom: spacing.xs }}>{title}</Text>
                             <Text style={{ marginBottom: spacing.lg, color: colors.textDim }}>{message}</Text>
 
                             <View style={$buttonContainer}>

@@ -19,7 +19,7 @@ export function ErrorDetails(props: ErrorDetailsProps) {
   return (
     <Screen
       preset="fixed"
-      safeAreaEdges={["top", "bottom"]}
+      safeAreaEdges={["bottom"]}
       contentContainerStyle={themed($contentContainer)}
     >
       <View style={$topSection}>

@@ -6,6 +6,8 @@ import Settings from "../models/Settings.js";
 import Gym from "../models/Gym.js";
 import { getISTMidnightToday, formatShortDate } from "../utils/timeUtils.js";
 import { sendWhatsAppTemplate } from "../services/Whatsapp.js";
+import { sendExpoPush } from "../services/pushNotificationService.js";
+import User from "../models/User.js";
 import dayjs from "dayjs";
 
 export const performExpiryChecks = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -52,7 +54,7 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
         // Find memberships that ended before today and are still marked 'active' or 'trial'
         const membershipsToExpire = await AssignedMembership.find({
             endDate: { $lt: today },
-            status: { $in: ['active', 'trial'] }
+            status: { $in: ['active', 'trial'] } // paused memberships are excluded
         });
 
         if (membershipsToExpire.length > 0) {
@@ -97,7 +99,7 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                         const gym = await Gym.findById(memb.gymId);
                         const templateName = "expired";
                         const params = [primaryMember.name, gym?.name, formatShortDate(memb.endDate)];
-                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, settings.whatsapp, gym?.name);
+                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, settings.whatsapp, gym?.name, { gymId: String(memb.gymId), clientId: String(primaryMember._id) });
                     }
                 }
             }
@@ -137,9 +139,64 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                         const remainingDays = dayjs(memb.endDate).diff(today, 'day');
                         const templateName = "renewal";
                         const params = [primaryMember.name, gym?.name, remainingDays, formatShortDate(memb.endDate)];
-                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, setting.whatsapp, gym?.name);
+                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, setting.whatsapp, gym?.name, { gymId: String(setting.gymId), clientId: String(primaryMember._id) });
                     }
                 }
+            }
+        }
+
+        // STEP 4: OWNER PUSH NOTIFICATIONS
+        const gymIds = await Client.distinct('gymId');
+        for (const gymId of gymIds) {
+            const owners = await User.find({
+                gymId,
+                expoPushToken: { $exists: true, $ne: null },
+                pushNotificationsEnabled: { $ne: false },
+            });
+
+            if (owners.length === 0) continue;
+
+            const [expiringTodayCount, outstandingAgg, expiringSoonCount] = await Promise.all([
+                Client.aggregate([
+                    { $match: { gymId, membershipStatus: 'active' } },
+                    { $lookup: { from: 'assignedmemberships', localField: 'activeMembership', foreignField: '_id', as: 'plan' } },
+                    { $unwind: '$plan' },
+                    { $match: { 'plan.endDate': { $gte: today, $lt: dayjs(today).add(1, 'day').toDate() } } },
+                    { $count: 'count' },
+                ]),
+                Client.aggregate([
+                    { $match: { gymId, balance: { $gt: 0 } } },
+                    { $group: { _id: null, total: { $sum: '$balance' }, count: { $sum: 1 } } },
+                ]),
+                Client.aggregate([
+                    { $match: { gymId, membershipStatus: 'active', upcomingMembership: null } },
+                    { $lookup: { from: 'assignedmemberships', localField: 'activeMembership', foreignField: '_id', as: 'plan' } },
+                    { $unwind: '$plan' },
+                    { $match: { 'plan.endDate': { $gte: today, $lte: dayjs(today).add(7, 'day').endOf('day').toDate() } } },
+                    { $count: 'count' },
+                ]),
+            ]);
+
+            const expToday = expiringTodayCount[0]?.count || 0;
+            const outstanding = outstandingAgg[0]?.total || 0;
+            const balanceClients = outstandingAgg[0]?.count || 0;
+            const expSoon = expiringSoonCount[0]?.count || 0;
+
+            const parts: string[] = [];
+            if (expToday > 0) parts.push(`${expToday} expiring today`);
+            if (expSoon > 0) parts.push(`${expSoon} expiring in 7 days`);
+            if (outstanding > 0) parts.push(`₹${outstanding} outstanding from ${balanceClients} client(s)`);
+
+            if (parts.length === 0) continue;
+
+            const title = 'GymKarta Daily Summary';
+            const body = parts.join(' · ');
+
+            for (const owner of owners) {
+                if (!owner.expoPushToken) continue;
+                const prefs = owner.pushPrefs || {};
+                if (prefs.dailySummary === false) continue;
+                await sendExpoPush(owner.expoPushToken, title, body, { screen: 'Home' });
             }
         }
 

@@ -1,16 +1,17 @@
-import { Pressable, StyleSheet, View, ViewStyle } from 'react-native'
-import React, { FC, useState } from 'react'
-import { Text } from '@/components/Text';
-import { SelectField } from '@/components/SelectField';
-import { spacing } from '@/theme/spacing';
-import { $styles } from '@/theme/styles';
-import { useAppTheme } from '@/theme/context';
-import { ThemedStyle } from '@/theme/types';
-import { Entypo, Ionicons, MaterialIcons, Octicons } from '@expo/vector-icons';
-import { formatDate } from 'date-fns';
-import { ClientOnBoardingType } from '@/utils/types';
-import DependentCard from './DependentCard';
-import { alreadyExists } from '@/utils/Helper';
+import { Pressable, View, ViewStyle } from 'react-native'
+import React, { FC, Dispatch, SetStateAction } from 'react'
+import { Text } from '@/components/Text'
+import { spacing } from '@/theme/spacing'
+import { $styles } from '@/theme/styles'
+import { useAppTheme } from '@/theme/context'
+import { ThemedStyle } from '@/theme/types'
+import { Entypo, Ionicons, Octicons } from '@expo/vector-icons'
+import { formatDate } from 'date-fns'
+import { ClientOnBoardingType } from '@/utils/types'
+import DependentCard from './DependentCard'
+import { alreadyExists } from '@/utils/Helper'
+import { ClientSectionLabel } from '@/components/clients/ClientSectionLabel'
+import { Calendar, Users, Check } from 'lucide-react-native'
 
 type Props = {
     memberships: { [key: string]: any }[],
@@ -19,184 +20,186 @@ type Props = {
     handleForm: (field: string, value: any) => void,
     handleDatePicker: () => void,
     form: ClientOnBoardingType,
-    setForm: (val: ClientOnBoardingType) => void,
+    setForm: Dispatch<SetStateAction<ClientOnBoardingType>>,
     duplicateNo: string,
     setDuplicateNo: (val: string) => void
 }
 
-const SelectMembership: FC<Props> = ({ selectedMembership, setSelectedMembership, memberships, handleDatePicker, handleForm, form, setForm, duplicateNo, setDuplicateNo }) => {
-    const { theme: { colors }, themed } = useAppTheme();
+const getDuration = (plan: any) => {
+    if (plan.durationInMonths > 0) return plan.durationInMonths === 1 ? '1 month' : `${plan.durationInMonths} months`
+    return plan.durationInDays === 1 ? '1 day' : `${plan.durationInDays} days`
+}
+
+const SelectMembership: FC<Props> = ({
+    selectedMembership, setSelectedMembership, memberships, handleDatePicker, handleForm, form, setForm, duplicateNo, setDuplicateNo
+}) => {
+    const { theme: { colors }, themed } = useAppTheme()
+    const selected = selectedMembership?.[0]
 
     const addMember = () => {
-        // @ts-ignore
-        setForm(prev => ({ ...prev, dependents: [...prev.dependents, { name: '', phoneNumber: '', gender: 'Male' }] }));
-    };
+        setForm(prev => ({ ...prev, dependents: [...prev.dependents, { name: '', phoneNumber: '', gender: 'Male' }] }))
+    }
 
     const updateDependent = (index: number, field: string, value: string) => {
-        // @ts-ignore
         setForm(prev => {
-            if (!prev.dependents) return prev;
-            const updatedDependents = [...prev.dependents];
-            updatedDependents[index] = { ...updatedDependents[index], [field]: value };
-            return { ...prev, dependents: updatedDependents };
-        });
+            const updatedDependents = [...prev.dependents]
+            updatedDependents[index] = { ...updatedDependents[index], [field]: value }
+            return { ...prev, dependents: updatedDependents }
+        })
         if (field === 'phoneNumber' && value.length === 10 && (value === form.primaryDetails.phoneNumber || alreadyExists(value))) {
-            setDuplicateNo(index.toString());
-        } else {
-            setDuplicateNo('');
-        }
-    };
+            setDuplicateNo(index.toString())
+        } else setDuplicateNo('')
+    }
 
     const updateExistingDependent = (index: number, action: 'add' | 'delete', item?: any) => {
-        // @ts-ignore
         setForm(prev => {
-            const updatedDependents = [...prev.dependents];
-            if (action === 'delete') {
-                updatedDependents.splice(index, 1);
-            } else if (item) {
-                updatedDependents[index] = { clientId: item._id, name: item.name, phoneNumber: item?.phoneNumber, gender: item.gender };
-            }
-            return { ...prev, dependents: updatedDependents };
+            const updatedDependents = [...prev.dependents]
+            if (action === 'delete') updatedDependents.splice(index, 1)
+            else if (item) updatedDependents[index] = { clientId: item._id, name: item.name, phoneNumber: item?.phoneNumber, gender: item.gender } as any
+            return { ...prev, dependents: updatedDependents }
         })
-    };
+    }
+
+    const selectPlan = (plan: any) => {
+        setSelectedMembership([plan])
+        handleForm('amount', plan.price)
+        handleForm('amountReceived', plan.price)
+        handleForm('dependents', [])
+    }
 
     return (
-        <View style={{ marginTop: 15 }}>
-            <Text preset='heading'>Select Membership</Text>
-            <View style={{ marginTop: 20 }}>
-                <View>
-                    <SelectField
-                        label="Membership Tier"
-                        placeholder="Select membership"
-                        value={selectedMembership}
-                        onSelect={(val) => { setSelectedMembership(val); handleForm('amount', val?.[0]?.price ?? 0); handleForm('dependents', []) }}
-                        options={memberships}
-                        multiple={false}
-                        allowEmpty={false}
-                        labelKey={'label'}
-                        valueKey={"_id"}
-                        containerStyle={{ marginBottom: spacing.lg }}
-                    />
-                    {
-                        selectedMembership?.[0]?.planType === 'indivisual' ?
-                            <View style={[themed($card), { padding: 0 }]}>
-                                <View style={themed($cardHeader)}>
-                                    <View style={{ backgroundColor: colors.palette.indigo100, padding: 8, borderRadius: 20 }}>
-                                        <MaterialIcons name='card-membership' size={25} color={colors.tint} />
-                                    </View>
-                                    <View style={{ marginLeft: 15 }}>
-                                        <Text weight='medium' size='md'>{selectedMembership?.[0]?.planName}</Text>
-                                        <View style={{ padding: 2, marginTop: 5, paddingHorizontal: 5, backgroundColor: colors.activeBg, borderWidth: 0.5, borderColor: colors.activeTxt, borderRadius: 5, alignSelf: 'flex-start' }}>
-                                            <Text size='xxs' style={{ color: colors.activeTxt }}>Active Selection</Text>
-                                        </View>
-                                    </View>
-                                </View>
-                                <View style={[{ paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }]}>
-                                    <View style={themed($membershipItem)}>
-                                        <Text>Price</Text>
-                                        <Text>{selectedMembership?.[0]?.price}</Text>
-                                    </View>
-                                    <View style={themed($membershipItem)}>
-                                        <Text>Billing</Text>
-                                        <Text>Recurring Monthly</Text>
-                                    </View>
-                                    <View style={[themed($membershipItem), { borderBottomWidth: 0 }]}>
-                                        <Text>Guests Allowed</Text>
-                                        <Text>1 per month</Text>
-                                    </View>
-                                </View>
-                            </View> :
-                            <View>
-                                <View style={[$styles.flexRow, { marginBottom: 10 }]}>
-                                    <Text preset='subheading'>Group Members</Text>
-                                    <Text size='xxs' weight='medium' style={themed($slotText)}>{form.dependents.length + 1}/{selectedMembership?.[0]?.membersAllowed} Slots Filled</Text>
-                                </View>
-                                <View style={{ marginBottom: 10 }}>
-                                    <Text size='xs' style={{ color: colors.textDim }}>Primary Payer</Text>
-                                    <View style={[themed($card), $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs }]}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '85%' }}>
-                                            <View style={{ padding: 10, borderRadius: 20, backgroundColor: colors.palette.indigo100, marginRight: 15 }}>
-                                                <Octicons name='person' size={20} color={colors.tint} />
-                                            </View>
-                                            <View style={{ flex: 1 }}>
-                                                <Text preset={'formLabel'}>{form?.primaryDetails?.name}</Text>
-                                                <Text size='xs' style={{ color: colors.textDim }} numberOfLines={1}>Main Account Holder ({form.primaryDetails?.gender})</Text>
-                                            </View>
-                                        </View>
-                                        <Entypo name='lock' size={20} color={colors.tintInactive} />
-                                    </View>
-                                </View>
-                                <View style={{ marginBottom: 15 }}>
-                                    <Text size='xs' style={{ color: colors.textDim, marginBottom: 10 }}>Dependents</Text>
-                                    {
-                                        form.dependents?.map((dependent, index) => <DependentCard key={index} item={dependent} index={index} updateDependent={updateDependent} duplicateNo={duplicateNo} updateExistingDependent={updateExistingDependent} />)
-                                    }
-                                    {form.dependents.length < selectedMembership?.[0]?.membersAllowed - 1 &&
-                                        <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderRadius: 5, borderStyle: 'dashed', borderColor: colors.textDim, padding: 10 }} onPress={addMember}>
-                                            <Ionicons name='add-circle' size={25} color={colors.textDim} />
-                                            <Text style={{ color: colors.textDim, marginLeft: 5 }} weight='medium'>Add Dependent {form.dependents.length + 1}</Text>
-                                        </Pressable>}
-                                </View>
-                            </View>
-                    }
+        <View>
+            <ClientSectionLabel title="Choose Plan" subtitle="Select a membership tier" />
 
-                    <View style={[$styles.flexRow, { marginBottom: 15, marginTop: 10 }]}>
-                        <Text weight='medium'>Start Date</Text>
-                        <Pressable style={themed($dateView)} onPress={handleDatePicker}>
-                            <Text style={{ color: form.startDate ? colors.text : colors.textDim }}>{form.startDate ? formatDate(form.startDate, 'dd/MM/yyyy') : 'dd/mm/yyyy'}</Text>
-                            <Ionicons name='calendar-outline' size={20} color={colors.textDim} />
+            <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
+                {memberships.map((plan) => {
+                    const isSelected = selected?._id === plan._id
+                    return (
+                        <Pressable
+                            key={plan._id}
+                            onPress={() => selectPlan(plan)}
+                            style={[themed($planCard), isSelected && { borderColor: colors.primary, borderWidth: 2, backgroundColor: colors.primaryBackground }]}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text weight="semiBold" size="md">{plan.planName}</Text>
+                                <Text size="xs" style={{ color: colors.textDim, marginTop: 2 }}>{getDuration(plan)} · {plan.planType}</Text>
+                            </View>
+                            <View style={{ alignItems: 'flex-end' }}>
+                                <Text weight="bold" size="lg">₹{plan.price}</Text>
+                                {isSelected && (
+                                    <View style={[themed($check), { backgroundColor: colors.primary }]}>
+                                        <Check size={14} color={colors.background} />
+                                    </View>
+                                )}
+                            </View>
                         </Pressable>
-                    </View>
-                    <Text size='xs' style={{ color: colors.textDim, textAlign: 'center' }}>Prices may vary based on promotional codes applied at the final step.</Text>
-                </View>
+                    )
+                })}
             </View>
+
+            {selected && selected.planType !== 'indivisual' && (
+                <>
+                    <ClientSectionLabel
+                        title="Group Members"
+                        subtitle={`${form.dependents.length + 1} / ${selected.membersAllowed} slots`}
+                        right={<Users size={16} color={colors.textDim} />}
+                    />
+                    <View style={[themed($card), { padding: spacing.md, marginBottom: spacing.sm }]}>
+                        <Text size="xxs" style={{ color: colors.textDim, marginBottom: 6 }}>PRIMARY PAYER</Text>
+                        <View style={$styles.flexRow}>
+                            <View style={[themed($avatar), { backgroundColor: colors.primaryBackground }]}>
+                                <Octicons name="person" size={18} color={colors.primary} />
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 10 }}>
+                                <Text weight="medium">{form.primaryDetails.name}</Text>
+                                <Text size="xs" style={{ color: colors.textDim }}>{form.primaryDetails.gender}</Text>
+                            </View>
+                            <Entypo name="lock" size={18} color={colors.textDim} />
+                        </View>
+                    </View>
+                    {form.dependents?.map((dep, index) => (
+                        <DependentCard key={index} item={dep} index={index} updateDependent={updateDependent} duplicateNo={duplicateNo} updateExistingDependent={updateExistingDependent} />
+                    ))}
+                    {form.dependents.length < selected.membersAllowed - 1 && (
+                        <Pressable style={themed($dashedBtn)} onPress={addMember}>
+                            <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+                            <Text style={{ color: colors.primary, marginLeft: 8 }} weight="medium">Add dependent</Text>
+                        </Pressable>
+                    )}
+                </>
+            )}
+
+            <ClientSectionLabel title="Start Date" subtitle="Back-date up to 1 year for register imports" />
+
+            <Pressable style={themed($dateCard)} onPress={handleDatePicker}>
+                <View style={[themed($avatar), { backgroundColor: colors.primaryBackground }]}>
+                    <Calendar size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text size="xs" style={{ color: colors.textDim }}>Membership starts</Text>
+                    <Text weight="semiBold">{form.startDate ? formatDate(form.startDate, 'dd MMM yyyy') : 'Select date'}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textDim} />
+            </Pressable>
         </View>
     )
 }
 
 export default SelectMembership
 
-const styles = StyleSheet.create({
-    row: { flexDirection: 'row', alignItems: 'center' },
-})
-
-const $cardHeader: ThemedStyle<ViewStyle> = ({ spacing, colors, isDark }) => ({
+const $planCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     flexDirection: 'row',
-    padding: spacing.lg,
     alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: isDark ? colors.palette.slate800 : colors.palette.slate300,
-    borderTopEndRadius: 12,
-    borderTopStartRadius: 12,
-})
-
-const $membershipItem: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-    ...$styles.flexRow,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    paddingVertical: spacing.xs
-})
-
-const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     backgroundColor: colors.surface,
     borderRadius: 16,
-    marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    padding: spacing.md,
 })
 
-const $dateView: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
+const $check: ThemedStyle<ViewStyle> = () => ({
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    width: '60%',
+    justifyContent: 'center',
+    marginTop: 6,
 })
 
-const $slotText: ThemedStyle<ViewStyle> = ({ spacing, colors, isDark }) => ({ borderRadius: 10, backgroundColor: isDark ? colors.palette.slate800 : colors.palette.indigo100, color: colors.tint, paddingHorizontal: 5, paddingVertical: 2 })
+const $card: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+})
+
+const $avatar: ThemedStyle<ViewStyle> = () => ({
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+})
+
+const $dashedBtn: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.primary + '60',
+    borderRadius: 14,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+})
+
+const $dateCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.xl,
+})

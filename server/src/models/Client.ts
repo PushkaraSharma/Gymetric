@@ -23,7 +23,8 @@ const ClientSchema = new Schema<IClient>({
         amount: Number,
         method: { type: String, enum: ['Cash', 'UPI', 'Card', 'Transfer'] },
         date: { type: Date, default: Date.now },
-        remarks: String
+        remarks: String,
+        type: { type: String, enum: ['membership', 'balance_collection'], default: 'membership' },
     }],
 }, { timestamps: true });
 

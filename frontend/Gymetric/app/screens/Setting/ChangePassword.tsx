@@ -56,6 +56,7 @@ const ChangePassword = () => {
                 leftIcon="caretLeft"
                 onLeftPress={goBack}
                 backgroundColor={colors.surface}
+                safeAreaTop
             />
             <ScrollView style={{ flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.md }}>
                 <Text size='xs' style={{ marginBottom: spacing.lg, color: colors.textDim }}>

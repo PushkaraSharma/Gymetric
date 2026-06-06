@@ -31,7 +31,12 @@ import { ActivityIndicator, TextStyle, View } from "react-native"
 import { ThemedStyle } from "@/theme/types"
 import Revenue from "@/screens/Revenue/Revenue"
 import { WhatsAppPremium } from "@/screens/Setting/WhatsAppPremium"
+import EditMembershipScreen from "@/screens/Clients/EditMembershipScreen"
+import ReceiptSettingsScreen from "@/screens/Setting/ReceiptSettingsScreen"
+import PushNotificationSettings from "@/screens/Setting/PushNotificationSettings"
 import { trackScreenView } from "@/services/analyticsService"
+import { registerPushToken } from "@/services/pushNotificationService"
+import React, { useEffect } from "react"
 
 const getActiveRouteName = (state: NavigationState | undefined): string | undefined => {
   if (!state) return undefined
@@ -49,6 +54,12 @@ const AppStack = () => {
   const [hasSeenOnboarding] = useMMKVBoolean('hasSeenOnboarding');
   const isLoading = useAppSelector(selectLoading);
   const { themed, theme: { colors } } = useAppTheme()
+
+  useEffect(() => {
+    if (authToken) {
+      registerPushToken();
+    }
+  }, [authToken]);
 
   return (
     <>
@@ -71,6 +82,7 @@ const AppStack = () => {
               <Stack.Screen name="Client Profile" component={ClientDetails} />
               <Stack.Screen name="Update Basic Information" component={UpdateClientbasicInfo} />
               <Stack.Screen name="Renew Membership" component={RenewMembership} />
+              <Stack.Screen name="Edit Membership" component={EditMembershipScreen} />
               <Stack.Screen name="Search Client" component={SearchClient} options={{ presentation: 'fullScreenModal' }} />
             </Stack.Group>
             <Stack.Group>
@@ -84,6 +96,8 @@ const AppStack = () => {
               <Stack.Screen name="WhatsApp Premium" component={WhatsAppPremium} />
               <Stack.Screen name="Revenue" component={Revenue} />
               <Stack.Screen name="Change Password" component={ChangePassword} />
+              <Stack.Screen name="Receipt Settings" component={ReceiptSettingsScreen} />
+              <Stack.Screen name="Push Notification Settings" component={PushNotificationSettings} />
             </Stack.Group>
           </>
         ) : (

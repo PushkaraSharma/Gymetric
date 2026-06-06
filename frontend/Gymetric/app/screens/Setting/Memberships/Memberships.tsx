@@ -59,7 +59,7 @@ const Memberships = () => {
             contentContainerStyle={[$styles.flex1]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
-            <Header title='Memberships' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
+            <Header title='Memberships' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} safeAreaTop={true} />
             <View style={{ paddingTop: 10, flex: 1 }}>
                 <ScrollView style={{ paddingHorizontal: 15, }}>
                     <Text style={{ marginBottom: 10 }}>Manage your gym's subscription plans</Text>

@@ -59,6 +59,7 @@ export const WhatsAppPremium = () => {
                 leftIcon="caretLeft"
                 onLeftPress={() => navigation.goBack()}
                 backgroundColor={colors.surface}
+                safeAreaTop
             />
             <ScrollView contentContainerStyle={{ padding: spacing.md }}>
                 <View style={themed($heroSection)}>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '@/theme/context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface HeaderProps {
     title?: string;
@@ -18,6 +19,7 @@ export interface HeaderProps {
     onLeftPress?: () => void;
     backgroundColor?: string;
     RightActionComponent?: React.ReactNode;
+    safeAreaTop?: boolean;
 }
 
 export function Header({
@@ -32,10 +34,12 @@ export function Header({
     onLeftPress,
     backgroundColor,
     RightActionComponent,
+    safeAreaTop = false,
 }: HeaderProps) {
     const navigation = useNavigation();
     const { theme } = useAppTheme();
     const styles = getStyles(theme);
+    const insets = useSafeAreaInsets();
 
     const handleBack = () => {
         if (onBack) {
@@ -50,40 +54,42 @@ export function Header({
     const finalRightAction = rightAction || RightActionComponent;
 
     return (
-        <View style={[styles.header, backgroundColor ? { backgroundColor } : null]}>
-            <View style={styles.left}>
-                {leftAction ? (
-                    leftAction
-                ) : (showBack || leftIcon) ? (
-                    <Pressable onPress={handleBack} style={styles.backBtn}>
-                        <ArrowLeft size={24} color={theme.colors.text} />
-                    </Pressable>
-                ) : (
-                    <View style={styles.placeholder} />
-                )}
-            </View>
+        <View style={[backgroundColor ? { backgroundColor } : null, { paddingTop: safeAreaTop ? insets.top : 0 }]}>
+            <View style={styles.header}>
+                <View style={styles.left}>
+                    {leftAction ? (
+                        leftAction
+                    ) : (showBack || leftIcon) ? (
+                        <Pressable onPress={handleBack} style={styles.backBtn}>
+                            <ArrowLeft size={24} color={theme.colors.text} />
+                        </Pressable>
+                    ) : (
+                        <View style={styles.placeholder} />
+                    )}
+                </View>
 
-            <View style={styles.center}>
-                {centerAction ? (
-                    centerAction
-                ) : (
-                    <>
-                        <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
-                        {subTitle ? (
-                            <Text style={styles.headerSubtitle} numberOfLines={1}>{subTitle}</Text>
-                        ) : null}
-                    </>
-                )}
-            </View>
+                <View style={styles.center}>
+                    {centerAction ? (
+                        centerAction
+                    ) : (
+                        <>
+                            <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
+                            {subTitle ? (
+                                <Text style={styles.headerSubtitle} numberOfLines={1}>{subTitle}</Text>
+                            ) : null}
+                        </>
+                    )}
+                </View>
 
-            <View style={styles.right}>
-                {finalRightAction ? (
-                    <View style={styles.rightAction}>
-                        {finalRightAction}
-                    </View>
-                ) : (
-                    <View style={styles.placeholder} />
-                )}
+                <View style={styles.right}>
+                    {finalRightAction ? (
+                        <View style={styles.rightAction}>
+                            {finalRightAction}
+                        </View>
+                    ) : (
+                        <View style={styles.placeholder} />
+                    )}
+                </View>
             </View>
         </View>
     );
@@ -93,9 +99,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: theme.spacing.md,
-        paddingBottom: theme.spacing.md,
-        height: 60,
+        paddingHorizontal: theme.spacing.xs,
+        paddingBottom: theme.spacing.xxs,
     },
     left: {
         width: 44,

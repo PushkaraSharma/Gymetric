@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView, ViewStyle, TextStyle, FlatList, Platform } from 'react-native'
+import { View, StyleSheet, ScrollView, ViewStyle, TextStyle, FlatList, Platform, Pressable } from 'react-native'
 import React, { useCallback, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { Header } from '@/components/Header'
@@ -13,7 +13,7 @@ import { TrendingUp, Wallet, CreditCard, Banknote, Smartphone, ArrowDownLeft } f
 import { format } from 'date-fns'
 import { MotiView } from 'moti'
 import { $styles } from '@/theme/styles'
-import { goBack } from '@/navigators/navigationUtilities'
+import { goBack, navigate } from '@/navigators/navigationUtilities'
 
 const Revenue = () => {
     const { themed, theme: { colors, spacing, typography } } = useAppTheme();
@@ -47,7 +47,7 @@ const Revenue = () => {
     }
 
     const RenderTransaction = ({ item }: any) => (
-        <View style={themed($transactionItem)}>
+        <Pressable style={themed($transactionItem)} onPress={() => item.clientId && navigate('Client Profile', { data: { _id: item.clientId, name: item.clientName } })}>
             <View style={$transactionLeft}>
                 <View style={[themed($iconBox), { backgroundColor: colors.palette.indigo100 }]}>
                     <ArrowDownLeft size={20} color={colors.palette.indigo600} />
@@ -64,13 +64,12 @@ const Revenue = () => {
                     {/* <PaymentIcon method={item.method} /> */}
                 </View>
             </View>
-        </View>
+        </Pressable>
     );
 
     return (
         <Screen
             preset="fixed"
-            safeAreaEdges={['top']}
             contentContainerStyle={[$styles.flex1]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
@@ -79,6 +78,7 @@ const Revenue = () => {
                 leftIcon="caretLeft"
                 onLeftPress={goBack}
                 backgroundColor={colors.surface}
+                safeAreaTop
             />
             <ScrollView
                 contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 50 }}

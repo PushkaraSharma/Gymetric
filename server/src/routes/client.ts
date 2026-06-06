@@ -3,33 +3,30 @@ import {
     getAllClients,
     getClientById,
     getClientStats,
+    getClientActivity,
     onBoarding,
     renewMembership,
     updateClient,
-    deleteClient
+    deleteClient,
+    collectPayment,
+    amendMembership,
+    pauseMembership,
+    resumeMembership,
 } from "../controllers/clientController.js";
 
 export async function clientRoutes(fastify: FastifyInstance) {
     fastify.addHook('onRequest', fastify.authenticate);
 
-    // GET /api/client/all
     fastify.get('/all', getAllClients);
-
-    // POST /api/client/add
     fastify.post('/add', onBoarding);
-
-    // PATCH /api/client/update
     fastify.patch('/update', updateClient);
-
-    // GET /api/client/clientInfo?id=...
     fastify.get('/clientInfo', getClientById);
-
-    // GET /api/client/stats
     fastify.get('/stats', getClientStats);
-
-    // PATCH /api/client/renew
+    fastify.get('/activity', getClientActivity);
     fastify.patch('/renew', renewMembership);
-
-    // DELETE /api/client/delete?id=...
+    fastify.post('/collect-payment', collectPayment);
+    fastify.patch('/membership/amend', amendMembership);
+    fastify.post('/membership/pause', pauseMembership);
+    fastify.post('/membership/resume', resumeMembership);
     fastify.delete('/delete', deleteClient);
 }

@@ -136,7 +136,7 @@ const Setting = () => {
           <ChevronRight size={20} color={colors.textDim} />
         </Pressable>
 
-        <Section title="GYM MANAGEMENT">
+        <Section title="MANAGEMENT">
           <SettingItem
             icon={CreditCard}
             label="Manage Membership"
@@ -144,9 +144,23 @@ const Setting = () => {
             onPress={() => navigate('Memberships')}
             color="#6366F1"
           />
+          <SettingItem
+            icon={FileText}
+            label="Receipt Settings"
+            description="Logo, signature and footer for payment receipts"
+            onPress={() => navigate('Receipt Settings')}
+            color="#6366F1"
+          />
         </Section>
 
         <Section title="NOTIFICATIONS">
+          <SettingItem
+            icon={MessageCircle}
+            label="Push Notifications"
+            description="Daily expiry and balance alerts"
+            onPress={() => navigate('Push Notification Settings')}
+            color="#4F46E5"
+          />
           {isLoading ? (
             <View style={themed($item)}>
               <Skeleton width="100%" height={44} borderRadius={12} />
@@ -154,7 +168,7 @@ const Setting = () => {
           ) : hasWhatsapp ? (
             <SettingItem
               icon={MessageCircle}
-              label="Notification Settings"
+              label="WhatsApp Settings"
               description="WhatsApp alerts and reminders"
               onPress={() => navigate('Notification Settings')}
               color="#10B981"
@@ -186,7 +200,7 @@ const Setting = () => {
           />
         </Section>
 
-        <Section title="ACCOUNT & SECURITY">
+        <Section title="SECURITY">
           <SettingItem
             icon={Key}
             label="Change Password"

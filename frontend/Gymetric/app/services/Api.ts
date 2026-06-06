@@ -122,6 +122,42 @@ export class Api {
     return await this.apiRequest('patch', '/api/client/renew', body);
   };
 
+  collectPayment = async (body: any) => {
+    return await this.apiRequest('post', '/api/client/collect-payment', body);
+  };
+
+  amendMembership = async (body: any) => {
+    return await this.apiRequest('patch', '/api/client/membership/amend', body);
+  };
+
+  pauseMembership = async (body: any) => {
+    return await this.apiRequest('post', '/api/client/membership/pause', body);
+  };
+
+  resumeMembership = async (body: any) => {
+    return await this.apiRequest('post', '/api/client/membership/resume', body);
+  };
+
+  getClientActivity = async (id: string) => {
+    return await this.apiRequest('get', `/api/client/activity?id=${id}`, null);
+  };
+
+  savePushToken = async (expoPushToken: string) => {
+    return await this.apiRequest('post', '/api/user/push-token', { expoPushToken });
+  };
+
+  updatePushPrefs = async (body: any) => {
+    return await this.apiRequest('patch', '/api/user/push-prefs', body);
+  };
+
+  getPushPrefs = async () => {
+    return await this.apiRequest('get', '/api/user/push-prefs');
+  };
+
+  updateReceiptSettings = async (body: any) => {
+    return await this.apiRequest('post', '/api/settings/receipt', body);
+  };
+
   createMembership = async (body: any) => {
     return await this.apiRequest('post', '/api/membership/add', body);
   };

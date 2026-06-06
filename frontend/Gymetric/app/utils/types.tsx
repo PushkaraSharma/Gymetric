@@ -16,16 +16,18 @@ export type ClientOnBoardingType = {
     primaryDetails: ClientDetailsType,
     dependents: DependentType[]
     amount: number,
+    amountReceived: number,
     method: string,
-    paymentReceived: boolean,
+    paymentReceived?: boolean,
     startDate: Date
 }
 
 export type MembershipRenewType = {
     id: number,
     amount: number,
+    amountReceived: number,
     method: string,
-    paymentReceived: boolean,
+    paymentReceived?: boolean,
     startDate: Date,
     dependents: DependentType[]
 }

@@ -13,6 +13,12 @@ const SettingsSchema = new mongoose.Schema({
         sendOnExpiry: { type: Boolean, default: true },
         sendOnReminder: { type: Boolean, default: true }
     },
+    receipt: {
+        logo: String,
+        signature: String,
+        footerNote: { type: String, default: 'Thank you for training with us!' },
+        showGymAddress: { type: Boolean, default: true },
+    },
 }, { timestamps: true });
 
 export default mongoose.models.Settings || mongoose.model('Settings', SettingsSchema);
