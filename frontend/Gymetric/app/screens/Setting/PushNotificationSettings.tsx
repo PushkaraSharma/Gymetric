@@ -46,7 +46,7 @@ const PushNotificationSettings = () => {
 
     const PrefRow = ({ label, prefKey }: { label: string; prefKey: keyof typeof prefs }) => (
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.md, borderBottomWidth: 1, borderColor: colors.border }}>
-            <Text weight="medium">{label}</Text>
+            <Text>{label}</Text>
             <Switch value={prefs[prefKey]} onPress={() => togglePref(prefKey, !prefs[prefKey])} />
         </View>
     )
@@ -59,7 +59,7 @@ const PushNotificationSettings = () => {
                     Get daily reminders about expiries and outstanding balances even when you don't open the app.
                 </Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
-                    <Text weight="semiBold">Enable notifications</Text>
+                    <Text preset='subheading' weight="semiBold">Enable notifications</Text>
                     <Switch value={enabled} onPress={() => toggleEnabled(!enabled)} />
                 </View>
                 <Text preset="subheading" style={{ marginBottom: spacing.sm }}>Alert types</Text>

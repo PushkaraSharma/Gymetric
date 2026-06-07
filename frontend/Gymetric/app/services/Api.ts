@@ -36,7 +36,7 @@ export class Api {
 
   async apiRequest<T>(method: "get" | "post" | "put" | "patch" | "delete", url: string, body?: any, params?: any, retries = 0): Promise<ApiResult> {
     const baseURL = this.apisauce.axiosInstance.defaults.baseURL ?? ''
-    console.log(`\n🌐 [API] ${method.toUpperCase()} ${url}\n   Base URL : ${baseURL}\n   Full URL : ${baseURL}${url}${params ? `\n   Params   : ${JSON.stringify(params)}` : ''}\n`)
+    // console.log(`\n🌐 [API] ${method.toUpperCase()} ${url}\n   Base URL : ${baseURL}\n   Full URL : ${baseURL}${url}${params ? `\n   Params   : ${JSON.stringify(params)}` : ''}\n`)
     const response: ApiResponse<BackendResponse<T>> = await this.apisauce[method](url, body, { params });
     if (!response.ok) {//Network fail
       const isRetryable = response.problem === 'TIMEOUT_ERROR' || response.problem === 'CONNECTION_ERROR' || response.problem === 'NETWORK_ERROR';
@@ -46,7 +46,6 @@ export class Api {
         await new Promise(resolve => setTimeout(resolve, 2000));
         return this.apiRequest(method, url, body, params, retries + 1);
       }
-      console.log(response.data)
       const message = response?.data?.message ?? response?.data?.error ?? "Network error";
       Toast.show({ type: 'error', text1: response.status == 401 ? 'Session Expired' : 'Internal error', text2: message, visibilityTime: 2000 });
       if (response.status === 401) remove('authToken');
@@ -68,7 +67,6 @@ export class Api {
   };
 
   checkUser = async (phoneNumber: string) => {
-    console.log("calling api")
     return await this.apiRequest('post', '/api/auth/check-user', { phoneNumber });
   };
 

@@ -188,7 +188,6 @@ const $stickyHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingTop: spacing.sm,
   paddingBottom: spacing.sm,
   zIndex: 2,
-  elevation: 2,
 })
 
 const $pageTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({

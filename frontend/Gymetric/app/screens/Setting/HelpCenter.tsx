@@ -13,11 +13,11 @@ const HelpCenter = () => {
     const { theme: { colors, spacing, typography }, themed } = useAppTheme()
 
     const handleEmail = () => {
-        Linking.openURL('mailto:pushkarasharma11@gmail.com')
+        Linking.openURL('mailto:indierootsapps@gmail.com')
     }
 
     const handlePhone = () => {
-        Linking.openURL('tel:+919711583364')
+        Linking.openURL('tel:+919354454113')
     }
 
     const SupportItem = ({ icon, title, value, onPress }: any) => (

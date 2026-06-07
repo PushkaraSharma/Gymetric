@@ -226,8 +226,9 @@ const Setting = () => {
         </Pressable>
 
         <Text
+          weight='medium'
           style={themed($versionText)}
-          text={`v${Constants.expoConfig?.version} (${OTA_VERSION})`}
+          text={`GymKarta v${Constants.expoConfig?.version}_${OTA_VERSION} • Made with ❤️`}
         />
       </ScrollView>
 

@@ -73,7 +73,4 @@ const getStyles = (theme: any) => StyleSheet.create({
         color: theme.colors.textDim,
         marginTop: 4,
     },
-    switch: {
-        transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }]
-    }
 });

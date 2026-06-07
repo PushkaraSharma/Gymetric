@@ -45,7 +45,6 @@ export const PhoneLoginScreen = () => {
             const formattedNumber = phoneToUse.startsWith('+') ? phoneToUse : `+91${phoneToUse}`;
             // Check if user exists & has password
             const check = await api.checkUser(formattedNumber);
-            console.log("check,", check)
             if (check.kind === 'ok' && check.data.exists && check.data.hasPassword) {
                 // User has password -> Go to Password Login
                 navigation.navigate("PasswordLogin", {

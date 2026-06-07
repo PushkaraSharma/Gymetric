@@ -183,6 +183,13 @@ const ClientDetails = ({ route }: any) => {
     if (isLoading) {
         return (
             <Screen preset="fixed" contentContainerStyle={[$styles.flex1]} safeAreaEdges={[]}>
+                <Header
+                    title='Member Profile'
+                    backgroundColor={colors.surface}
+                    leftIcon="caretLeft"
+                    onLeftPress={goBack}
+                    safeAreaTop={true}
+                />
                 <ScrollView contentContainerStyle={{ padding: spacing.md }}>
                     <Skeleton width="100%" height={180} borderRadius={20} style={{ marginBottom: spacing.md }} />
                     <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
@@ -261,13 +268,15 @@ const ClientDetails = ({ route }: any) => {
                                     </View>
                                 )}
                             </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: spacing.xs }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: spacing.xs }}>
                                 <Text size="xs" style={{ color: colors.textDim }}>{client?.phoneNumber}</Text>
                                 <Pressable onPress={() => callNumber(client?.phoneNumber)} style={themed($contactCircleBtn)}>
                                     <Ionicons name="call" size={14} color={colors.primary} />
+                                    <Text size="xxs" style={{ color: colors.primary }}>Call</Text>
                                 </Pressable>
                                 <Pressable onPress={() => openWhatsAppChat(client?.phoneNumber)} style={themed($contactCircleBtn)}>
                                     <Ionicons name="logo-whatsapp" size={14} color="#25D366" />
+                                    <Text size="xxs" style={{ color: "#25D366" }}>WhatsApp</Text>
                                 </Pressable>
                             </View>
                         </View>
@@ -531,14 +540,16 @@ const $editBtn: ThemedStyle<ViewStyle> = () => ({
     zIndex: 10,
 })
 
-const $contactCircleBtn: ThemedStyle<ViewStyle> = ({ colors }) => ({
-    width: 30,
-    height: 30,
+const $contactCircleBtn: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     borderRadius: 20,
     backgroundColor: colors.primaryBackground,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
+    gap: 2,
+    flexDirection: 'row',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs
 })
 
 const $divider: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
