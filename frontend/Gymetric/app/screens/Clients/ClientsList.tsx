@@ -111,33 +111,34 @@ const ClientsList = ({ route }: any) => {
         </View>
       </View>
 
-      <View style={{ paddingHorizontal: spacing.md }}>
-        <ClientSearchBar value={searchText} onChangeText={setSearchText} />
-        <ClientFilterChips filters={filters} selected={selectedFilter} onSelect={setSelectedFilter} />
-
-        {isLoading ? (
-          <View style={{ marginTop: spacing.md }}>
-            {[1, 2, 3, 4, 5].map(i => (
-              <Skeleton key={i} width="100%" height={80} borderRadius={20} style={{ marginBottom: spacing.sm }} />
-            ))}
-          </View>
-        ) : (
-          <FlatList
-            data={filteredClients}
-            keyExtractor={(item) => item._id || item.phoneNumber}
-            renderItem={({ item, index }) => (
-              <ClientListCard
-                client={item}
-                index={index}
-                onPress={() => navigate('Client Profile', { data: item })}
-              />
-            )}
-            contentContainerStyle={{ paddingBottom: 100, paddingTop: spacing.sm }}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={() => getClients(true)} tintColor={colors.primary} colors={[colors.primary]} />
-            }
-            ListEmptyComponent={
+      <View style={{ paddingHorizontal: spacing.md, flex: 1 }}>
+        <FlatList
+          data={filteredClients}
+          keyExtractor={(item) => item._id || item.phoneNumber}
+          renderItem={({ item, index }) => (
+            <ClientListCard
+              client={item}
+              index={index}
+              onPress={() => navigate('Client Profile', { data: item })}
+            />
+          )}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          stickyHeaderIndices={[0]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => getClients(true)} tintColor={colors.primary} colors={[colors.primary]} />
+          }
+          ListHeaderComponent={
+            <View style={themed($stickyHeader)}>
+              <ClientSearchBar value={searchText} onChangeText={setSearchText} />
+              <ClientFilterChips filters={filters} selected={selectedFilter} onSelect={setSelectedFilter} />
+            </View>
+          }
+          ListHeaderComponentStyle={{ backgroundColor: colors.background }}
+          ListEmptyComponent={
+            !isLoading ? (
               <View style={themed($empty)}>
                 <View style={[themed($emptyIcon), { backgroundColor: colors.primaryBackground }]}>
                   <Users size={32} color={colors.primary} />
@@ -150,9 +151,16 @@ const ClientsList = ({ route }: any) => {
                   <Button title="Add Member" onPress={() => navigate('Add Client')} style={{ marginTop: spacing.lg, minWidth: 160 }} />
                 )}
               </View>
-            }
-          />
-        )}
+            ) : null
+          }
+        />
+        {isLoading ? (
+          <View style={{ marginTop: spacing.md }}>
+            {[1, 2, 3, 4, 5].map(i => (
+              <Skeleton key={i} width="100%" height={80} borderRadius={20} style={{ marginBottom: spacing.sm }} />
+            ))}
+          </View>
+        ) : null}
       </View>
 
       <Pressable style={themed($fab)} onPress={() => navigate('Add Client')}>
@@ -173,6 +181,14 @@ const $header: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.md,
   paddingTop: spacing.sm,
   paddingBottom: spacing.xs,
+})
+
+const $stickyHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.background,
+  paddingTop: spacing.sm,
+  paddingBottom: spacing.sm,
+  zIndex: 2,
+  elevation: 2,
 })
 
 const $pageTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({

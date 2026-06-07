@@ -45,6 +45,7 @@ export type BackendResponse<T> = {
     success: boolean
     data?: T
     message?: string
+    error?: string
 }
 
 export type ApiResult = { kind: "ok"; data: any } | { kind: "error"; message: string }

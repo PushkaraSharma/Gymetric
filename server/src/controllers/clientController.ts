@@ -10,6 +10,7 @@ import MessageLog from "../models/MessageLog.js";
 import { sendWhatsAppTemplate, logSkippedWhatsApp } from "../services/Whatsapp.js";
 import {
     getISTMidnightToday,
+    getNowIST,
     parseToISTMidnight,
     calculateMembershipExpiry,
     formatShortDate,
@@ -87,7 +88,7 @@ export const getAllClients = async (request: FastifyRequest, reply: FastifyReply
         }
 
         const clients = await Client.find({ gymId })
-            .select('name phoneNumber gender membershipStatus activeMembership balance role')
+            .select('name phoneNumber gender membershipStatus activeMembership balance role profilePicture')
             .populate({ path: 'activeMembership', select: 'endDate planName status pauseHistory totalPausedDays' })
             .sort({ name: 1 })
             .lean();
@@ -663,7 +664,9 @@ export const resumeMembership = async (request: FastifyRequest, reply: FastifyRe
         }
 
         const now = new Date();
-        const pauseDays = Math.ceil((now.getTime() - new Date(currentPause.startedAt).getTime()) / (1000 * 60 * 60 * 24));
+        const pauseStart = getNowIST(currentPause.startedAt).startOf('day');
+        const resumeDay = getNowIST().startOf('day');
+        const pauseDays = resumeDay.diff(pauseStart, 'day');
         currentPause.endedAt = now;
         currentPause.days = pauseDays;
         membership.totalPausedDays = (membership.totalPausedDays || 0) + pauseDays;

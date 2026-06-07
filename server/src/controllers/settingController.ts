@@ -41,10 +41,15 @@ export const setReceiptSettings = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
         const { receipt } = request.body;
+        const existingSettings: any = await Settings.findOne({ gymId }).lean();
+        const nextReceipt = {
+            ...(existingSettings?.receipt || {}),
+            ...(receipt || {}),
+        };
 
         const settings = await Settings.findOneAndUpdate(
             { gymId },
-            { $set: { receipt, gymId } },
+            { $set: { receipt: nextReceipt, gymId } },
             { new: true, upsert: true, setDefaultsOnInsert: true }
         );
 

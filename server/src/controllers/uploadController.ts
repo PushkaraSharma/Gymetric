@@ -127,6 +127,39 @@ export const uploadGymLogo = async (request: FastifyRequest, reply: FastifyReply
 };
 
 /**
+ * Upload receipt logo/signature asset
+ */
+export const uploadReceiptAsset = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { gymId } = request.user as any;
+        const data = await (request as any).file();
+
+        if (!data) {
+            return reply.status(400).send({ success: false, message: 'No file uploaded' });
+        }
+
+        const assetType = (request.query as any).type === 'logo' ? 'logo' : 'signature';
+        const buffer = await data.toBuffer();
+
+        const result = await uploadToCloudinary(
+            buffer,
+            `gymetric/receipts/${gymId}`,
+            `receipt_${assetType}_${Date.now()}`
+        );
+
+        return reply.send({
+            success: true,
+            data: {
+                url: result.secure_url
+            }
+        });
+    } catch (error: any) {
+        request.log.error({ err: error }, 'Receipt asset upload error');
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};
+
+/**
  * Delete client profile picture
  */
 export const deleteClientProfilePicture = async (request: FastifyRequest, reply: FastifyReply) => {

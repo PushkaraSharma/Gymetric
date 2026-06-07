@@ -242,6 +242,37 @@ export class Api {
     return { kind: 'ok', data: response?.data?.data };
   };
 
+  uploadReceiptAsset = async (imageUri: string, type: 'signature' | 'logo' = 'signature') => {
+    const formData = new FormData();
+    const isPngDataUri = imageUri.startsWith('data:image/png');
+    const filename = isPngDataUri ? `${type}.png` : imageUri.split('/').pop() || `${type}.jpg`;
+    const match = /\.(\w+)$/.exec(filename);
+    const mimeType = isPngDataUri ? 'image/png' : match ? `image/${match[1]}` : 'image/jpeg';
+
+    formData.append('file', {
+      uri: imageUri,
+      name: filename,
+      type: mimeType,
+    } as any);
+
+    const response: any = await this.apisauce.post(
+      `/api/upload/receipt-asset?type=${type}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const message = response?.data?.message ?? "Upload failed";
+      Toast.show({ type: 'error', text1: 'Upload Error', text2: message });
+      return { kind: 'error', message };
+    }
+    return { kind: 'ok', data: response?.data?.data };
+  };
+
 }
 
 // Singleton instance of the API for convenience

@@ -28,7 +28,6 @@ import { OTA_VERSION } from '@/utils/Constants'
 import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { trackEvent, AnalyticsEvents, setAnalyticsUser, setEnrichedUserProperties } from '@/services/analyticsService'
 import { setCrashlyticsUser } from '@/services/crashlyticsService'
-
 const Setting = () => {
   const { theme: { colors, spacing, isDark }, themed, setThemeContextOverride, themeContext } = useAppTheme()
   const gymInfo = useAppSelector(selectGymInfo)

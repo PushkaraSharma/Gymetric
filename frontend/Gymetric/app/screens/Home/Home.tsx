@@ -1,10 +1,10 @@
 import { ScrollView, Pressable, RefreshControl, View, StyleSheet, Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppTheme } from '@/theme/context'
 import { Plus, Users, Activity as ActivityIconLucide, Clock, UserPlus, UserX, Wallet, IndianRupee } from 'lucide-react-native'
-import { useAppSelector } from '@/redux/Hooks'
-import { selectGymInfo } from '@/redux/state/GymStates'
+import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
+import { selectDashboardSummary, selectGymInfo, setDashboardSummary } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { navigate } from '@/navigators/navigationUtilities'
 import { useFocusEffect } from '@react-navigation/native'
@@ -45,17 +45,24 @@ export interface DashboardSummary {
 const Home = () => {
   const { theme, isDark } = useAppTheme()
   const styles = getStyles(theme)
+  const dispatch = useAppDispatch()
   const gymInfo = useAppSelector(selectGymInfo)
-  const [summary, setSummary] = useState<DashboardSummary | null>(null)
+  const cachedSummary = useAppSelector(selectDashboardSummary) as DashboardSummary | null
+  const [summary, setSummary] = useState<DashboardSummary | null>(cachedSummary)
   const [showBanner, setShowBanner] = useState(false)
   const [hasWhatsapp, setHasWhatsapp] = useState(false)
   const [hasMembershipPlans, setHasMembershipPlans] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(!cachedSummary)
   const [refreshing, setRefreshing] = useState(false)
+  const summaryRef = useRef<DashboardSummary | null>(cachedSummary)
 
-  const loadData = async (isRefresh = false) => {
+  useEffect(() => {
+    summaryRef.current = summary ?? cachedSummary
+  }, [cachedSummary, summary])
+
+  const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
-    else if (!summary) setIsLoading(true)
+    else if (!summaryRef.current) setIsLoading(true)
 
     const [dashboardRes, settingsRes, membershipsRes] = await Promise.all([
       api.dashboardAPI(),
@@ -65,6 +72,7 @@ const Home = () => {
 
     if (dashboardRes.kind === 'ok') {
       setSummary(dashboardRes.data as DashboardSummary)
+      dispatch(setDashboardSummary({ dashboardSummary: dashboardRes.data as DashboardSummary }))
       setGymStats({
         totalClients: dashboardRes.data?.totalClients ?? 0,
         activeMembers: dashboardRes.data?.activeMembers?.value ?? 0,
@@ -93,11 +101,11 @@ const Home = () => {
 
     if (isRefresh) setRefreshing(false)
     else setIsLoading(false)
-  }
+  }, [dispatch, gymInfo?._id, hasWhatsapp, isDark])
 
-  const onRefresh = useCallback(() => { loadData(true) }, [])
+  const onRefresh = useCallback(() => { loadData(true) }, [loadData])
 
-  useFocusEffect(useCallback(() => { loadData(false) }, []))
+  useFocusEffect(useCallback(() => { loadData(false) }, [loadData]))
 
   const statItems: StatItem[] = useMemo(() => [
     {

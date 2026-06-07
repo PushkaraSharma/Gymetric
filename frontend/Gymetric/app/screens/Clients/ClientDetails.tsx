@@ -23,6 +23,7 @@ import {
 } from 'lucide-react-native'
 import { Header } from '@/components/Header'
 import { StatItem } from '@/components/clients/ClientStatGrid'
+import { ImagePreviewModal } from '@/components/common/ImagePreviewModal'
 
 const ClientDetails = ({ route }: any) => {
     const { theme: { colors }, themed } = useAppTheme()
@@ -34,6 +35,7 @@ const ClientDetails = ({ route }: any) => {
     const [showPause, setShowPause] = useState(false)
     const [loader, setLoader] = useState(false)
     const [showCollectModal, setShowCollectModal] = useState(false)
+    const [showImagePreview, setShowImagePreview] = useState(false)
     const [activity, setActivity] = useState<any[]>([])
     const [activeTab, setActiveTab] = useState<'Payments' | 'Activity' | 'History'>('Payments')
 
@@ -231,6 +233,7 @@ const ClientDetails = ({ route }: any) => {
             />
 
             <CollectPaymentModal visible={showCollectModal} onClose={() => setShowCollectModal(false)} client={client} onSuccess={clientInfo} />
+            <ImagePreviewModal visible={showImagePreview} imageUrl={client?.profilePicture} onClose={() => setShowImagePreview(false)} />
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
                 {/* Hero card with integrated stats and edit */}
@@ -243,7 +246,9 @@ const ClientDetails = ({ route }: any) => {
                     </Pressable>
 
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                        <ProfileInitialLogo name={client?.name ?? ''} size={60} imageUrl={client?.profilePicture} sideMargin={false} />
+                        <Pressable disabled={!client?.profilePicture} onPress={() => setShowImagePreview(true)}>
+                            <ProfileInitialLogo name={client?.name ?? ''} size={60} imageUrl={client?.profilePicture} sideMargin={false} />
+                        </Pressable>
                         <View style={{ flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
                                 <Text weight="bold" size="md">{client?.name}</Text>

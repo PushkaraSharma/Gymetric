@@ -12,6 +12,7 @@ export type AppStackParamList = {
   "Client Profile": { data: { _id: string } }
   "Update Basic Information": { client: any }
   "Renew Membership": { client: any }
+  "Edit Membership": { client: any; membership: any }
   "Search Client": undefined
   Memberships: undefined
   "Create Edit Membership": { membership?: any }
@@ -21,6 +22,8 @@ export type AppStackParamList = {
   "WhatsApp Premium": undefined
   Revenue: undefined
   "Change Password": undefined
+  "Receipt Settings": undefined
+  "Push Notification Settings": undefined
 }
 
 export interface NavigationProps extends Partial<

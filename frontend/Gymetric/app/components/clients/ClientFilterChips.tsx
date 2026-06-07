@@ -36,7 +36,7 @@ export function ClientFilterChips({ filters, selected, onSelect }: Props) {
             showsHorizontalScrollIndicator={false}
             data={filters}
             keyExtractor={item => item.id}
-            contentContainerStyle={{ paddingHorizontal: 4, gap: 8, paddingBottom: 4 }}
+            contentContainerStyle={{ paddingHorizontal: 4, gap: 8, paddingBottom: 4, alignItems: 'flex-start' }}
             onScrollToIndexFailed={(info) => {
                 setTimeout(() => {
                     flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 })
@@ -64,10 +64,18 @@ export function ClientFilterChips({ filters, selected, onSelect }: Props) {
 }
 
 const $chip: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    alignSelf: 'flex-start',
+    flexGrow: 0,
+    flexShrink: 0,
+    height: 44,
+    minWidth: 72,
+    maxWidth: 156,
+    paddingHorizontal: 14,
+    paddingVertical: 0,
+    borderRadius: 18,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    justifyContent: 'center',
+    overflow: 'hidden',
 })

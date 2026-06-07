@@ -1,33 +1,38 @@
 type ReceiptData = {
-    gym: { name: string; address?: string; logo?: string };
-    client: { name: string; phoneNumber: string };
-    payment: { amount: number; method: string; date: string; remarks?: string };
-    membership?: { planName: string; startDate?: string; endDate?: string };
-    balance: number;
-    receiptNo: string;
-    receiptConfig?: { signature?: string; footerNote?: string; showGymAddress?: boolean };
-    status: 'PAID' | 'PARTIAL';
+  gym: { name: string; address?: string; logo?: string };
+  client: { name: string; phoneNumber: string };
+  payment: { amount: number; method: string; date: string; remarks?: string };
+  membership?: { planName: string; startDate?: string; endDate?: string };
+  balance: number;
+  receiptNo: string;
+  receiptConfig?: { signature?: string; footerNote?: string; showGymAddress?: boolean };
+  status: 'PAID' | 'PARTIAL';
 };
 
-const fmtCur = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+const fmtCur = (n: number) => `₹${n?.toLocaleString('en-IN')}`;
 
 export const generatePaymentReceiptHTML = (data: ReceiptData): string => {
-    const { gym, client, payment, membership, balance, receiptNo, receiptConfig, status } = data;
-    const statusColor = status === 'PAID' ? '#059669' : '#B45309';
+  const { gym, client, payment, membership, balance, receiptNo, receiptConfig, status } = data;
+  const statusColor = status === 'PAID' ? '#059669' : '#B45309';
 
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
-  body { font-family: -apple-system, sans-serif; margin: 0; padding: 24px; color: #111; }
-  .card { max-width: 400px; margin: 0 auto; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; }
+  @page { size: A4; margin: 0; }
+  html, body { width: 100%; min-height: 100%; margin: 0; padding: 0; background: #F8FAFC; color: #111; }
+  body { font-family: -apple-system, sans-serif; padding: 28px; box-sizing: border-box; }
+  .sheet { width: 100%; min-height: calc(100vh - 56px); display: flex; align-items: stretch; justify-content: center; }
+  .card { width: 100%; max-width: 760px; margin: 0 auto; border: 1px solid #E5E7EB; border-radius: 16px; padding: 28px; background: #FFFFFF; box-sizing: border-box; }
   .header { text-align: center; margin-bottom: 16px; }
-  .logo { max-height: 48px; margin-bottom: 8px; }
+  .logo { display: block; max-width: 220px; max-height: 96px; width: auto; height: auto; margin: 0 auto 10px; object-fit: contain; }
   .badge { display: inline-block; background: ${statusColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
   table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-  td { padding: 6px 0; font-size: 13px; border-bottom: 1px solid #F3F4F6; }
-  .amt { font-size: 22px; font-weight: 700; text-align: center; margin: 16px 0; }
-  .footer { text-align: center; font-size: 11px; color: #6B7280; margin-top: 16px; }
-  .sig { max-height: 40px; margin-top: 12px; }
+  td { padding: 8px 0; font-size: 14px; border-bottom: 1px solid #F3F4F6; }
+  .amt { font-size: 28px; font-weight: 700; text-align: center; margin: 20px 0 12px; }
+  .footer { text-align: center; font-size: 12px; color: #6B7280; margin-top: 18px; }
+  .sig-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
+  .sig { display: block; max-height: 88px; max-width: 240px; width: auto; height: auto; object-fit: contain; }
 </style></head><body>
+<div class="sheet">
 <div class="card">
   <div class="header">
     ${gym.logo ? `<img class="logo" src="${gym.logo}" />` : ''}
@@ -47,7 +52,8 @@ export const generatePaymentReceiptHTML = (data: ReceiptData): string => {
   <div class="amt">${fmtCur(payment.amount)}</div>
   ${balance > 0 ? `<p style="text-align:center;font-size:12px;color:#B45309">Balance due: ${fmtCur(balance)}</p>` : ''}
   ${payment.remarks ? `<p style="font-size:11px;color:#6B7280;text-align:center">${payment.remarks}</p>` : ''}
-  ${receiptConfig?.signature ? `<div style="text-align:right"><img class="sig" src="${receiptConfig.signature}" /></div>` : ''}
+  ${receiptConfig?.signature ? `<div class="sig-wrap"><img class="sig" src="${receiptConfig.signature}" /></div>` : ''}
   <div class="footer">${receiptConfig?.footerNote || 'Thank you for training with us!'}</div>
+</div>
 </div></body></html>`;
 };

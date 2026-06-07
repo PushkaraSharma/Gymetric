@@ -10,7 +10,7 @@ import { api } from '@/services/Api';
 import MembershipPayment from './MembershipPayment';
 import { Button } from '@/components/Button';
 import { colors } from '@/theme/colors';
-import { selectLoading, setLoading } from '@/redux/state/GymStates';
+import { selectGymInfo, selectLoading, setLoading } from '@/redux/state/GymStates';
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -21,6 +21,8 @@ import { addDays, format } from 'date-fns';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DEVICE_WIDTH } from '@/utils/Constants';
 import { validateNextStep } from '@/utils/Helper';
+import { getAutoShareReceiptPreference } from '@/utils/receiptPreferences';
+import ShareReceiptModal from '@/components/ShareReceiptModal';
 
 const RenewMembership = ({ route }: any) => {
     const client = route?.params?.client;
@@ -28,6 +30,7 @@ const RenewMembership = ({ route }: any) => {
 
     const dispatch = useAppDispatch();
     const loader = useAppSelector(selectLoading);
+    const gymInfo = useAppSelector(selectGymInfo);
 
     const [datePicker, setDatePicker] = useState<boolean>(false);
     const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { id: client?._id, name: client?.name, phoneNumber: client?.phoneNumber, gender: client?.gender }, amount: 0, amountReceived: 0, method: 'Cash', startDate: newStartDate, dependents: [] });
@@ -36,6 +39,9 @@ const RenewMembership = ({ route }: any) => {
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
     const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([]);
     const [duplicateNo, setDuplicateNo] = useState<string>('');
+    const [showReceipt, setShowReceipt] = useState(false);
+    const [receiptClient, setReceiptClient] = useState<any>(null);
+    const [receiptPayment, setReceiptPayment] = useState<any>(null);
     const translateX = useSharedValue(0);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -111,7 +117,18 @@ const RenewMembership = ({ route }: any) => {
             Toast.show({ type: 'success', text1: 'Membership renewed successfully' });
             trackEvent(AnalyticsEvents.MEMBERSHIP_RENEWED);
             incrementActionAndReview();
-            goBack();
+            if (getAutoShareReceiptPreference() && (form.amountReceived ?? 0) > 0) {
+                setReceiptClient(response.data);
+                setReceiptPayment({
+                    amount: form.amountReceived,
+                    method: form.method,
+                    date: new Date(),
+                    remarks: (form.amountReceived ?? 0) < (form.amount || 0) ? `Partial payment (₹${form.amountReceived} of ₹${form.amount})` : 'Membership renewal',
+                });
+                setShowReceipt(true);
+            } else {
+                goBack();
+            }
         }
     };
 
@@ -136,6 +153,20 @@ const RenewMembership = ({ route }: any) => {
                     setDatePicker(false);
                 }}
                 onCancel={() => setDatePicker(false)}
+            />
+            <ShareReceiptModal
+                visible={showReceipt}
+                onClose={() => {
+                    setShowReceipt(false);
+                    goBack();
+                }}
+                gym={gymInfo}
+                client={receiptClient || client}
+                payment={receiptPayment}
+                membership={{
+                    planName: selectedMembership?.[0]?.planName,
+                    startDate: form.startDate,
+                }}
             />
             <View style={{ flex: 1 }}>
                 <ClientWizardStepper steps={Steps} currentStep={currentStep} onBack={handleStepperBack} title="Renew Membership" />

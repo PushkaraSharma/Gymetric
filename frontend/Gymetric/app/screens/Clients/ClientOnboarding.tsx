@@ -8,7 +8,7 @@ import { Button } from '@/components/Button'
 import { api } from '@/services/Api'
 import DateTimePickerModal from "react-native-modal-datetime-picker"
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
-import { selectLoading, setLoading } from '@/redux/state/GymStates'
+import { selectGymInfo, selectLoading, setLoading } from '@/redux/state/GymStates'
 import Toast from 'react-native-toast-message'
 import { CustomModal } from '@/components/CustomModal'
 import { ClientDateType, ClientOnBoardingType, STEPS } from '@/utils/types'
@@ -24,10 +24,13 @@ import { useAppTheme } from '@/theme/context'
 import { incrementActionAndReview } from '@/services/storeReviewService'
 import { trackEvent, AnalyticsEvents } from '@/services/analyticsService'
 import { spacing } from '@/theme/spacing'
+import { getAutoShareReceiptPreference } from '@/utils/receiptPreferences'
+import ShareReceiptModal from '@/components/ShareReceiptModal'
 
 const CreateClient = () => {
     const dispatch = useAppDispatch()
     const loader = useAppSelector(selectLoading)
+    const gymInfo = useAppSelector(selectGymInfo)
     const { theme: { colors } } = useAppTheme()
 
     const Steps = ["Personal Info", "Membership", "Payment"] as STEPS[]
@@ -42,6 +45,9 @@ const CreateClient = () => {
     const [validNumber, setValidNumber] = useState<boolean>(true)
     const [duplicateNo, setDuplicateNo] = useState<string>('')
     const [isNoMembershipModalVisible, setIsNoMembershipModalVisible] = useState(false)
+    const [showReceipt, setShowReceipt] = useState(false)
+    const [receiptClient, setReceiptClient] = useState<any>(null)
+    const [receiptPayment, setReceiptPayment] = useState<any>(null)
 
     const translateX = useSharedValue(0)
     const animatedStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }))
@@ -149,7 +155,18 @@ const CreateClient = () => {
             Toast.show({ type: 'success', text1: 'Member onboarded successfully' })
             trackEvent(AnalyticsEvents.CLIENT_ADDED)
             incrementActionAndReview()
-            goBack()
+            if (getAutoShareReceiptPreference() && (form.amountReceived ?? 0) > 0) {
+                setReceiptClient(response.data)
+                setReceiptPayment({
+                    amount: form.amountReceived,
+                    method: form.method,
+                    date: new Date(),
+                    remarks: (form.amountReceived ?? 0) < (form.amount || 0) ? `Partial payment (₹${form.amountReceived} of ₹${form.amount})` : 'Membership',
+                })
+                setShowReceipt(true)
+            } else {
+                goBack()
+            }
         } else {
             dispatch(setLoading({ loading: false }))
         }
@@ -174,6 +191,20 @@ const CreateClient = () => {
                     setDatePicker({ visible: false, type: 'startDate' })
                 }}
                 onCancel={() => setDatePicker({ visible: false, type: 'startDate' })}
+            />
+            <ShareReceiptModal
+                visible={showReceipt}
+                onClose={() => {
+                    setShowReceipt(false)
+                    goBack()
+                }}
+                gym={gymInfo}
+                client={receiptClient}
+                payment={receiptPayment}
+                membership={{
+                    planName: selectedMembership?.[0]?.planName,
+                    startDate: form.startDate,
+                }}
             />
 
             <ClientWizardStepper steps={Steps} currentStep={currentStep} onBack={handleStepperBack} title="Add Member" />
