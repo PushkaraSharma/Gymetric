@@ -48,7 +48,7 @@ export function RevenueTrendChart({ trends }: RevenueTrendChartProps) {
           const barH = (item.amount / maxVal) * CHART_HEIGHT
           const gap = (chartWidth - visibleTrends.length * barWidth) / (visibleTrends.length + 1)
           return (
-            <View key={i} style={{ position: 'absolute', left: gap + i * (barWidth + gap), bottom: 24, alignItems: 'center' }}>
+            <View key={i} style={{ position: 'absolute', left: gap + i * (barWidth + gap), bottom: 0, alignItems: 'center' }}>
               <View style={[themed($bar), { width: barWidth, height: Math.max(barH, 4), backgroundColor: colors.primary }]} />
               <Text style={themed($barLabel)} text={item.label} />
             </View>
@@ -95,7 +95,7 @@ const $statsRow: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.background,
   borderRadius: 14,
   paddingVertical: spacing.sm,
-  marginTop: spacing.sm,
+  marginTop: spacing.xs,
 })
 const $statItem: ThemedStyle<ViewStyle> = () => ({ flex: 1, alignItems: 'center' })
 const $statBorder: ThemedStyle<ViewStyle> = ({ colors }) => ({ borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border })

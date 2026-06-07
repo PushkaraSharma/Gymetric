@@ -34,6 +34,7 @@ import { WhatsAppPremium } from "@/screens/Setting/WhatsAppPremium"
 import EditMembershipScreen from "@/screens/Clients/EditMembershipScreen"
 import ReceiptSettingsScreen from "@/screens/Setting/ReceiptSettingsScreen"
 import PushNotificationSettings from "@/screens/Setting/PushNotificationSettings"
+import SeedDataScreen from "@/screens/Setting/SeedDataScreen"
 import { trackScreenView } from "@/services/analyticsService"
 import { registerPushToken } from "@/services/pushNotificationService"
 import React, { useEffect } from "react"
@@ -98,6 +99,7 @@ const AppStack = () => {
               <Stack.Screen name="Change Password" component={ChangePassword} />
               <Stack.Screen name="Receipt Settings" component={ReceiptSettingsScreen} />
               <Stack.Screen name="Push Notification Settings" component={PushNotificationSettings} />
+              <Stack.Screen name="Seed Data" component={SeedDataScreen} />
             </Stack.Group>
           </>
         ) : (

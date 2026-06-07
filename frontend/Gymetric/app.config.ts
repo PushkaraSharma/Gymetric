@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     name: "GymKarta",
     slug: "Gymetric",
     scheme: "gymkarta",
-    version: "1.0.0",
+    version: "2.0.0",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
     icon: "./assets/images/app-icon.png",
@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         allowBackup: false,
         edgeToEdgeEnabled: true,
         googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
-        versionCode: 3,
+        versionCode: 4,
     },
     ios: {
         buildNumber: '3',

@@ -1,6 +1,6 @@
 import React, { useState } from "react"
-import { View, Pressable, ActivityIndicator, TouchableOpacity, StyleSheet, Text, ScrollView } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { View, Pressable, ActivityIndicator, TouchableOpacity, StyleSheet, Text, ScrollView, Platform } from "react-native"
+import { Screen } from "@/components/Screen"
 import { TextField } from "@/components/TextField"
 import { Button } from "@/components/Button"
 import { useAppTheme } from "@/theme/context"
@@ -81,7 +81,11 @@ export const PasswordLoginScreen = () => {
     }
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        <Screen
+            preset="fixed"
+            safeAreaEdges={["top", "bottom"]}
+            {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
+        >
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <ChevronLeft color={theme.colors.text} size={32} />
@@ -119,6 +123,7 @@ export const PasswordLoginScreen = () => {
                         </Pressable>
                     )}
                     onSubmitEditing={handleLogin}
+                    returnKeyType="done"
                 />
 
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -138,17 +143,13 @@ export const PasswordLoginScreen = () => {
                     onPress={handleLoginWithOtp}
                     textStyle={{ color: theme.colors.primary, fontSize: 14 }}
                 />}
-                <VersionFooter />
             </ScrollView>
-        </SafeAreaView>
+            <VersionFooter />
+        </Screen>
     )
 }
 
 const getStyles = (theme: any) => StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-    },
     header: {
         paddingHorizontal: theme.spacing.lg,
         paddingTop: theme.spacing.md,
@@ -161,7 +162,7 @@ const getStyles = (theme: any) => StyleSheet.create({
         flexGrow: 1,
         paddingHorizontal: theme.spacing.lg,
         paddingVertical: theme.spacing.md,
-        justifyContent: 'center',
+        paddingBottom: 80,
     },
     title: {
         fontSize: theme.typography.xxl,

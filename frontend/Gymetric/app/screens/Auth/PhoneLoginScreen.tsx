@@ -1,12 +1,11 @@
 import React, { useState } from "react"
-import { View, ActivityIndicator, Image, Keyboard, StyleSheet, Text } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { View, ActivityIndicator, Image, Keyboard, StyleSheet, Text, ScrollView, Platform } from "react-native"
+import { Screen } from "@/components/Screen"
 import { TextField } from "@/components/TextField"
 import { Button } from "@/components/Button"
 import { useAppTheme } from "@/theme/context"
 import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { useNavigation } from "@react-navigation/native"
-
 import { api } from "@/services/Api"
 import { storage } from "@/utils/LocalStorage"
 import { VersionFooter } from "@/components/VersionFooter";
@@ -19,7 +18,6 @@ export const PhoneLoginScreen = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
 
-    // Ensure we start with a clean state
     React.useEffect(() => {
         const auth = getAuth();
         if (auth.currentUser) {
@@ -29,7 +27,7 @@ export const PhoneLoginScreen = () => {
 
     const handleContinue = async (phone?: string) => {
         const phoneInput = phone || phoneNumber
-        const phoneToUse = phoneInput.replace(/\s/g, '') // Sanitize input
+        const phoneToUse = phoneInput.replace(/\s/g, '')
 
         if (!phoneToUse || phoneToUse.length < 10) {
             setError("Please enter a valid phone number")
@@ -41,12 +39,9 @@ export const PhoneLoginScreen = () => {
         storage.set("isFirstLaunch", false)
 
         try {
-            // Format number to E.164 (Assuming India +91 for now, can be made dynamic)
             const formattedNumber = phoneToUse.startsWith('+') ? phoneToUse : `+91${phoneToUse}`;
-            // Check if user exists & has password
             const check = await api.checkUser(formattedNumber);
             if (check.kind === 'ok' && check.data.exists && check.data.hasPassword) {
-                // User has password -> Go to Password Login
                 navigation.navigate("PasswordLogin", {
                     phoneNumber: phoneToUse,
                     username: check.data.username
@@ -64,8 +59,16 @@ export const PhoneLoginScreen = () => {
     }
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-            <View style={styles.container}>
+        <Screen
+            preset="fixed"
+            safeAreaEdges={["top", "bottom"]}
+            {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
+        >
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
                 <View style={styles.logoContainer}>
                     <Image source={isDark ? require("../../../assets/images/app-icon-dark.png") : require("../../../assets/images/app-icon.png")} style={styles.logo} />
                 </View>
@@ -81,7 +84,6 @@ export const PhoneLoginScreen = () => {
                         setPhoneNumber(text)
                         if (text.length === 10) {
                             Keyboard.dismiss()
-                            // Small delay to allow state update to propagate
                             setTimeout(() => handleContinue(text), 100)
                         }
                     }}
@@ -104,21 +106,18 @@ export const PhoneLoginScreen = () => {
                     style={{ marginTop: theme.spacing.md }}
                     icon={isLoading ? <ActivityIndicator size="small" color="white" /> : undefined}
                 />
-                <VersionFooter />
-            </View>
-        </SafeAreaView>
+            </ScrollView>
+            <VersionFooter />
+        </Screen>
     )
 }
 
 const getStyles = (theme: any) => StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-    },
-    container: {
-        flex: 1,
+    scrollContent: {
+        flexGrow: 1,
         justifyContent: 'center',
         paddingHorizontal: theme.spacing.lg,
+        paddingBottom: 80,
     },
     logoContainer: {
         alignItems: 'center',

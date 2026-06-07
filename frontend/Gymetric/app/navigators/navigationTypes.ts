@@ -24,6 +24,7 @@ export type AppStackParamList = {
   "Change Password": undefined
   "Receipt Settings": undefined
   "Push Notification Settings": undefined
+  "Seed Data": undefined
 }
 
 export interface NavigationProps extends Partial<

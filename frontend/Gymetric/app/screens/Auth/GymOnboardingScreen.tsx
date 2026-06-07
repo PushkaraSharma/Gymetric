@@ -1,6 +1,6 @@
-import React, { useState } from "react"
-import { View, ActivityIndicator, StyleSheet, Text, ScrollView } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import React, { useState, useRef } from "react"
+import { View, ActivityIndicator, StyleSheet, Text, ScrollView, Platform, Pressable, TextInput } from "react-native"
+import { Screen } from "@/components/Screen"
 import { TextField } from "@/components/TextField"
 import { Button } from "@/components/Button"
 import { useAppTheme } from "@/theme/context"
@@ -28,6 +28,10 @@ export const GymOnboardingScreen = () => {
     const [isPasswordVisible, setIsPasswordVisible] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
+
+    const ownerRef = useRef<TextInput>(null)
+    const addressRef = useRef<TextInput>(null)
+    const passwordRef = useRef<TextInput>(null)
 
     const handleOnboard = async () => {
         if (!gymName || !ownerName || !password) {
@@ -76,7 +80,11 @@ export const GymOnboardingScreen = () => {
     }
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        <Screen
+            preset="fixed"
+            safeAreaEdges={["top", "bottom"]}
+            {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
+        >
             <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
                 <Text style={styles.title}>Setup your Gym</Text>
                 <Text style={styles.subtitle}>Just a few more details to get you started.</Text>
@@ -87,40 +95,50 @@ export const GymOnboardingScreen = () => {
                     label="Gym Name"
                     placeholder="e.g. Spartan Fitness"
                     containerStyle={{ marginBottom: theme.spacing.md }}
+                    returnKeyType="next"
+                    onSubmitEditing={() => ownerRef.current?.focus()}
                 />
 
                 <TextField
+                    ref={ownerRef}
                     value={ownerName}
                     onChangeText={setOwnerName}
                     label="Your Name"
                     placeholder="John Doe"
                     containerStyle={{ marginBottom: theme.spacing.md }}
+                    returnKeyType="next"
+                    onSubmitEditing={() => addressRef.current?.focus()}
                 />
 
                 <TextField
+                    ref={addressRef}
                     value={gymAddress}
                     onChangeText={setGymAddress}
                     label="Gym Address (Optional)"
                     placeholder="123 Fitness St."
                     containerStyle={{ marginBottom: theme.spacing.md }}
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
                 />
 
                 <TextField
+                    ref={passwordRef}
                     value={password}
                     onChangeText={setPassword}
                     label="Create Password"
                     placeholder="Min 6 characters"
                     secureTextEntry={!isPasswordVisible}
                     containerStyle={{ marginBottom: theme.spacing.lg }}
+                    returnKeyType="done"
+                    onSubmitEditing={handleOnboard}
                     RightAccessory={() => (
-                        <View style={{ paddingRight: 12 }}>
+                        <Pressable style={{ paddingRight: 12 }} onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
                             <EyeOff
                                 size={20}
                                 color={theme.colors.textDim}
-                                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                                 style={{ opacity: isPasswordVisible ? 0.5 : 1 }}
                             />
-                        </View>
+                        </Pressable>
                     )}
                 />
 
@@ -135,20 +153,16 @@ export const GymOnboardingScreen = () => {
                     icon={isLoading ? <ActivityIndicator size="small" color="white" /> : undefined}
                 />
             </ScrollView>
-        </SafeAreaView>
+        </Screen>
     )
 }
 
 const getStyles = (theme: any) => StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-    },
     scrollContent: {
         flexGrow: 1,
         paddingHorizontal: theme.spacing.lg,
         paddingVertical: theme.spacing.xl,
-        justifyContent: 'center',
+        paddingBottom: 40,
     },
     title: {
         fontSize: theme.typography.xxl,

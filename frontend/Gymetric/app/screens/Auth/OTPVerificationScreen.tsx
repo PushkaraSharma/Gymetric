@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react"
-import { View, ActivityIndicator, Image, TouchableOpacity, Keyboard, StyleSheet, Text } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import React, { useState, useEffect, useRef } from "react"
+import { View, ActivityIndicator, Image, TouchableOpacity, Keyboard, StyleSheet, Text, ScrollView, Platform } from "react-native"
+import { Screen } from "@/components/Screen"
 import { TextField } from "@/components/TextField"
 import { Button } from "@/components/Button"
 import { useAppTheme } from "@/theme/context"
@@ -12,7 +12,6 @@ import { saveString, save } from "@/utils/LocalStorage"
 import { trackEvent, AnalyticsEvents, setAnalyticsUser } from '@/services/analyticsService'
 import { setCrashlyticsUser } from '@/services/crashlyticsService'
 import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
-import { useRef } from "react"
 import { VersionFooter } from "@/components/VersionFooter"
 import { ChevronLeft } from "lucide-react-native"
 
@@ -29,7 +28,6 @@ export const OTPVerificationScreen = () => {
     const [error, setError] = useState("")
     const [otpSending, setOtpSending] = useState(false)
 
-    // Resend OTP State
     const [confirmResult, setConfirmResult] = useState(confirmation)
     const [timer, setTimer] = useState(30)
     const [canResend, setCanResend] = useState(false)
@@ -48,7 +46,6 @@ export const OTPVerificationScreen = () => {
         return () => clearInterval(interval)
     }, [timer])
 
-    // Handle Auto-Verification & Auth State Changes
     useEffect(() => {
         const unsubscribe = getAuth().onAuthStateChanged((user) => {
             if (user) {
@@ -151,13 +148,21 @@ export const OTPVerificationScreen = () => {
     }
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        <Screen
+            preset="fixed"
+            safeAreaEdges={["top", "bottom"]}
+            {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
+        >
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <ChevronLeft color={theme.colors.text} size={32} />
                 </TouchableOpacity>
             </View>
-            <View style={styles.container}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
                 <View style={styles.logoContainer}>
                     <Image source={isDark ? require("../../../assets/images/app-icon-dark.png") : require("../../../assets/images/app-icon.png")} style={styles.logo} />
                 </View>
@@ -175,6 +180,8 @@ export const OTPVerificationScreen = () => {
                     autoComplete="sms-otp"
                     textContentType="oneTimeCode"
                     containerStyle={{ marginBottom: theme.spacing.lg }}
+                    returnKeyType="done"
+                    onSubmitEditing={() => handleVerify()}
                 />
 
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -200,17 +207,13 @@ export const OTPVerificationScreen = () => {
                         <Text style={styles.timerText}>Resend code in {timer}s</Text>
                     )}
                 </View>
-                <VersionFooter />
-            </View>
-        </SafeAreaView>
+            </ScrollView>
+            <VersionFooter />
+        </Screen>
     )
 }
 
 const getStyles = (theme: any) => StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-    },
     header: {
         paddingHorizontal: theme.spacing.lg,
         paddingTop: theme.spacing.md,
@@ -219,10 +222,11 @@ const getStyles = (theme: any) => StyleSheet.create({
         padding: theme.spacing.xs,
         marginLeft: -theme.spacing.xs,
     },
-    container: {
-        flex: 1,
+    scrollContent: {
+        flexGrow: 1,
         justifyContent: 'center',
         paddingHorizontal: theme.spacing.lg,
+        paddingBottom: 80,
     },
     logoContainer: {
         alignItems: 'center',

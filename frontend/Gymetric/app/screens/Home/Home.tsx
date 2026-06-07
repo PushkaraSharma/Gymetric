@@ -20,6 +20,8 @@ import { WhatsAppBanner } from '@/components/dashboard/WhatsAppBanner'
 import { setGymStats, setEnrichedUserProperties } from '@/services/analyticsService'
 import { OTA_VERSION } from '@/utils/Constants'
 import Constants from 'expo-constants'
+import { WhatsNewModal } from '@/components/WhatsNewModal'
+import { load, save } from '@/utils/LocalStorage'
 
 let hasShownBannerSession = false
 
@@ -54,11 +56,22 @@ const Home = () => {
   const [hasMembershipPlans, setHasMembershipPlans] = useState(false)
   const [isLoading, setIsLoading] = useState(!cachedSummary)
   const [refreshing, setRefreshing] = useState(false)
+  const [showWhatsNew, setShowWhatsNew] = useState(false)
   const summaryRef = useRef<DashboardSummary | null>(cachedSummary)
 
   useEffect(() => {
     summaryRef.current = summary ?? cachedSummary
   }, [cachedSummary, summary])
+
+  useEffect(() => {
+    const lastSeen = load<number>('@last_seen_ota_version')
+    if (lastSeen !== OTA_VERSION) {
+      setShowWhatsNew(true)
+      save('@last_seen_ota_version', OTA_VERSION)
+    }
+  }, [])
+
+  const handleWhatsNewClose = () => setShowWhatsNew(false)
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -154,6 +167,7 @@ const Home = () => {
           ownerName={gymInfo?.ownerName || 'Admin'}
           gymLogo={gymInfo?.logo}
           isDark={isDark}
+          onNotificationsPress={() => setShowWhatsNew(true)}
         />
 
         <View style={{ paddingHorizontal: theme.spacing.md }}>
@@ -254,6 +268,7 @@ const Home = () => {
       <Pressable style={styles.fab} onPress={() => navigate('Add Client')}>
         <Plus size={28} color={theme.colors.background} />
       </Pressable>
+      <WhatsNewModal visible={showWhatsNew} onClose={handleWhatsNewClose} />
     </SafeAreaView>
   )
 }

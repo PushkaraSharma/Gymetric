@@ -1,0 +1,19 @@
+name: Daily Push Summary
+on:
+  schedule:
+    # 02:30 UTC = 08:00 IST
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Push Summary API
+        run: |
+          curl --request POST \
+          --url https://api.gymkarta.indieroots.in/api/system/run-push-summary \
+          --header 'Content-Type: application/json' \
+          --data '{"secret": "${{ secrets.CRON_SECRET }}"}' \
+          --fail \
+          --retry 3

@@ -58,12 +58,12 @@ export function ClientListCard({ client, index, onPress }: Props) {
                                 <Text size="xxs" style={{ color: colors.palette.indigo500 }}>{daysLeft}d left</Text>
                             </View>
                         )}
-                        {daysLeft !== null && daysLeft < 0 && (
+                        {/* {daysLeft !== null && daysLeft < 0 && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                                 <AlertCircle size={11} color={colors.error} />
                                 <Text size="xxs" style={{ color: colors.error }}>Expired</Text>
                             </View>
-                        )}
+                        )} */}
                     </View>
                 </View>
                 <View style={{ alignItems: 'center', gap: 6, flexDirection: 'row' }}>

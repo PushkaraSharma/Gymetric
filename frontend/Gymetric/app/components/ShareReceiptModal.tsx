@@ -7,6 +7,7 @@ import { ThemedStyle } from '@/theme/types'
 import { spacing } from '@/theme/spacing'
 import * as Print from 'expo-print'
 import * as Sharing from 'expo-sharing'
+import * as FileSystem from 'expo-file-system'
 import { generatePaymentReceiptHTML } from '@/utils/paymentReceiptTemplate'
 import { format } from 'date-fns'
 import Toast from 'react-native-toast-message'
@@ -44,7 +45,9 @@ const ShareReceiptModal = ({ visible, onClose, gym, client, payment, membership,
     const buildHtml = () => {
         const balance = client?.balance || 0
         const isPartial = balance > 0 || payment?.remarks?.includes('Partial')
-        return generatePaymentReceiptHTML({
+        const receiptNo = `GK-${Date.now().toString().slice(-8)}`
+        return {
+            html: generatePaymentReceiptHTML({
             gym: { name: gym?.name || 'Gym', address: gym?.address, logo: mergedReceiptConfig?.logo || gym?.logo },
             client: { name: client?.name, phoneNumber: client?.phoneNumber },
             payment: {
@@ -59,13 +62,26 @@ const ShareReceiptModal = ({ visible, onClose, gym, client, payment, membership,
                 endDate: membership.endDate ? format(new Date(membership.endDate), 'dd MMM yyyy') : undefined,
             } : undefined,
             balance,
-            receiptNo: `GK-${Date.now().toString().slice(-8)}`,
+            receiptNo,
             receiptConfig: mergedReceiptConfig,
             status: isPartial ? 'PARTIAL' : 'PAID',
-        })
+        }),
+            receiptNo,
+        }
     }
 
-    const html = useMemo(() => buildHtml(), [client, gym, membership, mergedReceiptConfig, payment])
+    const getReceiptFileName = (receiptNo: string, ext: 'pdf' | 'png') => {
+        const safeName = (client?.name || 'Client').replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-')
+        return `Receipt-${receiptNo}-${safeName}.${ext}`
+    }
+
+    const copyToNamedFile = async (sourceUri: string, filename: string) => {
+        const destUri = `${FileSystem.cacheDirectory}${filename}`
+        await FileSystem.copyAsync({ from: sourceUri, to: destUri })
+        return destUri
+    }
+
+    const html = useMemo(() => buildHtml().html, [client, gym, membership, mergedReceiptConfig, payment])
 
     useEffect(() => {
         if (!visible) {
@@ -86,9 +102,11 @@ const ShareReceiptModal = ({ visible, onClose, gym, client, payment, membership,
     const sharePdf = async () => {
         setLoading(true)
         try {
-            const { uri } = await Print.printToFileAsync({ html: buildHtml() })
+            const { html: receiptHtml, receiptNo } = buildHtml()
+            const { uri } = await Print.printToFileAsync({ html: receiptHtml })
+            const namedUri = await copyToNamedFile(uri, getReceiptFileName(receiptNo, 'pdf'))
             if (await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Receipt' })
+                await Sharing.shareAsync(namedUri, { mimeType: 'application/pdf', dialogTitle: 'Share Receipt' })
             }
             onClose()
         } catch {
@@ -104,9 +122,11 @@ const ShareReceiptModal = ({ visible, onClose, gym, client, payment, membership,
         }
         setLoading(true)
         try {
+            const { receiptNo } = buildHtml()
             const uri = await viewShotRef.current?.capture?.()
             if (uri && await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share Receipt' })
+                const namedUri = await copyToNamedFile(uri, getReceiptFileName(receiptNo, 'png'))
+                await Sharing.shareAsync(namedUri, { mimeType: 'image/png', dialogTitle: 'Share Receipt' })
             }
             onClose()
         } catch {

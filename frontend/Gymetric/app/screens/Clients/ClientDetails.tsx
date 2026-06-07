@@ -173,6 +173,8 @@ const ClientDetails = ({ route }: any) => {
         [client]
     )
 
+    console.log(client?.membershipStatus)
+
     const sortedPayments = useMemo(() =>
         client?.paymentHistory?.slice().sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],
         [client?.paymentHistory]

@@ -1,16 +1,18 @@
 import React from 'react'
-import { View, Image, ImageStyle, ViewStyle, TextStyle } from 'react-native'
+import { View, Image, ImageStyle, ViewStyle, TextStyle, TouchableOpacity } from 'react-native'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { Text } from '@/components/Text'
+import { Bell } from 'lucide-react-native'
 
 interface DashboardHeaderProps {
   ownerName: string
   gymLogo?: string
   isDark: boolean
+  onNotificationsPress?: () => void
 }
 
-export function DashboardHeader({ ownerName, gymLogo, isDark }: DashboardHeaderProps) {
+export function DashboardHeader({ ownerName, gymLogo, isDark, onNotificationsPress }: DashboardHeaderProps) {
   const { themed, theme: { colors } } = useAppTheme()
 
   return (
@@ -30,6 +32,11 @@ export function DashboardHeader({ ownerName, gymLogo, isDark }: DashboardHeaderP
         <Text style={themed($greetingLabel)} text="WELCOME BACK" />
         <Text style={themed($greeting)} text={`${ownerName}`} />
       </View>
+      {onNotificationsPress && (
+        <TouchableOpacity onPress={onNotificationsPress} style={themed($bellButton)} hitSlop={8}>
+          <Bell size={22} color={colors.text} />
+        </TouchableOpacity>
+      )}
     </View>
   )
 }
@@ -67,4 +74,12 @@ const $greeting: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
   fontWeight: typography.bold,
   fontSize: 20,
   color: colors.text,
+})
+
+const $bellButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  alignItems: 'center',
+  justifyContent: 'center',
 })

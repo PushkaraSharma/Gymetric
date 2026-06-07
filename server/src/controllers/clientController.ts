@@ -24,7 +24,7 @@ import {
 } from "../utils/membershipValidation.js";
 import { syncMembersForMembership, getMembershipStatusFromDates } from "../utils/membershipHelpers.js";
 import { STALE_WHATSAPP_SKIP_DAYS } from "../utils/Constants.js";
-import { cache, getCacheKey } from "../utils/cache.js";
+import { cache, getCacheKey, invalidateClientCaches } from "../utils/cache.js";
 
 interface OnboardingBody {
     primaryDetails: any;
@@ -47,10 +47,6 @@ interface RenewalBody {
     amountReceived?: number;
     dependents: any[];
 }
-
-const invalidateClientCaches = (gymId: string) => {
-    cache.del([getCacheKey('client_list', gymId), getCacheKey('dashboard_summary', gymId)]);
-};
 
 const applyPayment = (
     client: any,
@@ -213,7 +209,7 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
             description: `${primaryClient.name} joined with a ${plan.planName} plan starting ${formatDisplayDate(customStartDate)}${dependents.length > 0 ? ` along with ${dependents.length} members` : ''}`,
             amount: paymentResult.received,
             memberId: primaryClient._id,
-            date: today
+            date: new Date()
         }], { session });
 
         await session.commitTransaction();
@@ -370,7 +366,7 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
                 `${primaryClient.name} pre-paid for ${plan.planName} starting on ${formatDisplayDate(newStartDate)}`,
             amount: paymentResult.received,
             memberId: primaryClient._id,
-            date: today
+            date: new Date()
         }], { session });
 
         await session.commitTransaction();
@@ -416,10 +412,11 @@ export const collectPayment = async (request: FastifyRequest, reply: FastifyRepl
             return reply.status(400).send({ success: false, error: `Amount cannot exceed outstanding balance of ₹${client.balance}.` });
         }
 
+        const paymentDate = date ? new Date(date) : new Date();
         client.paymentHistory.push({
             amount,
             method: method as any,
-            date: date ? new Date(date) : new Date(),
+            date: paymentDate,
             remarks: remarks || 'Balance collection',
             type: 'balance_collection',
         });
@@ -433,7 +430,7 @@ export const collectPayment = async (request: FastifyRequest, reply: FastifyRepl
             description: `₹${amount} collected from ${client.name}${remarks ? ` — ${remarks}` : ''}`,
             amount,
             memberId: client._id,
-            date: getISTMidnightToday(),
+            date: paymentDate,
         }], { session });
 
         await session.commitTransaction();
@@ -573,7 +570,7 @@ export const amendMembership = async (request: FastifyRequest, reply: FastifyRep
             title: 'Membership updated',
             description: `${client.name}'s ${membership.planName} updated: ${reason}`,
             memberId: client._id,
-            date: today,
+            date: new Date(),
         }], { session });
 
         await session.commitTransaction();
@@ -623,7 +620,7 @@ export const pauseMembership = async (request: FastifyRequest, reply: FastifyRep
             title: 'Membership paused',
             description: `${primaryClient?.name}'s ${membership.planName} membership paused${reason ? `: ${reason}` : ''}`,
             memberId: membership.primaryMemberId,
-            date: getISTMidnightToday(),
+            date: new Date(),
         }], { session });
 
         await session.commitTransaction();
@@ -690,7 +687,7 @@ export const resumeMembership = async (request: FastifyRequest, reply: FastifyRe
             title: 'Membership resumed',
             description: `${primaryClient?.name}'s ${membership.planName} resumed after ${pauseDays} day(s). New expiry: ${formatDisplayDate(membership.endDate)}`,
             memberId: membership.primaryMemberId,
-            date: getISTMidnightToday(),
+            date: new Date(),
         }], { session });
 
         await session.commitTransaction();
@@ -722,7 +719,7 @@ export const getClientActivity = async (request: FastifyRequest, reply: FastifyR
                 title: a.title,
                 description: a.description,
                 amount: a.amount,
-                date: a.date,
+                date: a.createdAt || a.date,
             })),
             ...messages.map((m: any) => ({
                 type: 'message',

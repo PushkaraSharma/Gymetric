@@ -13,6 +13,7 @@ export interface IClient {
     profilePicture?: string;
     gymId: Types.ObjectId;
     balance: number;
+    isSeeded?: boolean;
     role: 'primary' | 'dependent';
     membershipStatus: MembershipStatus;
     activeMembership?: Types.ObjectId;

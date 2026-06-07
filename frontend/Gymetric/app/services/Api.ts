@@ -271,6 +271,10 @@ export class Api {
     return { kind: 'ok', data: response?.data?.data };
   };
 
+  seedDemoData = async (action: 'seed' | 'clear') => {
+    return this.apiRequest('post', '/api/gym/seed-demo-data', { action });
+  };
+
 }
 
 // Singleton instance of the API for convenience
