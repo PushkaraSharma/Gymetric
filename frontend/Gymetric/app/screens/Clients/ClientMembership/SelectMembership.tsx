@@ -1,5 +1,7 @@
 import { Pressable, View, ViewStyle } from 'react-native'
-import React, { FC, Dispatch, SetStateAction } from 'react'
+import React, { FC, Dispatch, SetStateAction, useRef, useCallback } from 'react'
+import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Text } from '@/components/Text'
 import { spacing } from '@/theme/spacing'
 import { $styles } from '@/theme/styles'
@@ -35,6 +37,32 @@ const SelectMembership: FC<Props> = ({
 }) => {
     const { theme: { colors }, themed } = useAppTheme()
     const selected = selectedMembership?.[0]
+    const bottomSheetModalRef = useRef<BottomSheetModal>(null)
+    const { bottom } = useSafeAreaInsets()
+
+    const openPlanSelector = () => {
+        bottomSheetModalRef.current?.present()
+    }
+
+    const selectPlan = (plan: any) => {
+        setSelectedMembership([plan])
+        handleForm('amount', plan.price)
+        handleForm('amountReceived', plan.price)
+        handleForm('dependents', [])
+        bottomSheetModalRef.current?.dismiss()
+    }
+
+    const renderBackdrop = useCallback(
+        (props: any) => (
+            <BottomSheetBackdrop
+                {...props}
+                disappearsOnIndex={-1}
+                appearsOnIndex={0}
+                pressBehavior="close"
+            />
+        ),
+        []
+    )
 
     const addMember = () => {
         setForm(prev => ({ ...prev, dependents: [...prev.dependents, { name: '', phoneNumber: '', gender: 'Male' }] }))
@@ -60,42 +88,97 @@ const SelectMembership: FC<Props> = ({
         })
     }
 
-    const selectPlan = (plan: any) => {
-        setSelectedMembership([plan])
-        handleForm('amount', plan.price)
-        handleForm('amountReceived', plan.price)
-        handleForm('dependents', [])
-    }
+
 
     return (
         <View>
             <ClientSectionLabel title="Choose Plan" subtitle="Select a membership tier" />
 
-            <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
-                {memberships.map((plan) => {
-                    const isSelected = selected?._id === plan._id
-                    return (
-                        <Pressable
-                            key={plan._id}
-                            onPress={() => selectPlan(plan)}
-                            style={[themed($planCard), isSelected && { borderColor: colors.primary, borderWidth: 2, backgroundColor: colors.primaryBackground }]}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text weight="semiBold" size="md">{plan.planName}</Text>
-                                <Text size="xs" style={{ color: colors.textDim, marginTop: 2 }}>{getDuration(plan)} · {plan.planType}</Text>
-                            </View>
-                            <View style={{ alignItems: 'flex-end' }}>
-                                <Text weight="bold" size="lg">₹{plan.price}</Text>
-                                {isSelected && (
-                                    <View style={[themed($check), { backgroundColor: colors.primary }]}>
-                                        <Check size={14} color={colors.background} />
+            <Pressable
+                onPress={openPlanSelector}
+                style={themed($pickerCard)}
+            >
+                <View style={{ flex: 1 }}>
+                    <Text size="xxs" style={{ color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        Plan Tier
+                    </Text>
+                    {selected ? (
+                        <>
+                            <Text weight="bold" size="md" style={{ marginTop: 4, color: colors.text }}>
+                                {selected.planName}
+                            </Text>
+                            <Text size="xs" style={{ color: colors.textDim, marginTop: 2 }}>
+                                {getDuration(selected)} · {selected.planType}
+                            </Text>
+                        </>
+                    ) : (
+                        <Text weight="medium" size="md" style={{ marginTop: 4, color: colors.textDim }}>
+                            Choose a plan...
+                        </Text>
+                    )}
+                </View>
+                <View style={{ alignItems: 'center', flexDirection: 'row', gap: spacing.xs }}>
+                    {selected && (
+                        <Text weight="bold" size="lg" style={{ color: colors.primary }}>
+                            ₹{selected.price}
+                        </Text>
+                    )}
+                    <Ionicons name="chevron-down" size={20} color={colors.textDim} />
+                </View>
+            </Pressable>
+
+            {/* Bottom Sheet Modal for selecting plan */}
+            <BottomSheetModal
+                ref={bottomSheetModalRef}
+                snapPoints={["60%", "85%"]}
+                index={0}
+                backdropComponent={renderBackdrop}
+                backgroundStyle={{ backgroundColor: colors.surface }}
+                handleIndicatorStyle={{ backgroundColor: colors.border }}
+            >
+                <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingBottom: bottom + spacing.md }}>
+                    <View style={themed($sheetHeader)}>
+                        <Text weight="bold" size="lg" style={{ color: colors.text }}>Choose Plan</Text>
+                        <Text size="xs" style={{ color: colors.textDim }}>Select a membership tier for the client</Text>
+                    </View>
+
+                    <BottomSheetScrollView
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.xs }}
+                    >
+                        {memberships.map((plan) => {
+                            const isSelected = selected?._id === plan._id
+                            return (
+                                <Pressable
+                                    key={plan._id}
+                                    onPress={() => selectPlan(plan)}
+                                    style={[
+                                        themed($planCard),
+                                        isSelected && {
+                                            borderColor: colors.primary,
+                                            borderWidth: 2,
+                                            backgroundColor: colors.primaryBackground
+                                        }
+                                    ]}
+                                >
+                                    <View style={{ flex: 1 }}>
+                                        <Text weight="semiBold" size="md" style={{ color: colors.text }}>{plan.planName}</Text>
+                                        <Text size="xs" style={{ color: colors.textDim, marginTop: 2 }}>{getDuration(plan)} · {plan.planType}</Text>
                                     </View>
-                                )}
-                            </View>
-                        </Pressable>
-                    )
-                })}
-            </View>
+                                    <View style={{ alignItems: 'flex-end' }}>
+                                        <Text weight="bold" size="lg" style={{ color: colors.text }}>₹{plan.price}</Text>
+                                        {isSelected && (
+                                            <View style={[themed($check), { backgroundColor: colors.primary }]}>
+                                                <Check size={14} color={colors.background} />
+                                            </View>
+                                        )}
+                                    </View>
+                                </Pressable>
+                            )
+                        })}
+                    </BottomSheetScrollView>
+                </View>
+            </BottomSheetModal>
 
             {selected && selected.planType !== 'indivisual' && (
                 <>
@@ -129,7 +212,7 @@ const SelectMembership: FC<Props> = ({
                 </>
             )}
 
-            <ClientSectionLabel title="Start Date" subtitle="Back-date up to 1 year for register imports" />
+            <ClientSectionLabel title="Start Date" subtitle="Back-date up to 1 year is allowed" />
 
             <Pressable style={themed($dateCard)} onPress={handleDatePicker}>
                 <View style={[themed($avatar), { backgroundColor: colors.primaryBackground }]}>
@@ -146,6 +229,22 @@ const SelectMembership: FC<Props> = ({
 }
 
 export default SelectMembership
+
+const $pickerCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+})
+
+const $sheetHeader: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+})
 
 const $planCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     flexDirection: 'row',

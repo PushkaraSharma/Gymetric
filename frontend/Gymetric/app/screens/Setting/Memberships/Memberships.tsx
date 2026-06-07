@@ -31,7 +31,7 @@ const Memberships = () => {
                 </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text preset='subheading' style={{ color: colors.tint, marginRight: 15 }}>₹{item.price}</Text>
+                <Text preset='formLabel' style={{ color: colors.tint, marginRight: 15 }}>₹{item.price}</Text>
                 <Ionicons name='chevron-forward' size={20} color={colors.tintInactive} />
             </View>
         </Pressable>

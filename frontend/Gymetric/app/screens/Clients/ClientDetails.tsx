@@ -24,6 +24,7 @@ import { ClientSectionLabel } from '@/components/clients/ClientSectionLabel'
 import {
     Wallet, Calendar, CreditCard, Clock, Pause, Play, Pencil, RefreshCw, Receipt, Activity
 } from 'lucide-react-native'
+import { Header } from '@/components/Header'
 
 const ClientDetails = ({ route }: any) => {
     const { theme: { colors }, themed } = useAppTheme()
@@ -188,7 +189,13 @@ const ClientDetails = ({ route }: any) => {
 
     return (
         <Screen preset="fixed" contentContainerStyle={[$styles.flex1]} safeAreaEdges={[]} {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}>
-            <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background }}>
+            <Header title='Member Profile' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} safeAreaTop={true} rightAction={() => {
+                <Pressable onPress={() => setShowDeleteModal(true)} style={[themed($iconBtn), { marginLeft: 8 }]}>
+                    <Ionicons name="trash-outline" size={20} color={colors.error} />
+                </Pressable>
+            }} />
+
+            {/* <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background }}>
                 <View style={themed($header)}>
                     <Pressable onPress={goBack} style={themed($iconBtn)}>
                         <Ionicons name="chevron-back" size={22} color={colors.text} />
@@ -203,7 +210,7 @@ const ClientDetails = ({ route }: any) => {
                         </Pressable>
                     )}
                 </View>
-            </SafeAreaView>
+            </SafeAreaView> */}
 
             <CustomModal
                 visible={showDeleteModal}
@@ -243,34 +250,9 @@ const ClientDetails = ({ route }: any) => {
                     />
                 </View>
 
-                {/* Balance alert */}
-                {(client?.balance > 0) && client?.role === 'primary' && (
-                    <Pressable style={[themed($balanceAlert), { marginHorizontal: spacing.md }]} onPress={() => setShowCollectModal(true)}>
-                        <View style={{ flex: 1 }}>
-                            <Text size="xs" style={{ color: colors.error }}>Outstanding balance</Text>
-                            <Text weight="bold" size="xl" style={{ color: colors.error }}>₹{client.balance}</Text>
-                        </View>
-                        <View style={[themed($collectChip), { backgroundColor: colors.error }]}>
-                            <Text weight="semiBold" size="sm" style={{ color: colors.background }}>Collect</Text>
-                        </View>
-                    </Pressable>
-                )}
-
-                {client?.role === 'dependent' && client?.activeMembership?.primaryMemberId?.balance > 0 && (
-                    <View style={[themed($infoBanner), { marginHorizontal: spacing.md }]}>
-                        <Text size="xs" style={{ color: colors.textDim }}>
-                            Paid by {client.activeMembership.primaryMemberId.name} — Balance ₹{client.activeMembership.primaryMemberId.balance}
-                        </Text>
-                    </View>
-                )}
-
-                {/* Stats */}
-                <View style={{ paddingHorizontal: spacing.md }}>
-                    <ClientStatGrid stats={stats} />
-                </View>
 
                 {/* Quick actions */}
-                <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.sm }}>
+                <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
                         {client?.balance > 0 && client?.role === 'primary' && (
                             <Pressable style={themed($actionChip)} onPress={() => setShowCollectModal(true)}>
@@ -307,6 +289,32 @@ const ClientDetails = ({ route }: any) => {
                             </Pressable>
                         )}
                     </ScrollView>
+                </View>
+
+                {/* Balance alert */}
+                {(client?.balance > 0) && client?.role === 'primary' && (
+                    <Pressable style={[themed($balanceAlert), { marginHorizontal: spacing.md }]} onPress={() => setShowCollectModal(true)}>
+                        <View style={{ flex: 1 }}>
+                            <Text size="xs" style={{ color: colors.error }}>Outstanding balance</Text>
+                            <Text weight="bold" size="sm" style={{ color: colors.error }}>₹{client.balance}</Text>
+                        </View>
+                        <View style={[themed($collectChip), { backgroundColor: colors.error }]}>
+                            <Text weight="semiBold" size="sm" style={{ color: colors.background }}>Collect</Text>
+                        </View>
+                    </Pressable>
+                )}
+
+                {client?.role === 'dependent' && client?.activeMembership?.primaryMemberId?.balance > 0 && (
+                    <View style={[themed($infoBanner), { marginHorizontal: spacing.md }]}>
+                        <Text size="xs" style={{ color: colors.textDim }}>
+                            Paid by {client.activeMembership.primaryMemberId.name} — Balance ₹{client.activeMembership.primaryMemberId.balance}
+                        </Text>
+                    </View>
+                )}
+
+                {/* Stats */}
+                <View style={{ paddingHorizontal: spacing.md }}>
+                    <ClientStatGrid stats={stats} />
                 </View>
 
                 {/* Current membership */}
@@ -469,12 +477,12 @@ const $balanceAlert: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     borderWidth: 1,
     borderColor: colors.error + '40',
     padding: spacing.md,
-    marginBottom: spacing.md,
+    // marginBottom: spacing.md,
 })
 
 const $collectChip: ThemedStyle<ViewStyle> = ({ spacing }) => ({
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: 12,
 })
 

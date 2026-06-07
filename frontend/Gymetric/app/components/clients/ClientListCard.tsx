@@ -43,9 +43,9 @@ export function ClientListCard({ client, index, onPress }: Props) {
         >
             <Pressable style={themed($card)} onPress={onPress}>
                 <ProfileInitialLogo name={client.name} size={52} imageUrl={client.profilePicture} />
-                <View style={{ flex: 1, marginLeft: 12 }}>
+                <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text weight="semiBold" size="md" numberOfLines={1} style={{ flex: 1 }}>{client.name}</Text>
+                        <Text weight="semiBold" size="sm" numberOfLines={1} style={{ flex: 1 }}>{client.name}</Text>
                         {hasBalance && (
                             <View style={[themed($badge), { backgroundColor: colors.errorBackground }]}>
                                 <Text size="xxs" weight="bold" style={{ color: colors.error }}>₹{client.balance}</Text>
@@ -53,7 +53,7 @@ export function ClientListCard({ client, index, onPress }: Props) {
                         )}
                     </View>
                     <Text size="xs" style={{ color: colors.textDim, marginTop: 2 }}>{client.phoneNumber}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8, flexWrap: 'wrap' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         {client.activeMembership?.planName && (
                             <Text size="xxs" style={{ color: colors.textDim }}>{client.activeMembership.planName}</Text>
                         )}
@@ -71,7 +71,7 @@ export function ClientListCard({ client, index, onPress }: Props) {
                         )}
                     </View>
                 </View>
-                <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                <View style={{ alignItems: 'flex-end', gap: 6, flexDirection: 'row' }}>
                     <View style={[themed($badge), { backgroundColor: st.bg }]}>
                         <Text size="xxs" weight="bold" style={{ color: st.text, textTransform: 'uppercase' }}>{client.membershipStatus}</Text>
                     </View>
@@ -89,7 +89,7 @@ const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
+    padding: spacing.sm,
     marginBottom: spacing.sm,
 })
 
