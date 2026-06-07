@@ -46,11 +46,6 @@ export function ClientListCard({ client, index, onPress }: Props) {
                 <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text weight="semiBold" size="sm" numberOfLines={1} style={{ flex: 1 }}>{client.name}</Text>
-                        {hasBalance && (
-                            <View style={[themed($badge), { backgroundColor: colors.errorBackground }]}>
-                                <Text size="xxs" weight="bold" style={{ color: colors.error }}>₹{client.balance}</Text>
-                            </View>
-                        )}
                     </View>
                     <Text size="xs" style={{ color: colors.textDim, marginTop: 2 }}>{client.phoneNumber}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -63,7 +58,7 @@ export function ClientListCard({ client, index, onPress }: Props) {
                                 <Text size="xxs" style={{ color: colors.palette.indigo500 }}>{daysLeft}d left</Text>
                             </View>
                         )}
-                        {daysLeft !== null && daysLeft < 0 && client.membershipStatus === 'active' && (
+                        {daysLeft !== null && daysLeft < 0 && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                                 <AlertCircle size={11} color={colors.error} />
                                 <Text size="xxs" style={{ color: colors.error }}>Expired</Text>
@@ -71,10 +66,18 @@ export function ClientListCard({ client, index, onPress }: Props) {
                         )}
                     </View>
                 </View>
-                <View style={{ alignItems: 'flex-end', gap: 6, flexDirection: 'row' }}>
-                    <View style={[themed($badge), { backgroundColor: st.bg }]}>
-                        <Text size="xxs" weight="bold" style={{ color: st.text, textTransform: 'uppercase' }}>{client.membershipStatus}</Text>
+                <View style={{ alignItems: 'center', gap: 6, flexDirection: 'row' }}>
+                    <View style={{ gap: 8 }}>
+                        <View style={[themed($badge), { backgroundColor: st.bg }]}>
+                            <Text size="xxs" weight="semiBold" style={{ color: st.text, textTransform: 'uppercase' }}>{client.membershipStatus}</Text>
+                        </View>
+                        {hasBalance && (
+                            <View style={[themed($badge), { backgroundColor: colors.errorBackground }]}>
+                                <Text size="xxs" weight="semiBold" style={{ color: colors.error }}>₹{client.balance}</Text>
+                            </View>
+                        )}
                     </View>
+
                     <ChevronRight size={18} color={colors.borderStrong} />
                 </View>
             </Pressable>

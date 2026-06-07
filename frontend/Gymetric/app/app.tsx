@@ -22,19 +22,9 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useToastConfig } from "./components/ToastConfig"
 import { trackEvent, AnalyticsEvents } from "./services/analyticsService"
+import ToastApp from "./components/common/ToastApp"
 
 export const NAVIGATION_PERSISTENCE_KEY = "NAVIGATION_STATE"
-
-function ToastApp() {
-  const toastConfig = useToastConfig()
-  return (
-    <Toast
-      config={toastConfig}
-      topOffset={initialWindowMetrics?.insets.top ?? 40}
-      visibilityTime={2000}
-    />
-  )
-}
 
 export function App() {
   const {

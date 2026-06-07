@@ -1,5 +1,5 @@
-import React from 'react'
-import { ScrollView, Pressable, ViewStyle } from 'react-native'
+import React, { useRef, useEffect } from 'react'
+import { FlatList, Pressable, ViewStyle } from 'react-native'
 import { Text } from '@/components/Text'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
@@ -18,18 +18,34 @@ type Props = {
 
 export function ClientFilterChips({ filters, selected, onSelect }: Props) {
     const { theme: { colors, typography }, themed } = useAppTheme()
+    const flatListRef = useRef<FlatList>(null)
+
+    useEffect(() => {
+        const index = filters.findIndex(f => f.id === selected)
+        if (index !== -1 && flatListRef.current) {
+            setTimeout(() => {
+                flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 })
+            }, 100)
+        }
+    }, [selected, filters])
 
     return (
-        <ScrollView
+        <FlatList
+            ref={flatListRef}
             horizontal
             showsHorizontalScrollIndicator={false}
+            data={filters}
+            keyExtractor={item => item.id}
             contentContainerStyle={{ paddingHorizontal: 4, gap: 8, paddingBottom: 4 }}
-        >
-            {filters.map((f) => {
+            onScrollToIndexFailed={(info) => {
+                setTimeout(() => {
+                    flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 })
+                }, 100)
+            }}
+            renderItem={({ item: f }) => {
                 const isActive = selected === f.id
                 return (
                     <Pressable
-                        key={f.id}
                         onPress={() => onSelect(f.id)}
                         style={[themed($chip), isActive && { backgroundColor: colors.primary, borderColor: colors.primary }]}
                     >
@@ -42,8 +58,8 @@ export function ClientFilterChips({ filters, selected, onSelect }: Props) {
                         </Text>
                     </Pressable>
                 )
-            })}
-        </ScrollView>
+            }}
+        />
     )
 }
 

@@ -62,7 +62,7 @@ export function MainNavigator() {
                 component={ClientsList}
                 listeners={{ tabPress: () => hapticsSelection() }}
                 options={{
-                    tabBarLabel: "Clients",
+                    tabBarLabel: "Members",
                     tabBarIcon: ({ color, size }) => (
                         <Users size={size} color={color} />
                     ),

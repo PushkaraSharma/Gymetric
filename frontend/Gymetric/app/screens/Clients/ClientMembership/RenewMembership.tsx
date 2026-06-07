@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { Screen } from '@/components/Screen';
 import { $styles } from '@/theme/styles';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import OnBoardingStepsHeader from '@/components/OnBoardingStepsHeader';
+import { ClientWizardStepper } from '@/components/clients/ClientWizardStepper';
 import { ClientOnBoardingType, MembershipRenewType, STEPS } from '@/utils/types';
 import SelectMembership from './SelectMembership';
 import { api } from '@/services/Api';
@@ -61,6 +61,11 @@ const RenewMembership = ({ route }: any) => {
             }
         )
     }
+
+    const handleStepperBack = () => {
+        if (currentStep === 'Membership') goBack()
+        else moveStep('prev')
+    };
 
     const moveStep = (direction: "next" | "prev") => {
         if (currentStep === 'Membership' && direction === 'next') {
@@ -133,7 +138,7 @@ const RenewMembership = ({ route }: any) => {
                 onCancel={() => setDatePicker(false)}
             />
             <View style={{ flex: 1 }}>
-                <OnBoardingStepsHeader moveStep={moveStep} currentStep={currentStep} steps={Steps} renew={true} />
+                <ClientWizardStepper steps={Steps} currentStep={currentStep} onBack={handleStepperBack} title="Renew Membership" />
                 <Animated.View style={[{ flex: 1 }, animatedStyle]}>
                     <ScrollView style={{ paddingHorizontal: 15, flex: 1 }}>
                         {

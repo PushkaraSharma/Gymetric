@@ -46,8 +46,8 @@ export class Api {
         await new Promise(resolve => setTimeout(resolve, 2000));
         return this.apiRequest(method, url, body, params, retries + 1);
       }
-
-      const message = response?.data?.message ?? "Network error";
+      console.log(response.data)
+      const message = response?.data?.message ?? response?.data?.error ?? "Network error";
       Toast.show({ type: 'error', text1: response.status == 401 ? 'Session Expired' : 'Internal error', text2: message, visibilityTime: 2000 });
       if (response.status === 401) remove('authToken');
       return { kind: 'error', message };

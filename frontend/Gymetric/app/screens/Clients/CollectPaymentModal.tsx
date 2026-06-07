@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, TextInput, Pressable, Modal, TouchableWithoutFeedback, ViewStyle } from 'react-native'
+import { View, TextInput, Pressable, Modal, TouchableWithoutFeedback, ViewStyle, Keyboard } from 'react-native'
 import { useAppTheme } from '@/theme/context'
 import { Text } from '@/components/Text'
 import { Button } from '@/components/Button'
@@ -11,6 +11,7 @@ import Toast from 'react-native-toast-message'
 import ShareReceiptModal from '@/components/ShareReceiptModal'
 import { useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo } from '@/redux/state/GymStates'
+import ToastApp from '@/components/common/ToastApp'
 
 type Props = {
     visible: boolean
@@ -62,59 +63,60 @@ const CollectPaymentModal = ({ visible, onClose, client, onSuccess }: Props) => 
 
     return (
         <>
-        <ShareReceiptModal
-            visible={showReceipt}
-            onClose={() => setShowReceipt(false)}
-            gym={gymInfo}
-            client={updatedClient || client}
-            payment={lastPayment}
-            receiptConfig={{}}
-        />
-        <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-            <TouchableWithoutFeedback onPress={onClose}>
-                <View style={themed($overlay)}>
-                    <TouchableWithoutFeedback>
-                        <View style={themed($container)}>
-                            <Text preset="subheading" weight="bold">Collect Payment</Text>
-                            <Text style={{ color: colors.textDim, marginVertical: spacing.xs }}>
-                                Outstanding: ₹{client?.balance || 0}
-                            </Text>
-                            <TextInput
-                                placeholder="Amount"
-                                keyboardType="number-pad"
-                                value={amount}
-                                onChangeText={setAmount}
-                                style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, marginBottom: 12, color: colors.text }}
-                                placeholderTextColor={colors.textDim}
-                            />
-                            <TextInput
-                                placeholder="Remarks (optional)"
-                                value={remarks}
-                                onChangeText={setRemarks}
-                                style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, marginBottom: 12, color: colors.text }}
-                                placeholderTextColor={colors.textDim}
-                            />
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.md }}>
-                                {['Cash', 'UPI', 'Card', 'Transfer'].map((type) => (
-                                    <Pressable
-                                        key={type}
-                                        onPress={() => setMethod(type)}
-                                        style={[themed($chip), method === type && { borderColor: colors.tint, borderWidth: 2 }]}
-                                    >
-                                        <MaterialCommunityIcons name={type === 'UPI' ? 'qrcode-scan' : type === 'Cash' ? 'cash-multiple' : type === 'Card' ? 'credit-card' : 'bank'} size={16} color={method === type ? colors.tint : colors.textDim} />
-                                        <Text size="xs" style={{ marginLeft: 4, color: method === type ? colors.tint : colors.textDim }}>{type}</Text>
-                                    </Pressable>
-                                ))}
+            <ShareReceiptModal
+                visible={showReceipt}
+                onClose={() => setShowReceipt(false)}
+                gym={gymInfo}
+                client={updatedClient || client}
+                payment={lastPayment}
+                receiptConfig={{}}
+            />
+            <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+                <TouchableWithoutFeedback onPress={onClose}>
+                    <View style={themed($overlay)}>
+                        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                            <View style={themed($container)}>
+                                <Text preset="subheading" weight="bold">Collect Payment</Text>
+                                <Text style={{ color: colors.textDim, marginVertical: spacing.xs }}>
+                                    Outstanding: ₹{client?.balance || 0}
+                                </Text>
+                                <TextInput
+                                    placeholder="Amount"
+                                    keyboardType="number-pad"
+                                    value={amount}
+                                    onChangeText={setAmount}
+                                    style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, marginBottom: 16, color: colors.text }}
+                                    placeholderTextColor={colors.textDim}
+                                />
+                                <TextInput
+                                    placeholder="Remarks (optional)"
+                                    value={remarks}
+                                    onChangeText={setRemarks}
+                                    style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, marginBottom: 16, color: colors.text }}
+                                    placeholderTextColor={colors.textDim}
+                                />
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: spacing.lg, marginTop: spacing.sm }}>
+                                    {['Cash', 'UPI', 'Card', 'Transfer'].map((type) => (
+                                        <Pressable
+                                            key={type}
+                                            onPress={() => setMethod(type)}
+                                            style={[themed($chip), method === type && { borderColor: colors.tint, borderWidth: 2 }]}
+                                        >
+                                            <MaterialCommunityIcons name={type === 'UPI' ? 'qrcode-scan' : type === 'Cash' ? 'cash-multiple' : type === 'Card' ? 'credit-card' : 'bank'} size={16} color={method === type ? colors.tint : colors.textDim} />
+                                            <Text size="xs" style={{ marginLeft: 4, color: method === type ? colors.tint : colors.textDim }}>{type}</Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                                    <Button title="Cancel" variant="outline" style={{ flex: 1 }} onPress={onClose} />
+                                    <Button title={loading ? 'Collecting...' : 'Collect'} style={{ flex: 1 }} onPress={handleCollect} disabled={loading} />
+                                </View>
                             </View>
-                            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                                <Button title="Cancel" variant="outline" style={{ flex: 1 }} onPress={onClose} />
-                                <Button title={loading ? 'Collecting...' : 'Collect'} style={{ flex: 1 }} onPress={handleCollect} disabled={loading} />
-                            </View>
-                        </View>
-                    </TouchableWithoutFeedback>
-                </View>
-            </TouchableWithoutFeedback>
-        </Modal>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+                <ToastApp />
+            </Modal>
         </>
     )
 }

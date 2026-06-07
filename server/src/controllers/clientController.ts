@@ -142,7 +142,9 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
         const endDate = expiryValidation.endDate!;
 
         let membershipStatus: string = 'active';
-        if (customStartDate > today) {
+        if (endDate < today) {
+            membershipStatus = plan.isTrial ? 'trial_expired' : 'expired';
+        } else if (customStartDate > today) {
             membershipStatus = 'future';
         } else if (plan.isTrial) {
             membershipStatus = 'trial';
@@ -174,7 +176,7 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
                     depClient = await Client.findByIdAndUpdate(dep.clientId, {
                         role: 'dependent',
                         membershipStatus,
-                        activeMembership: ['active', 'trial'].includes(membershipStatus) ? newAssignedMembership._id : undefined,
+                        activeMembership: ['active', 'trial', 'expired', 'trial_expired'].includes(membershipStatus) ? newAssignedMembership._id : undefined,
                         upcomingMembership: membershipStatus === 'future' ? newAssignedMembership._id : undefined,
                     }, { new: true, session });
                 } else {
@@ -183,7 +185,7 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
                         gymId,
                         role: 'dependent',
                         membershipStatus,
-                        activeMembership: ['active', 'trial'].includes(membershipStatus) ? newAssignedMembership._id : undefined,
+                        activeMembership: ['active', 'trial', 'expired', 'trial_expired'].includes(membershipStatus) ? newAssignedMembership._id : undefined,
                         upcomingMembership: membershipStatus === 'future' ? newAssignedMembership._id : undefined,
                     }], { session });
                 }
@@ -197,7 +199,7 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
             await newAssignedMembership.save({ session });
         }
 
-        primaryClient.activeMembership = ['active', 'trial'].includes(membershipStatus) ? newAssignedMembership._id : undefined;
+        primaryClient.activeMembership = ['active', 'trial', 'expired', 'trial_expired'].includes(membershipStatus) ? newAssignedMembership._id : undefined;
         primaryClient.upcomingMembership = membershipStatus === 'future' ? newAssignedMembership._id : undefined;
         applyPayment(primaryClient, amount, paymentResult.received, method, newAssignedMembership._id);
         primaryClient.membershipHistory.push(newAssignedMembership._id);
@@ -306,7 +308,9 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
         }
 
         const newEndDate = expiryValidation.endDate!;
-        const status = newStartDate > today ? 'future' : (plan.isTrial ? 'trial' : 'active');
+        const status = newEndDate < today
+            ? (plan.isTrial ? 'trial_expired' : 'expired')
+            : (newStartDate > today ? 'future' : (plan.isTrial ? 'trial' : 'active'));
 
         const [renewedMembership] = await AssignedMembership.create([{
             gymId,
@@ -331,7 +335,7 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
             if (depClient) {
                 depClient.role = 'dependent';
                 depClient.membershipStatus = status as any;
-                if (status === 'active' || status === 'trial') {
+                if (['active', 'trial', 'expired', 'trial_expired'].includes(status)) {
                     depClient.activeMembership = renewedMembership._id;
                 } else {
                     depClient.upcomingMembership = renewedMembership._id;
@@ -344,7 +348,7 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
         await renewedMembership.save({ session });
 
         let activityType: 'RENEWAL' | 'ADVANCE_RENEWAL' = 'RENEWAL';
-        if (status === 'active' || status === 'trial') {
+        if (['active', 'trial', 'expired', 'trial_expired'].includes(status)) {
             primaryClient.membershipStatus = status as any;
             primaryClient.activeMembership = renewedMembership._id;
         } else {
@@ -452,7 +456,7 @@ export const amendMembership = async (request: FastifyRequest, reply: FastifyRep
 
         if (!reason?.trim()) {
             await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: 'Reason is required for membership amendments.' });
+            return reply.status(400).send({ success: false, error: 'Reason is required for membership update.' });
         }
 
         const client = await Client.findOne({ _id: clientId, gymId }).session(session);
@@ -465,7 +469,7 @@ export const amendMembership = async (request: FastifyRequest, reply: FastifyRep
         const isUpcoming = String(client.upcomingMembership) === String(membershipId);
         if (!isActive && !isUpcoming) {
             await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: 'Can only amend active or upcoming membership.' });
+            return reply.status(400).send({ success: false, error: 'Can only update active or upcoming membership.' });
         }
 
         const membership = await AssignedMembership.findOne({ _id: membershipId, gymId }).session(session);
@@ -476,7 +480,7 @@ export const amendMembership = async (request: FastifyRequest, reply: FastifyRep
 
         if (!['active', 'future', 'trial', 'paused'].includes(membership.status)) {
             await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: 'Cannot amend expired or cancelled membership.' });
+            return reply.status(400).send({ success: false, error: 'Cannot update expired or cancelled membership.' });
         }
 
         const plan = planId
@@ -565,8 +569,8 @@ export const amendMembership = async (request: FastifyRequest, reply: FastifyRep
         await Activity.create([{
             gymId,
             type: 'MEMBERSHIP_AMENDED',
-            title: 'Membership amended',
-            description: `${client.name}'s ${membership.planName} amended: ${reason}`,
+            title: 'Membership updated',
+            description: `${client.name}'s ${membership.planName} updated: ${reason}`,
             memberId: client._id,
             date: today,
         }], { session });
@@ -794,11 +798,14 @@ export const deleteClient = async (request: any, reply: any) => {
             return reply.status(404).send({ success: false, message: 'Client not found' });
         }
 
-        if (!['expired', 'trial_expired'].includes(client.membershipStatus) && client.membershipHistory.length > 0) {
-            return reply.status(400).send({ success: false, message: 'Cannot delete: Client membership is not expired.' });
-        }
+        // Delete associated assigned memberships, activities and message logs
+        await Promise.all([
+            AssignedMembership.deleteMany({ primaryMemberId: id }),
+            Activity.deleteMany({ memberId: id }),
+            MessageLog.deleteMany({ clientId: id }),
+            Client.findByIdAndDelete(id)
+        ]);
 
-        await Client.findByIdAndDelete(id);
         invalidateClientCaches(gymId);
         return reply.send({ success: true, message: 'Client deleted successfully' });
     } catch (error: any) {

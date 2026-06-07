@@ -14,6 +14,8 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker'
 import { format } from 'date-fns'
 import Toast from 'react-native-toast-message'
 import { CustomModal } from '@/components/CustomModal'
+import { $styles } from '@/theme/styles'
+import { TextField } from '@/components/TextField'
 
 const EditMembershipScreen = ({ route }: any) => {
     const { client, membership } = route.params
@@ -63,7 +65,7 @@ const EditMembershipScreen = ({ route }: any) => {
 
     return (
         <Screen preset="fixed">
-            <Header title="Edit Membership" leftIcon="caretLeft" onLeftPress={goBack} />
+            <Header title="Edit Membership" leftIcon="caretLeft" onLeftPress={goBack} safeAreaTop backgroundColor={colors.surface} />
             <ScrollView contentContainerStyle={{ padding: spacing.md }}>
                 <SelectField
                     label="Plan"
@@ -74,25 +76,31 @@ const EditMembershipScreen = ({ route }: any) => {
                     labelKey="label"
                     valueKey="_id"
                 />
-                <Text weight="medium" style={{ marginBottom: 4 }}>Start Date</Text>
-                <Button title={format(startDate, 'dd MMM yyyy')} variant="outline" onPress={() => setDatePicker('start')} style={{ marginBottom: spacing.md }} />
-                <Text weight="medium" style={{ marginBottom: 4 }}>End Date</Text>
-                <Button title={format(endDate, 'dd MMM yyyy')} variant="outline" onPress={() => setDatePicker('end')} style={{ marginBottom: spacing.md }} />
-                <Text weight="medium" style={{ marginBottom: 4 }}>Total Amount</Text>
-                <TextInput
+                <Text style={$styles.label}>Start Date</Text>
+                <Button title={format(startDate, 'dd MMM yyyy')} variant="outline" onPress={() => setDatePicker('start')} style={{ marginBottom: spacing.md, backgroundColor: colors.surface }} />
+                <Text style={$styles.label}>End Date</Text>
+                <Button title={format(endDate, 'dd MMM yyyy')} variant="outline" onPress={() => setDatePicker('end')} style={{ marginBottom: spacing.md, backgroundColor: colors.surface }} />
+                <TextField
                     value={totalAmount}
                     onChangeText={setTotalAmount}
-                    keyboardType="number-pad"
-                    style={[themed($input)]}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    keyboardType='number-pad'
+                    label="Total Amount"
+                    placeholder="Enter total amount"
+                    returnKeyType="next"
+
                 />
-                <Text weight="medium" style={{ marginBottom: 4, marginTop: spacing.md }}>Reason (required)</Text>
-                <TextInput
+
+                <TextField
+                    label='Reason (required)'
                     value={reason}
                     onChangeText={setReason}
                     multiline
                     placeholder="Why is this being changed?"
-                    placeholderTextColor={colors.textDim}
-                    style={[themed($input), { minHeight: 80 }]}
+                    returnKeyType="next"
+                    style={{ minHeight: 80, textAlignVertical: 'top' }}
+                    onSubmitEditing={() => setShowConfirm(true)}
                 />
                 <Button title="Save Changes" onPress={() => setShowConfirm(true)} style={{ marginTop: spacing.lg }} />
             </ScrollView>
@@ -111,7 +119,7 @@ const EditMembershipScreen = ({ route }: any) => {
 
             <CustomModal
                 visible={showConfirm}
-                title="Confirm Amendment"
+                title="Confirm Update"
                 message={`Update ${client.name}'s ${membership.planName} membership?`}
                 confirmText={loading ? 'Saving...' : 'Confirm'}
                 onConfirm={handleSave}

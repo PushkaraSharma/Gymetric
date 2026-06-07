@@ -32,13 +32,13 @@ export const validateMembershipNotExpiredOnCreate = (
     const today = getISTMidnightToday();
     const endDate = calculateMembershipExpiry(startDate, durationInMonths, durationInDays);
 
-    if (endDate < today) {
-        return {
-            valid: false,
-            error: 'Membership would already be expired. Use a later start date or shorter plan.',
-            endDate,
-        };
-    }
+    // if (endDate < today) {
+    //     return {
+    //         valid: false,
+    //         error: 'Membership would already be expired. Use a later start date or shorter plan.',
+    //         endDate,
+    //     };
+    // }
     return { valid: true, endDate };
 };
 

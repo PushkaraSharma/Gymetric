@@ -171,6 +171,18 @@ const Home = () => {
                 hasMembershipPlans={hasMembershipPlans}
               />
 
+              <View style={{ marginBottom: theme.spacing.md }}>
+                <RevenueCard
+                  value={summary?.revenueThisMonth?.value ?? 0}
+                  trend={summary?.revenueThisMonth?.trend ?? null}
+                  retentionRate={summary?.retentionRate}
+                  avgRevenuePerMember={summary?.avgRevenuePerMember}
+                  todayCollection={summary?.todayCollection}
+                  onPress={() => navigate('Revenue')}
+                />
+              </View>
+
+
               {(summary?.expiringIn7Days ?? 0) > 0 && (
                 <ActionAlertCard
                   label="EXPIRING SOON"
@@ -194,17 +206,6 @@ const Home = () => {
                   variant="danger"
                 />
               )}
-
-              <View style={{ marginBottom: theme.spacing.md }}>
-                <RevenueCard
-                  value={summary?.revenueThisMonth?.value ?? 0}
-                  trend={summary?.revenueThisMonth?.trend ?? null}
-                  retentionRate={summary?.retentionRate}
-                  avgRevenuePerMember={summary?.avgRevenuePerMember}
-                  todayCollection={summary?.todayCollection}
-                  onPress={() => navigate('Revenue')}
-                />
-              </View>
 
               {(summary?.totalOutstanding ?? 0) > 0 && (
                 <ActionAlertCard

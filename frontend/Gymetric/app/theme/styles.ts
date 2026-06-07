@@ -2,6 +2,7 @@ import { ViewStyle } from "react-native"
 
 import { spacing } from "./spacing"
 import { colors } from "./colors"
+import { typography } from "./typography"
 
 /* Use this file to define styles that are used in multiple places in your app. */
 export const $styles = {
@@ -41,5 +42,11 @@ export const $styles = {
     shadowOpacity: 0.15,
     shadowRadius: 12.81,
     elevation: 16,
+  },
+  label: {
+    fontSize: typography.s,
+    color: colors.textDim,
+    marginBottom: spacing.xxs,
+    fontWeight: typography.medium
   }
 }

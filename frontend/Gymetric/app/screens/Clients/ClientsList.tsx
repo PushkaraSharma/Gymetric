@@ -77,7 +77,7 @@ const ClientsList = ({ route }: any) => {
         case 'Trial': return c.membershipStatus === 'trial'
         case 'Has Balance': return (c.balance || 0) > 0
         case 'Paused': return c.membershipStatus === 'paused'
-        case 'Inactive': return c.membershipStatus === 'cancelled'
+        // case 'Inactive': return c.membershipStatus === 'cancelled'
         case 'Expiring Soon':
           if (!c.activeMembership?.endDate) return false
           const endDate = parseISO(c.activeMembership.endDate)
