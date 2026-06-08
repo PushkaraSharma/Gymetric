@@ -21,7 +21,8 @@ export const saveReceiptFormatPreference = (value: ReceiptFormatPreference) => {
 }
 
 export const getAutoShareReceiptPreference = () => {
-    return loadString(AUTO_SHARE_RECEIPT_KEY) === 'true'
+    const stored = loadString(AUTO_SHARE_RECEIPT_KEY)
+    return stored === 'false' ? false : true
 }
 
 export const saveAutoShareReceiptPreference = (value: boolean) => {
