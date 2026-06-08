@@ -56,6 +56,7 @@ const ChangePassword = () => {
                 leftIcon="caretLeft"
                 onLeftPress={goBack}
                 backgroundColor={colors.surface}
+                safeAreaTop
             />
             <ScrollView style={{ flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.md }}>
                 <Text size='xs' style={{ marginBottom: spacing.lg, color: colors.textDim }}>
@@ -90,8 +91,8 @@ const ChangePassword = () => {
                 />
 
                 <Button
-                    text="Update Password"
-                    preset="reversed"
+                    title="Update Password"
+                    variant="primary"
                     style={{ marginTop: spacing.xl }}
                     onPress={handleUpdate}
                     disabled={!newPassword || !confirmPassword}

@@ -35,6 +35,8 @@ export class Api {
   }
 
   async apiRequest<T>(method: "get" | "post" | "put" | "patch" | "delete", url: string, body?: any, params?: any, retries = 0): Promise<ApiResult> {
+    const baseURL = this.apisauce.axiosInstance.defaults.baseURL ?? ''
+    // console.log(`\n🌐 [API] ${method.toUpperCase()} ${url}\n   Base URL : ${baseURL}\n   Full URL : ${baseURL}${url}${params ? `\n   Params   : ${JSON.stringify(params)}` : ''}\n`)
     const response: ApiResponse<BackendResponse<T>> = await this.apisauce[method](url, body, { params });
     if (!response.ok) {//Network fail
       const isRetryable = response.problem === 'TIMEOUT_ERROR' || response.problem === 'CONNECTION_ERROR' || response.problem === 'NETWORK_ERROR';
@@ -44,18 +46,13 @@ export class Api {
         await new Promise(resolve => setTimeout(resolve, 2000));
         return this.apiRequest(method, url, body, params, retries + 1);
       }
-
-      const message = response?.data?.message ?? "Network error";
+      const message = response?.data?.message ?? response?.data?.error ?? "Network error";
       Toast.show({ type: 'error', text1: response.status == 401 ? 'Session Expired' : 'Internal error', text2: message, visibilityTime: 2000 });
       if (response.status === 401) remove('authToken');
       return { kind: 'error', message };
     }
     return { kind: 'ok', data: response?.data?.data as T };
   };
-
-  async loginAPI(username: string, password: string) {
-    return this.apiRequest('post', '/api/auth/login', { username, password });
-  }
 
   verifyOtp = async (firebaseIdToken: string) => {
     return await this.apiRequest('post', '/api/auth/verify-otp', { firebaseIdToken });
@@ -121,6 +118,42 @@ export class Api {
 
   renewMembership = async (body: any) => {
     return await this.apiRequest('patch', '/api/client/renew', body);
+  };
+
+  collectPayment = async (body: any) => {
+    return await this.apiRequest('post', '/api/client/collect-payment', body);
+  };
+
+  amendMembership = async (body: any) => {
+    return await this.apiRequest('patch', '/api/client/membership/amend', body);
+  };
+
+  pauseMembership = async (body: any) => {
+    return await this.apiRequest('post', '/api/client/membership/pause', body);
+  };
+
+  resumeMembership = async (body: any) => {
+    return await this.apiRequest('post', '/api/client/membership/resume', body);
+  };
+
+  getClientActivity = async (id: string) => {
+    return await this.apiRequest('get', `/api/client/activity?id=${id}`, null);
+  };
+
+  savePushToken = async (expoPushToken: string) => {
+    return await this.apiRequest('post', '/api/user/push-token', { expoPushToken });
+  };
+
+  updatePushPrefs = async (body: any) => {
+    return await this.apiRequest('patch', '/api/user/push-prefs', body);
+  };
+
+  getPushPrefs = async () => {
+    return await this.apiRequest('get', '/api/user/push-prefs');
+  };
+
+  updateReceiptSettings = async (body: any) => {
+    return await this.apiRequest('post', '/api/settings/receipt', body);
   };
 
   createMembership = async (body: any) => {
@@ -205,6 +238,41 @@ export class Api {
       return { kind: 'error', message };
     }
     return { kind: 'ok', data: response?.data?.data };
+  };
+
+  uploadReceiptAsset = async (imageUri: string, type: 'signature' | 'logo' = 'signature') => {
+    const formData = new FormData();
+    const isPngDataUri = imageUri.startsWith('data:image/png');
+    const filename = isPngDataUri ? `${type}.png` : imageUri.split('/').pop() || `${type}.jpg`;
+    const match = /\.(\w+)$/.exec(filename);
+    const mimeType = isPngDataUri ? 'image/png' : match ? `image/${match[1]}` : 'image/jpeg';
+
+    formData.append('file', {
+      uri: imageUri,
+      name: filename,
+      type: mimeType,
+    } as any);
+
+    const response: any = await this.apisauce.post(
+      `/api/upload/receipt-asset?type=${type}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const message = response?.data?.message ?? "Upload failed";
+      Toast.show({ type: 'error', text1: 'Upload Error', text2: message });
+      return { kind: 'error', message };
+    }
+    return { kind: 'ok', data: response?.data?.data };
+  };
+
+  seedDemoData = async (action: 'seed' | 'clear') => {
+    return this.apiRequest('post', '/api/gym/seed-demo-data', { action });
   };
 
 }

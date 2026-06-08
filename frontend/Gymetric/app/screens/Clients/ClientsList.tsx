@@ -1,336 +1,230 @@
-import { FlatList, Pressable, ScrollView, TouchableOpacity, View, ViewStyle, TextStyle, RefreshControl } from 'react-native'
+import { FlatList, Pressable, View, ViewStyle, TextStyle, RefreshControl, StyleSheet } from 'react-native'
 import React, { useCallback, useMemo, useState } from 'react'
-import { Screen } from '@/components/Screen'
-import { $styles } from '@/theme/styles'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { Text } from '@/components/Text'
 import { ThemedStyle } from '@/theme/types'
-import { Search, Plus, ChevronRight, Filter } from 'lucide-react-native'
+import { Plus, Users } from 'lucide-react-native'
 import { useAppTheme } from '@/theme/context'
-import { TextField } from '@/components/TextField'
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
-import { selectAllClients, setLoading } from '@/redux/state/GymStates'
+import { selectAllClients } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { navigate } from '@/navigators/navigationUtilities'
 import { useFocusEffect } from '@react-navigation/native'
-import { addDays, isAfter, isBefore, parseISO } from 'date-fns';
-import ProfileInitialLogo from '@/components/ProfileInitialLogo'
-import { MotiView } from 'moti'
+import { addDays, isAfter, isBefore, parseISO } from 'date-fns'
 import { Skeleton } from '@/components/Skeleton'
+import { ClientSearchBar } from '@/components/clients/ClientSearchBar'
+import { ClientFilterChips } from '@/components/clients/ClientFilterChips'
+import { ClientListCard } from '@/components/clients/ClientListCard'
+import { Button } from '@/components/Button'
+import { spacing } from '@/theme/spacing'
+
+const FILTER_IDS = ['All Clients', 'Active', 'Expiring Soon', 'Has Balance', 'Expired', 'Trial', 'Paused', 'Inactive'] as const
 
 const ClientsList = ({ route }: any) => {
-  const { themed, theme: { colors, spacing, typography } } = useAppTheme();
-  const dispatch = useAppDispatch();
-  const clients = useAppSelector(selectAllClients);
+  const { themed, theme: { colors, spacing, typography } } = useAppTheme()
+  const dispatch = useAppDispatch()
+  const clients = useAppSelector(selectAllClients)
 
-  const filters = ['All Clients', 'Expiring Soon', 'Active', 'Expired', 'Trial', 'Inactive'];
-  const [searchText, setSearchText] = useState<string>('');
-  const [selectedFilter, setSelectedFilter] = useState<string>(route?.params?.filter || 'All Clients');
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [searchText, setSearchText] = useState('')
+  const [selectedFilter, setSelectedFilter] = useState<string>(route?.params?.filter || 'All Clients')
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
-  // Update filter if navigation params change while screen is already mounted
   React.useEffect(() => {
-    if (route?.params?.filter) {
-      setSelectedFilter(route.params.filter);
-    }
-  }, [route?.params?.filter]);
+    if (route?.params?.filter) setSelectedFilter(route.params.filter)
+  }, [route?.params?.filter])
+
+  const filterCounts = useMemo(() => {
+    if (!clients?.length) return {}
+    const now = new Date()
+    const sevenDays = addDays(now, 7)
+    const counts: Record<string, number> = { 'All Clients': clients.length }
+    clients.forEach((c: any) => {
+      if (c.membershipStatus === 'active') counts['Active'] = (counts['Active'] || 0) + 1
+      if (c.membershipStatus === 'expired' || c.membershipStatus === 'trial_expired') counts['Expired'] = (counts['Expired'] || 0) + 1
+      if (c.membershipStatus === 'trial') counts['Trial'] = (counts['Trial'] || 0) + 1
+      if ((c.balance || 0) > 0) counts['Has Balance'] = (counts['Has Balance'] || 0) + 1
+      if (c.membershipStatus === 'paused') counts['Paused'] = (counts['Paused'] || 0) + 1
+      if (c.membershipStatus === 'cancelled') counts['Inactive'] = (counts['Inactive'] || 0) + 1
+      if (c.activeMembership?.endDate) {
+        const end = parseISO(c.activeMembership.endDate)
+        if (c.membershipStatus === 'active' && isAfter(end, now) && isBefore(end, sevenDays)) {
+          counts['Expiring Soon'] = (counts['Expiring Soon'] || 0) + 1
+        }
+      }
+    })
+    return counts
+  }, [clients])
+
+  const filters = useMemo(() =>
+    FILTER_IDS.map(id => ({ id, label: id, count: filterCounts[id] })),
+    [filterCounts]
+  )
 
   const filteredClients = useMemo(() => {
-    if (!clients?.length) return [];
+    if (!clients?.length) return []
     const now = new Date()
-    const sevenDaysFromNow = addDays(now, 7);
-    const search = searchText.trim().toLowerCase();
-    const searchFiltered = search ? clients.filter((c) => c.name?.toLowerCase().includes(search) || c.phoneNumber?.includes(search)) : clients;
+    const sevenDaysFromNow = addDays(now, 7)
+    const search = searchText.trim().toLowerCase()
+    const searchFiltered = search
+      ? clients.filter((c: any) => c.name?.toLowerCase().includes(search) || c.phoneNumber?.includes(search))
+      : clients
 
-    return searchFiltered.filter((c) => {
+    return searchFiltered.filter((c: any) => {
       switch (selectedFilter) {
-        case 'Active':
-          return c.membershipStatus === 'active';
-        case 'Expired':
-          return c.membershipStatus === 'expired' || c.membershipStatus === 'trial_expired';
-        case 'Trial':
-          return c.membershipStatus === 'trial';
-        case 'Inactive':
-          return c.membershipStatus === 'cancelled';
+        case 'Active': return c.membershipStatus === 'active'
+        case 'Expired': return c.membershipStatus === 'expired' || c.membershipStatus === 'trial_expired'
+        case 'Trial': return c.membershipStatus === 'trial'
+        case 'Has Balance': return (c.balance || 0) > 0
+        case 'Paused': return c.membershipStatus === 'paused'
+        // case 'Inactive': return c.membershipStatus === 'cancelled'
         case 'Expiring Soon':
-          if (!c.activeMembership?.endDate) return false;
-          const endDate = parseISO(c.activeMembership.endDate);
-          return (c.membershipStatus === 'active' && isAfter(endDate, now) && isBefore(endDate, sevenDaysFromNow));
-        case 'All Clients':
-        default:
-          return true;
+          if (!c.activeMembership?.endDate) return false
+          const endDate = parseISO(c.activeMembership.endDate)
+          return c.membershipStatus === 'active' && isAfter(endDate, now) && isBefore(endDate, sevenDaysFromNow)
+        default: return true
       }
-    });
-  }, [clients, selectedFilter, searchText]);
+    })
+  }, [clients, selectedFilter, searchText])
 
   const getClients = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    // Stale-while-revalidate: only show skeleton if we have NO data to show yet
-    else if (!clients || clients.length === 0) setIsLoading(true);
+    if (isRefresh) setRefreshing(true)
+    else if (!clients?.length) setIsLoading(true)
+    await api.allClients()
+    if (isRefresh) setRefreshing(false)
+    setIsLoading(false)
+  }
 
-    await api.allClients();
+  useFocusEffect(useCallback(() => { getClients() }, []))
 
-    if (isRefresh) setRefreshing(false);
-    setIsLoading(false);
-  };
-
-  const onRefresh = useCallback(() => {
-    getClients(true);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      getClients();
-    }, [])
-  );
-
-  const filterChip = (filter: string, index: number) => {
-    const isSelected = selectedFilter === filter;
-    return (
-      <TouchableOpacity
-        key={index}
-        style={[themed($chip), isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }]}
-        onPress={() => setSelectedFilter(filter)}
-      >
-        <Text style={themed({ color: isSelected ? colors.background : colors.textDim, fontFamily: isSelected ? typography.primary.semiBold : typography.primary.normal })} size="xs">
-          {filter}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const StatusChip = (st: string) => {
-    let bg: any = colors.surface;
-    let txt: any = colors.textDim;
-
-    if (st === 'active') { bg = colors.successBackground; txt = colors.success; }
-    else if (st === 'trial') { bg = colors.primaryBackground; txt = colors.primary; }
-    else if (st === 'future') { bg = colors.palette.slate100; txt = colors.palette.slate600; }
-    else if (st === 'expired' || st === 'trial_expired') { bg = colors.errorBackground; txt = colors.error; }
-
-    return (
-      <View style={[themed($statusChip), { backgroundColor: bg }]}>
-        <Text size='xxs' style={themed({ color: txt, fontFamily: typography.primary.bold, textTransform: 'uppercase' })}>{st}</Text>
-      </View>
-    );
-  };
-
-  const RenderItem = ({ item }: any) => (
-    <MotiView
-      from={{ opacity: 0, translateY: 10 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      style={themed($itemContainer)}
-    >
-      <Pressable
-        style={themed($item)}
-        onPress={() => navigate('Client Profile', { data: item })}
-      >
-        <View style={$itemContent}>
-          <ProfileInitialLogo name={item.name} size={44} imageUrl={item.profilePicture} />
-          <View style={$itemTextContainer}>
-            <Text style={themed($itemName)}>{item.name}</Text>
-            <Text style={themed($itemPhone)}>{item.phoneNumber}</Text>
-          </View>
-        </View>
-        <View style={$itemRight}>
-          {StatusChip(item.membershipStatus)}
-          <ChevronRight size={18} color={colors.borderStrong} style={{ marginLeft: 8 }} />
-        </View>
-      </Pressable>
-    </MotiView>
-  );
+  const activeCount = filterCounts['Active'] || 0
+  const balanceCount = filterCounts['Has Balance'] || 0
 
   return (
-    <Screen
-      preset="fixed"
-      safeAreaEdges={["top"]}
-      backgroundColor={colors.background}
-      contentContainerStyle={[$styles.flex1]}
-    >
+    <SafeAreaView style={themed($container)} edges={['top']}>
       <View style={themed($header)}>
-        <Text preset="heading" style={themed($headerTitle)}>Clients</Text>
-        <Pressable style={themed($addBtn)} onPress={() => navigate('Add Client')}>
-          <Plus size={24} color={colors.background} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={themed($pageTitle)}>Members</Text>
+          <Text size="xs" style={{ color: colors.textDim, marginTop: 2 }}>
+            {clients?.length || 0} total · {activeCount} active{balanceCount > 0 ? ` · ${balanceCount} with dues` : ''}
+          </Text>
+        </View>
       </View>
 
-      <View style={themed($searchContainer)}>
-        <TextField
-          value={searchText}
-          onChangeText={setSearchText}
-          placeholder="Search members..."
-          returnKeyType="search"
-          LeftAccessory={() => (
-            <View style={{ paddingLeft: 12 }}>
-              <Search size={20} color={colors.textDim} />
-            </View>
-          )}
-        />
-      </View>
-
-      <View style={$filterWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={$filterContent}
-        >
-          {filters.map((filter, index) => filterChip(filter, index))}
-        </ScrollView>
-      </View>
-
-      {isLoading ? (
-        <ScrollView contentContainerStyle={themed($listContent)}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <View key={i} style={themed($itemContainer)}>
-              <View style={themed($item)}>
-                <View style={$itemContent}>
-                  <Skeleton width={44} height={44} borderRadius={22} style={{ marginRight: 12 }} />
-                  <View style={$itemTextContainer}>
-                    <Skeleton width={120} height={16} style={{ marginBottom: 4 }} />
-                    <Skeleton width={80} height={12} />
-                  </View>
-                </View>
-                <Skeleton width={60} height={24} borderRadius={8} />
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-      ) : (
+      <View style={{ paddingHorizontal: spacing.md, flex: 1 }}>
         <FlatList
           data={filteredClients}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.text}
-              colors={[colors.primary]}
-            />
-          }
           keyExtractor={(item) => item._id || item.phoneNumber}
-          renderItem={RenderItem}
-          contentContainerStyle={themed($listContent)}
-          ListEmptyComponent={
-            <View style={$emptyContainer}>
-              <Text style={themed({ color: colors.textDim })}>No members found</Text>
+          renderItem={({ item, index }) => (
+            <ClientListCard
+              client={item}
+              index={index}
+              onPress={() => navigate('Client Profile', { data: item })}
+            />
+          )}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          stickyHeaderIndices={[0]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => getClients(true)} tintColor={colors.primary} colors={[colors.primary]} />
+          }
+          ListHeaderComponent={
+            <View style={themed($stickyHeader)}>
+              <ClientSearchBar value={searchText} onChangeText={setSearchText} />
+              <ClientFilterChips filters={filters} selected={selectedFilter} onSelect={setSelectedFilter} />
             </View>
           }
+          ListHeaderComponentStyle={{ backgroundColor: colors.background }}
+          ListEmptyComponent={
+            !isLoading ? (
+              <View style={themed($empty)}>
+                <View style={[themed($emptyIcon), { backgroundColor: colors.primaryBackground }]}>
+                  <Users size={32} color={colors.primary} />
+                </View>
+                <Text weight="semiBold" size="md">No members found</Text>
+                <Text size="sm" style={{ color: colors.textDim, textAlign: 'center', marginTop: 4 }}>
+                  {searchText ? 'Try a different search term' : selectedFilter !== 'All Clients' ? 'No members match this filter' : 'Add your first gym member to get started'}
+                </Text>
+                {!searchText && selectedFilter === 'All Clients' && (
+                  <Button title="Add Member" onPress={() => navigate('Add Client')} style={{ marginTop: spacing.lg, minWidth: 160 }} />
+                )}
+              </View>
+            ) : null
+          }
         />
-      )}
-    </Screen>
+        {isLoading ? (
+          <View style={{ marginTop: spacing.md }}>
+            {[1, 2, 3, 4, 5].map(i => (
+              <Skeleton key={i} width="100%" height={80} borderRadius={20} style={{ marginBottom: spacing.sm }} />
+            ))}
+          </View>
+        ) : null}
+      </View>
+
+      <Pressable style={themed($fab)} onPress={() => navigate('Add Client')}>
+        <Plus size={26} color={colors.background} />
+      </Pressable>
+    </SafeAreaView>
   )
 }
 
 export default ClientsList
 
+const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  backgroundColor: colors.background,
+})
+
 const $header: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.md,
+  paddingTop: spacing.sm,
+  paddingBottom: spacing.xs,
 })
 
-const $headerTitle: ThemedStyle<TextStyle> = ({ typography }) => ({
-  fontFamily: typography.secondary.bold,
+const $stickyHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.background,
+  paddingTop: spacing.sm,
+  paddingBottom: spacing.sm,
+  zIndex: 2,
+})
+
+const $pageTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
+  fontWeight: typography.bold,
   fontSize: 32,
+  color: colors.text,
+  lineHeight: 40
 })
 
-const $addBtn: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $fab: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  position: 'absolute',
+  bottom: 24,
+  right: 24,
+  width: 60,
+  height: 60,
+  borderRadius: 30,
   backgroundColor: colors.primary,
-  borderRadius: 16,
-  width: 44,
-  height: 44,
   alignItems: 'center',
   justifyContent: 'center',
   shadowColor: colors.primary,
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.2,
-  shadowRadius: 8,
-  elevation: 4,
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.35,
+  shadowRadius: 12,
+  elevation: 8,
 })
 
-const $searchContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  marginBottom: spacing.md,
+const $empty: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: 'center',
+  marginTop: 60,
+  paddingHorizontal: spacing.xl,
 })
 
-const $filterWrapper: ViewStyle = {
+const $emptyIcon: ThemedStyle<ViewStyle> = () => ({
+  width: 72,
+  height: 72,
+  borderRadius: 36,
+  alignItems: 'center',
+  justifyContent: 'center',
   marginBottom: 16,
-}
-
-const $filterContent: ViewStyle = {
-  paddingHorizontal: 24,
-  alignItems: 'center',
-}
-
-const $filterIconContainer: ViewStyle = {
-  marginRight: 12,
-}
-
-const $chip: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-  marginRight: spacing.xs,
-  borderRadius: 20,
-  paddingHorizontal: 16,
-  paddingVertical: 8,
-  backgroundColor: colors.surface,
-  borderWidth: 1,
-  borderColor: colors.border,
 })
-
-const $listContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingBottom: spacing.xl,
-})
-
-const $itemContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginBottom: spacing.sm,
-})
-
-const $item: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: 12,
-  backgroundColor: colors.surface,
-  borderRadius: 16,
-  borderWidth: 1,
-  borderColor: colors.border,
-})
-
-const $itemContent: ViewStyle = {
-  flexDirection: 'row',
-  alignItems: 'center',
-  flex: 1,
-}
-
-const $itemTextContainer: ViewStyle = {
-  flex: 1,
-}
-
-const $itemName: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
-  fontFamily: typography.primary.semiBold,
-  fontSize: 15,
-  color: colors.text,
-})
-
-const $itemPhone: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 13,
-  color: colors.textDim,
-  marginTop: 2,
-})
-
-const $itemRight: ViewStyle = {
-  flexDirection: 'row',
-  alignItems: 'center',
-}
-
-const $statusChip: ViewStyle = {
-  paddingVertical: 4,
-  paddingHorizontal: 8,
-  borderRadius: 8,
-}
-
-const $emptyContainer: ViewStyle = {
-  alignItems: 'center',
-  marginTop: 40,
-}

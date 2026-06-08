@@ -16,16 +16,18 @@ export type ClientOnBoardingType = {
     primaryDetails: ClientDetailsType,
     dependents: DependentType[]
     amount: number,
+    amountReceived: number,
     method: string,
-    paymentReceived: boolean,
+    paymentReceived?: boolean,
     startDate: Date
 }
 
 export type MembershipRenewType = {
     id: number,
     amount: number,
+    amountReceived: number,
     method: string,
-    paymentReceived: boolean,
+    paymentReceived?: boolean,
     startDate: Date,
     dependents: DependentType[]
 }
@@ -43,6 +45,7 @@ export type BackendResponse<T> = {
     success: boolean
     data?: T
     message?: string
+    error?: string
 }
 
 export type ApiResult = { kind: "ok"; data: any } | { kind: "error"; message: string }

@@ -10,8 +10,8 @@ const IST_TIMEZONE = 'Asia/Kolkata';
 /**
  * Returns the current time in IST
  */
-export const getNowIST = () => {
-    return dayjs().tz(IST_TIMEZONE);
+export const getNowIST = (date?: Date | string) => {
+    return dayjs(date).tz(IST_TIMEZONE);
 };
 
 /**

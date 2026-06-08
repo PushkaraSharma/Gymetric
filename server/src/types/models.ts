@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { MembershipStatus, PaymentMethod, ActivityType, OnboardingPurpose } from '../utils/Constants.js';
+import { MembershipStatus, PaymentMethod, ActivityType, OnboardingPurpose, PaymentType } from '../utils/Constants.js';
 
 export interface IClient {
     _id: Types.ObjectId;
@@ -13,6 +13,7 @@ export interface IClient {
     profilePicture?: string;
     gymId: Types.ObjectId;
     balance: number;
+    isSeeded?: boolean;
     role: 'primary' | 'dependent';
     membershipStatus: MembershipStatus;
     activeMembership?: Types.ObjectId;
@@ -24,6 +25,7 @@ export interface IClient {
         method: PaymentMethod;
         date: Date;
         remarks?: string;
+        type?: PaymentType;
     }[];
     createdAt: Date;
     updatedAt: Date;
@@ -40,6 +42,13 @@ export interface IAssignedMembership {
     endDate: Date;
     status: MembershipStatus;
     totalAmount: number;
+    pauseHistory?: {
+        startedAt: Date;
+        endedAt?: Date;
+        days?: number;
+        reason?: string;
+    }[];
+    totalPausedDays?: number;
     createdAt: Date;
     updatedAt: Date;
 }

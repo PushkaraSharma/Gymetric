@@ -5,11 +5,11 @@ import {
   BottomSheetModal,
 } from "@gorhom/bottom-sheet";
 import React, { forwardRef, Ref, useImperativeHandle, useRef } from "react";
-import { TouchableOpacity, View, ViewStyle } from "react-native";
+import { Pressable, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
-import { ListItem } from "./ListItem";
+import { Text } from "./Text";
 import { TextField, TextFieldProps } from "./TextField";
 import { spacing } from "@/theme/spacing";
 import { useAppTheme } from "@/theme/context";
@@ -123,10 +123,10 @@ export const SelectField = forwardRef(function SelectField(
             : (props) => (
               <BottomSheetFooter
                 {...props}
-                style={themed($bottomSheetFooter)}
+                style={themed($bottomSheetFooter) as ViewStyle}
                 bottomInset={bottom}
               >
-                <Button text="Dismiss" preset="filled" onPress={dismissOptions} />
+                <Button title="Dismiss" variant="primary" onPress={dismissOptions} />
               </BottomSheetFooter>
             )
         }
@@ -135,19 +135,18 @@ export const SelectField = forwardRef(function SelectField(
           style={{ marginBottom: bottom + (multiple ? spacing.xl * 2 : 0) }}
           data={options}
           keyExtractor={(o: any) => String(o?.[valueKey])}
-          renderItem={({ item, index }: any) => (
-            <ListItem
-              text={String(item?.[labelKey])}
-              topSeparator={index !== 0}
-              style={themed($listItem)}
-              rightIcon={
-                value.some((v) => v?.[valueKey] === item?.[valueKey])
-                  ? "check"
-                  : undefined
-              } rightIconColor={colors.error}
-              onPress={() => updateValue(item)}
-            />
-          )}
+          renderItem={({ item, index }: any) => {
+            const selected = value.some((v) => v?.[valueKey] === item?.[valueKey]);
+            return (
+              <Pressable
+                onPress={() => updateValue(item)}
+                style={[themed($listItem), index !== 0 && themed($topSeparator)]}
+              >
+                <Text style={{ flex: 1, color: colors.text }}>{String(item?.[labelKey])}</Text>
+                {selected && <Icon icon="check" size={18} color={colors.primary} />}
+              </Pressable>
+            );
+          }}
         />
       </BottomSheetModal>
     </>
@@ -159,6 +158,15 @@ const $bottomSheetFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingBottom: spacing.xs
 });
 
-const $listItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $listItem: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm + 2,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+});
+
+const $topSeparator: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  borderTopWidth: 1,
+  borderTopColor: colors.border,
 });

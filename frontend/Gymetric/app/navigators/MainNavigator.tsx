@@ -1,20 +1,21 @@
-import { TextStyle, ViewStyle } from "react-native"
+import React, { useEffect } from "react"
+import { Platform } from "react-native"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAppTheme } from "@/theme/context"
-import type { ThemedStyle } from "@/theme/types"
 import Home from "@/screens/Home/Home"
 import ClientsList from "@/screens/Clients/ClientsList"
 import Setting from "@/screens/Setting/Setting"
-import { Octicons } from '@expo/vector-icons'
-import { useEffect } from "react"
+import { LayoutDashboard, Users, Settings } from "lucide-react-native"
+import { hapticsSelection } from "@/utils/haptics"
 import { api } from "@/services/Api"
 
 const Tab = createBottomTabNavigator();
 
 export function MainNavigator() {
-    const { bottom } = useSafeAreaInsets()
-    const { themed, theme: { colors } } = useAppTheme()
+    const { theme } = useAppTheme()
+    const insets = useSafeAreaInsets()
+    const isAndroid = Platform.OS === 'android';
 
     useEffect(() => {
         api.gymInfo(); //later will move to initial fetch
@@ -22,64 +23,62 @@ export function MainNavigator() {
     }, []);
 
     return (
-            <Tab.Navigator
-                screenOptions={{
-                    headerShown: false,
-                    tabBarHideOnKeyboard: true,
-                    tabBarStyle: themed([$tabBar, { height: bottom + 70 }]),
-                    tabBarActiveTintColor: colors.text,
-                    tabBarInactiveTintColor: colors.text,
-                    tabBarLabelStyle: themed($tabBarLabel),
-                    tabBarItemStyle: themed($tabBarItem),
+        <Tab.Navigator
+            screenOptions={{
+                headerShown: false,
+                tabBarStyle: {
+                    backgroundColor: theme.colors.surface,
+                    borderTopWidth: 1,
+                    borderTopColor: theme.colors.border,
+                    paddingTop: 5,
+                    ...(isAndroid ? {
+                        paddingBottom: Math.max(insets.bottom, 10),
+                        height: 55 + Math.max(insets.bottom, 10),
+                    } : {}),
+                    ...theme.shadows.medium,
+                },
+                tabBarActiveTintColor: theme.colors.primary,
+                tabBarInactiveTintColor: theme.colors.textDim,
+                tabBarLabelStyle: {
+                    fontSize: theme.typography.xxs,
+                    fontWeight: theme.typography.semiBold,
+                }
+            }}
+        >
+            <Tab.Screen
+                name="Home"
+                component={Home}
+                listeners={{ tabPress: () => hapticsSelection() }}
+                options={{
+                    tabBarLabel: 'Home',
+                    tabBarIcon: ({ color, size }) => (
+                        <LayoutDashboard size={size} color={color} />
+                    ),
                 }}
-            >
-                <Tab.Screen
-                    name="Home"
-                    component={Home}
-                    options={{
-                        tabBarLabel: 'Home',
-                        tabBarIcon: ({ focused }) => (
-                            <Octicons name="home" size={25} color={focused ? colors.tint : colors.tintInactive} />
-                        ),
-                    }}
-                />
+            />
 
-                <Tab.Screen
-                    name="Clients"
-                    component={ClientsList}
-                    options={{
-                        tabBarLabel: "Clients",
-                        tabBarIcon: ({ focused }) => (
-                            <Octicons name="people" size={25} color={focused ? colors.tint : colors.tintInactive} />
-                        ),
-                    }}
-                />
-                <Tab.Screen
-                    name="Setting"
-                    component={Setting}
-                    options={{
-                        tabBarLabel: 'Setting',
-                        tabBarIcon: ({ focused }) => (
-                            <Octicons name="gear" size={25} color={focused ? colors.tint : colors.tintInactive} />
-                        ),
-                    }}
-                />
-            </Tab.Navigator>
+            <Tab.Screen
+                name="Clients"
+                component={ClientsList}
+                listeners={{ tabPress: () => hapticsSelection() }}
+                options={{
+                    tabBarLabel: "Members",
+                    tabBarIcon: ({ color, size }) => (
+                        <Users size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Setting"
+                component={Setting}
+                listeners={{ tabPress: () => hapticsSelection() }}
+                options={{
+                    tabBarLabel: 'Setting',
+                    tabBarIcon: ({ color, size }) => (
+                        <Settings size={size} color={color} />
+                    ),
+                }}
+            />
+        </Tab.Navigator>
     )
 }
-
-const $tabBar: ThemedStyle<ViewStyle> = ({ colors }) => ({
-    backgroundColor: colors.background,
-    borderTopColor: colors.transparent,
-})
-
-const $tabBarItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    paddingTop: spacing.md,
-})
-
-const $tabBarLabel: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
-    fontSize: 12,
-    fontFamily: typography.primary.medium,
-    lineHeight: 16,
-    color: colors.text,
-})

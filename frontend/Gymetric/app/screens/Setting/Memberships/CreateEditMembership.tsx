@@ -14,6 +14,8 @@ import { useAppTheme } from '@/theme/context'
 import { api } from '@/services/Api'
 import Toast from 'react-native-toast-message'
 import { goBack } from '@/navigators/navigationUtilities'
+import { incrementActionAndReview } from '@/services/storeReviewService'
+import { trackEvent, AnalyticsEvents } from '@/services/analyticsService'
 import { Switch } from '@/components/Toggle/Switch'
 import { Checkbox } from '@/components/Toggle/Checkbox'
 import { Text } from '@/components/Text'
@@ -77,6 +79,10 @@ const CreateEditMembership = ({ navigation, route }: any) => {
     if (response.kind === 'ok') {
       dispatch(setGymInfo({ gymInfo: response.data }));
       Toast.show({ type: 'success', text1: `Membership ${membership ? 'updated' : 'created'} successfully` });
+      if (!membership) {
+        trackEvent(AnalyticsEvents.MEMBERSHIP_PLAN_CREATED);
+        incrementActionAndReview();
+      }
       goBack();
     }
     dispatch(setLoading({ loading: false }));
@@ -93,6 +99,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
         backgroundColor={colors.surface}
         leftIcon="caretLeft"
         onLeftPress={goBack}
+        safeAreaTop={true}
         RightActionComponent={membership ? <Ionicons name="trash-outline" size={24} color={colors.error} style={{ marginRight: 10 }} onPress={() => setDeleteModalVisible(true)} /> : undefined}
       />
       <View style={{ flex: 1 }}>
@@ -120,8 +127,8 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             blurOnSubmit={false}
           />
           <View style={{ marginBottom: 20 }}>
-            <Text preset='formLabel'>Plan Type</Text>
-            <View style={[$styles.flexRow, { marginTop: 10 }]}>
+            <Text style={themed($label)}>Plan Type</Text>
+            <View style={[$styles.flexRow]}>
               {
                 ['Indivisual', 'Couple', 'Group'].map((type: string, index: number) => (
                   <Pressable key={index} style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => { handleForm('planType', type.toLowerCase()) }}>
@@ -156,7 +163,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             placeholder="0.00"
             returnKeyType="next"
             onSubmitEditing={() => durationRef.current?.focus()}
-            LeftAccessory={() => <Text style={{ alignSelf: 'center', marginLeft: 15, color: colors.textDim }} size='md'>₹</Text>}
+            LeftAccessory={() => <Text style={{ alignSelf: 'center', color: colors.textDim }} size='md'>₹</Text>}
           />
           <View style={[themed($card), { padding: spacing.md, paddingHorizontal: 0 }]}>
             <View style={[$styles.flexRow, { paddingHorizontal: spacing.md, borderBottomWidth: 1, paddingBottom: 10, borderColor: colors.border }]}>
@@ -169,8 +176,8 @@ const CreateEditMembership = ({ navigation, route }: any) => {
             </View>
           </View>
           <View style={{ marginTop: 5, marginBottom: 15 }}>
-            <Text preset='formLabel'>Duration Settings</Text>
-            <View style={[$styles.flexRow, { marginTop: 10, backgroundColor: colors.surface, padding: 4, borderRadius: 10, borderWidth: 1, borderColor: colors.border }]}>
+            <Text style={themed($label)}>Duration Settings</Text>
+            <View style={[$styles.flexRow, { backgroundColor: colors.surface, padding: 4, borderRadius: 10, borderWidth: 1, borderColor: colors.border }]}>
               {['Months', 'Days'].map((type: string, index: number) => (
                 <Pressable key={index} style={{ width: '48%', alignItems: 'center', padding: 8, backgroundColor: type === durationType ? colors.tint : colors.surface, borderRadius: 8 }} onPress={() => { setDurationType(type as 'Months') }}>
                   <Text weight='medium' style={{ color: type === durationType ? colors.surface : colors.textDim }}>{type}</Text>
@@ -203,7 +210,7 @@ const CreateEditMembership = ({ navigation, route }: any) => {
           /> */}
         </ScrollView>
         <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-          <Button text={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
+          <Button title={loading ? `${membership ? 'Updating...' : 'Creating'}` : `${membership ? 'Update' : 'Create'} Membership`} variant="primary" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={createOrUpdate} />
         </View>
       </View>
       <CustomModal
@@ -244,4 +251,11 @@ const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   marginBottom: spacing.md,
   borderWidth: 1,
   borderColor: colors.border,
+})
+
+const $label: ThemedStyle<ViewStyle> = ({ colors, spacing, typography }) => ({
+  fontSize: typography.s,
+  color: colors.textDim,
+  marginBottom: spacing.xs,
+  fontWeight: typography.medium,
 })

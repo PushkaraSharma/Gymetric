@@ -1,4 +1,4 @@
-import { Platform, ScrollView, StyleSheet, View, ViewStyle, Alert } from 'react-native'
+import { Platform, ScrollView, StyleSheet, View, ViewStyle } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
@@ -6,14 +6,14 @@ import { Ionicons } from '@expo/vector-icons'
 import { goBack, navigate } from '@/navigators/navigationUtilities'
 import { Button } from '@/components/Button'
 import { api } from '@/services/Api'
-import DateTimePickerModal from "react-native-modal-datetime-picker";
+import DateTimePickerModal from "react-native-modal-datetime-picker"
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
-import { selectLoading, setLoading } from '@/redux/state/GymStates'
+import { selectGymInfo, selectLoading, setLoading } from '@/redux/state/GymStates'
 import Toast from 'react-native-toast-message'
 import { CustomModal } from '@/components/CustomModal'
 import { ClientDateType, ClientOnBoardingType, STEPS } from '@/utils/types'
 import PersonalInfo from './CreateUpdateClient/PersonalInfo'
-import OnBoardingStepsHeader from '@/components/OnBoardingStepsHeader'
+import { ClientWizardStepper } from '@/components/clients/ClientWizardStepper'
 import SelectMembership from './ClientMembership/SelectMembership'
 import MembershipPayment from './ClientMembership/MembershipPayment'
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated'
@@ -21,27 +21,36 @@ import { DEVICE_WIDTH } from '@/utils/Constants'
 import { alreadyExists } from '@/utils/Helper'
 import { differenceInYears, format } from 'date-fns'
 import { useAppTheme } from '@/theme/context'
+import { incrementActionAndReview } from '@/services/storeReviewService'
+import { trackEvent, AnalyticsEvents } from '@/services/analyticsService'
+import { spacing } from '@/theme/spacing'
+import { getAutoShareReceiptPreference } from '@/utils/receiptPreferences'
+import ShareReceiptModal from '@/components/ShareReceiptModal'
 
 const CreateClient = () => {
-    const dispatch = useAppDispatch();
-    const loader = useAppSelector(selectLoading);
-    const { theme: { colors }, themed } = useAppTheme()
+    const dispatch = useAppDispatch()
+    const loader = useAppSelector(selectLoading)
+    const gymInfo = useAppSelector(selectGymInfo)
+    const { theme: { colors } } = useAppTheme()
 
-    const Steps = ["Personal Info", "Membership", "Payment"] as STEPS[];
-    const [currentStep, setCurrentStep] = useState<STEPS>("Personal Info");
-    const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { name: '', phoneNumber: '', age: null, birthday: null, gender: 'Male', anniversaryDate: null, onboardingPurpose: 'General Fitness' }, dependents: [], amount: 0, method: 'Cash', paymentReceived: true, startDate: new Date() });
-    const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
-    const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([]);
-    const [datePicker, setDatePicker] = useState<ClientDateType>({ visible: false, type: 'startDate' });
-    const [validNumber, setValidNumber] = useState<boolean>(true);
-    const [duplicateNo, setDuplicateNo] = useState<string>('');
-    const [isNoMembershipModalVisible, setIsNoMembershipModalVisible] = useState(false);
+    const Steps = ["Personal Info", "Membership", "Payment"] as STEPS[]
+    const [currentStep, setCurrentStep] = useState<STEPS>("Personal Info")
+    const [form, setForm] = useState<ClientOnBoardingType>({
+        primaryDetails: { name: '', phoneNumber: '', age: null, birthday: null, gender: 'Male', anniversaryDate: null, onboardingPurpose: 'General Fitness' },
+        dependents: [], amount: 0, amountReceived: 0, method: 'Cash', startDate: new Date()
+    })
+    const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([])
+    const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([])
+    const [datePicker, setDatePicker] = useState<ClientDateType>({ visible: false, type: 'startDate' })
+    const [validNumber, setValidNumber] = useState<boolean>(true)
+    const [duplicateNo, setDuplicateNo] = useState<string>('')
+    const [isNoMembershipModalVisible, setIsNoMembershipModalVisible] = useState(false)
+    const [showReceipt, setShowReceipt] = useState(false)
+    const [receiptClient, setReceiptClient] = useState<any>(null)
+    const [receiptPayment, setReceiptPayment] = useState<any>(null)
 
-    const translateX = useSharedValue(0);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateX: translateX.value }],
-    }));
+    const translateX = useSharedValue(0)
+    const animatedStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }))
 
     const animateStep = (direction: 'next' | 'prev') => {
         translateX.value = withTiming(
@@ -56,70 +65,76 @@ const CreateClient = () => {
 
     const validateSteps = () => {
         if (currentStep === 'Personal Info') {
-            return (memberships.length > 0 && !!form.primaryDetails?.name && form.primaryDetails?.phoneNumber?.length === 10 && validNumber)
-        } else if (currentStep === 'Membership') {
-            return !duplicateNo && !(form.dependents.length + 1 < selectedMembership?.[0]?.membersAllowed);
-        } else {
-            return true;
+            return memberships.length > 0 && !!form.primaryDetails?.name && form.primaryDetails?.phoneNumber?.length === 10 && validNumber
         }
-    };
+        if (currentStep === 'Membership') {
+            return !!selectedMembership?.[0] && !duplicateNo && !(form.dependents.length + 1 < selectedMembership?.[0]?.membersAllowed)
+        }
+        const received = form.amountReceived ?? 0
+        return received >= 0 && received <= (form.amount || 0)
+    }
 
     const handleForm = (field: string, value: any, scope: 'root' | 'primaryDetails' = 'root') => {
         setForm(prev => {
             if (scope === 'primaryDetails') {
-                let updatedDetails = { ...prev.primaryDetails, [field]: value };
+                const updatedDetails = { ...prev.primaryDetails, [field]: value }
                 if (field === 'birthday' && value) {
-                    updatedDetails.age = differenceInYears(new Date(), value);
+                    updatedDetails.age = differenceInYears(new Date(), value)
                 }
-                return { ...prev, primaryDetails: updatedDetails };
+                return { ...prev, primaryDetails: updatedDetails }
             }
-            return { ...prev, [field]: value };
-        });
+            return { ...prev, [field]: value }
+        })
         if (field === 'phoneNumber' && value.length === 10 && alreadyExists(value)) {
-            setValidNumber(false);
+            setValidNumber(false)
         } else {
-            setValidNumber(true);
+            setValidNumber(true)
         }
-    };
+    }
 
     const moveStep = (direction: "next" | "prev") => {
         if (currentStep === 'Membership' && direction === 'next') {
-            const invalidDependent = form.dependents.find(dep => !dep.name?.trim() || !(dep.phoneNumber.length === 10));
+            const invalidDependent = form.dependents.find(dep => !dep.name?.trim() || !(dep.phoneNumber.length === 10))
             if (invalidDependent) {
-                Toast.show({ type: 'error', text1: 'Incomplete depedent details' });
-                return;
-            } else if (selectedMembership?.[0]?.planType === 'couple' && (form.primaryDetails.gender === form.dependents?.[0]?.gender)) {
-                Toast.show({ type: 'error', text1: 'For Couple plan gender cannot be same' });
-                return;
+                Toast.show({ type: 'error', text1: 'Incomplete dependent details' })
+                return
+            }
+            if (selectedMembership?.[0]?.planType === 'couple' && form.primaryDetails.gender === form.dependents?.[0]?.gender) {
+                Toast.show({ type: 'error', text1: 'For Couple plan gender cannot be same' })
+                return
             }
         }
-        animateStep(direction);
+        animateStep(direction)
         setCurrentStep((prevStep) => {
             const currentIndex = Steps.indexOf(prevStep)
-            if (direction === "next") {
-                return Steps[Math.min(currentIndex + 1, Steps.length - 1)]
-            }
+            if (direction === "next") return Steps[Math.min(currentIndex + 1, Steps.length - 1)]
             return Steps[Math.max(currentIndex - 1, 0)]
         })
-    };
+    }
+
+    const handleStepperBack = () => {
+        if (currentStep === 'Personal Info') goBack()
+        else moveStep('prev')
+    }
 
     const getMemberships = async () => {
-        const response = await api.allMemberships();
+        const response = await api.allMemberships()
         if (response.kind === 'ok') {
             if (response.data.length === 0) {
-                setIsNoMembershipModalVisible(true);
-                return;
+                setIsNoMembershipModalVisible(true)
+                return
             }
-            const memberships = response.data.filter((item: any) => item.active).map((item: any) => ({ ...item, label: `${item.planName} - ₹${item.price}` }));
-            const firstMem = memberships?.[0];
-            setSelectedMembership([firstMem]);
-            handleForm('amount', firstMem?.price);
-            setMemberships(memberships);
+            const activePlans = response.data.filter((item: any) => item.active).map((item: any) => ({ ...item, label: `${item.planName} - ₹${item.price}` }))
+            const firstMem = activePlans?.[0]
+            setSelectedMembership([firstMem])
+            handleForm('amount', firstMem?.price)
+            handleForm('amountReceived', firstMem?.price)
+            setMemberships(activePlans)
         }
-    };
+    }
 
     const handleCreate = async () => {
-        dispatch(setLoading({ loading: true }));
+        dispatch(setLoading({ loading: true }))
         const body = {
             ...form,
             startDate: format(form.startDate, 'yyyy-MM-dd'),
@@ -129,94 +144,124 @@ const CreateClient = () => {
                 birthday: form.primaryDetails.birthday ? format(form.primaryDetails.birthday, 'yyyy-MM-dd') : null,
                 anniversaryDate: form.primaryDetails.anniversaryDate ? format(form.primaryDetails.anniversaryDate, 'yyyy-MM-dd') : null,
             }
-        };
-        const response = await api.createClient(body);
+        }
+        const response = await api.createClient(body)
 
         if (response.kind == 'ok') {
-            // Upload profile picture if provided
             if (form.primaryDetails.profilePicture) {
-                const uploadResponse = await api.uploadClientProfilePicture(
-                    response.data._id,
-                    form.primaryDetails.profilePicture
-                );
-                if (uploadResponse.kind === 'error') {
-                    console.log('Profile picture upload failed, but client created');
-                }
+                await api.uploadClientProfilePicture(response.data._id, form.primaryDetails.profilePicture)
             }
-
-            dispatch(setLoading({ loading: false }));
-            Toast.show({ type: 'success', text1: 'Client onboarded successfully' });
-            goBack();
+            dispatch(setLoading({ loading: false }))
+            Toast.show({ type: 'success', text1: 'Member onboarded successfully' })
+            trackEvent(AnalyticsEvents.CLIENT_ADDED)
+            incrementActionAndReview()
+            if (getAutoShareReceiptPreference() && (form.amountReceived ?? 0) > 0) {
+                setReceiptClient(response.data)
+                setReceiptPayment({
+                    amount: form.amountReceived,
+                    method: form.method,
+                    date: new Date(),
+                    remarks: (form.amountReceived ?? 0) < (form.amount || 0) ? `Partial payment (₹${form.amountReceived} of ₹${form.amount})` : 'Membership',
+                })
+                setShowReceipt(true)
+            } else {
+                goBack()
+            }
         } else {
-            dispatch(setLoading({ loading: false }));
+            dispatch(setLoading({ loading: false }))
         }
-    };
+    }
 
-    useEffect(() => {
-        getMemberships();
-    }, []);
+    useEffect(() => { getMemberships() }, [])
 
     return (
         <Screen
             preset="fixed"
             contentContainerStyle={[$styles.flex1]}
-            safeAreaEdges={["bottom"]}
+            safeAreaEdges={['bottom']}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
             <DateTimePickerModal
                 isVisible={datePicker.visible}
                 mode="date"
-                minimumDate={datePicker.type === 'startDate' ? new Date() : new Date('1900-01-01')}
+                minimumDate={datePicker.type === 'startDate' ? new Date(new Date().setFullYear(new Date().getFullYear() - 1)) : new Date('1900-01-01')}
                 date={datePicker.type === 'birthday' ? (form.primaryDetails.birthday ?? new Date()) : datePicker.type === 'anniversaryDate' ? (form.primaryDetails.anniversaryDate ?? new Date()) : (form.startDate ?? new Date())}
-                onConfirm={async (date) => {
-                    handleForm(datePicker.type, date, (datePicker.type === 'birthday' || datePicker.type === 'anniversaryDate') ? 'primaryDetails' : 'root');
-                    setDatePicker({ visible: false, type: 'startDate' });
+                onConfirm={(date) => {
+                    handleForm(datePicker.type, date, (datePicker.type === 'birthday' || datePicker.type === 'anniversaryDate') ? 'primaryDetails' : 'root')
+                    setDatePicker({ visible: false, type: 'startDate' })
                 }}
                 onCancel={() => setDatePicker({ visible: false, type: 'startDate' })}
             />
-            <View style={{ flex: 1 }}>
-                <OnBoardingStepsHeader moveStep={moveStep} currentStep={currentStep} steps={Steps} />
-                <Animated.View style={[{ flex: 1 }, animatedStyle]}>
-                    <ScrollView style={{ paddingHorizontal: 15, flex: 1 }}>
-                        {
-                            currentStep === 'Personal Info' ?
-                                <PersonalInfo handleForm={(field: string, value: any) => { handleForm(field, value, 'primaryDetails') }} form={form.primaryDetails} setDatePicker={setDatePicker} validNumber={validNumber} /> :
-                                currentStep === 'Membership' ?
-                                    <SelectMembership setForm={setForm} memberships={memberships} setSelectedMembership={setSelectedMembership} selectedMembership={selectedMembership} handleForm={handleForm} handleDatePicker={() => { setDatePicker({ visible: true, type: 'startDate' }) }} form={form}
-                                        duplicateNo={duplicateNo} setDuplicateNo={setDuplicateNo} />
-                                    :
-                                    <MembershipPayment handleForm={handleForm} form={form} selectedMembership={selectedMembership?.[0]} />
-                        }
-                    </ScrollView>
-                </Animated.View>
-                <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-                    <Button disabled={!validateSteps()} disabledStyle={{ opacity: 0.4 }} text={currentStep === 'Payment' ? (loader ? 'Finishing...' : 'Finish Setup') : 'Next Step'} preset="reversed" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.white} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleCreate() : moveStep('next') }} />
-                </View>
+            <ShareReceiptModal
+                visible={showReceipt}
+                onClose={() => {
+                    setShowReceipt(false)
+                    goBack()
+                }}
+                gym={gymInfo}
+                client={receiptClient}
+                payment={receiptPayment}
+                membership={{
+                    planName: selectedMembership?.[0]?.planName,
+                    startDate: form.startDate,
+                }}
+            />
+
+            <ClientWizardStepper steps={Steps} currentStep={currentStep} onBack={handleStepperBack} title="Add Member" />
+
+            <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+                <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    {currentStep === 'Personal Info' ? (
+                        <PersonalInfo
+                            handleForm={(field, value) => handleForm(field, value, 'primaryDetails')}
+                            form={form.primaryDetails}
+                            setDatePicker={setDatePicker}
+                            validNumber={validNumber}
+                        />
+                    ) : currentStep === 'Membership' ? (
+                        <SelectMembership
+                            setForm={setForm}
+                            memberships={memberships}
+                            setSelectedMembership={setSelectedMembership}
+                            selectedMembership={selectedMembership}
+                            handleForm={handleForm}
+                            handleDatePicker={() => setDatePicker({ visible: true, type: 'startDate' })}
+                            form={form}
+                            duplicateNo={duplicateNo}
+                            setDuplicateNo={setDuplicateNo}
+                        />
+                    ) : (
+                        <MembershipPayment handleForm={handleForm} form={form} selectedMembership={selectedMembership?.[0]} />
+                    )}
+                </ScrollView>
+            </Animated.View>
+
+            <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: spacing.md, borderColor: colors.border, backgroundColor: colors.background }}>
+                <Button
+                    disabled={!validateSteps()}
+                    title={currentStep === 'Payment' ? (loader ? 'Finishing...' : 'Complete Onboarding') : 'Continue'}
+                    variant="primary"
+                    RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name="arrow-forward" size={20} color={colors.white} style={{ marginLeft: 5 }} />}
+                    onPress={async () => { currentStep === 'Payment' ? await handleCreate() : moveStep('next') }}
+                />
             </View>
+
             <CustomModal
                 visible={isNoMembershipModalVisible}
                 title="No Memberships Found"
-                message="You need to create a membership plan before adding a client."
+                message="Create a membership plan before adding a member."
                 confirmText="Create"
                 cancelText="Go Back"
-                onCancel={() => {
-                    setIsNoMembershipModalVisible(false);
-                    goBack();
-                }}
-                onConfirm={() => {
-                    setIsNoMembershipModalVisible(false);
-                    goBack();
-                    navigate("Memberships");
-                }}
+                onCancel={() => { setIsNoMembershipModalVisible(false); goBack() }}
+                onConfirm={() => { setIsNoMembershipModalVisible(false); goBack(); navigate("Memberships") }}
             />
         </Screen>
     )
 }
 
 export default CreateClient
-
-const styles = StyleSheet.create({})
-
-
-
-

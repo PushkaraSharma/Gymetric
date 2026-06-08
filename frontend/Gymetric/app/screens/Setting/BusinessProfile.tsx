@@ -3,7 +3,6 @@ import React, { useRef, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Header } from '@/components/Header'
-import HeaderbackButton from '@/components/HeaderbackButton'
 import { Button } from '@/components/Button'
 import { Ionicons, MaterialCommunityIcons, Octicons } from '@expo/vector-icons'
 import { TextField } from '@/components/TextField'
@@ -79,7 +78,7 @@ const BusinessProfile = () => {
       safeAreaEdges={["bottom"]}
       {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
     >
-      <Header title='Business Profile' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
+      <Header title='Business Profile' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} safeAreaTop={true} />
       <View style={{ flex: 1 }}>
         <ScrollView style={{ paddingHorizontal: 15 }}>
           <View>
@@ -109,7 +108,7 @@ const BusinessProfile = () => {
             placeholder="Enter gym name"
             returnKeyType="next"
             onSubmitEditing={() => phoneRef.current?.focus()}
-            RightAccessory={() => <MaterialCommunityIcons name='dumbbell' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            LeftAccessory={() => <MaterialCommunityIcons name='dumbbell' size={20} color={colors.tintInactive} />}
           />
           <TextField
             ref={phoneRef}
@@ -122,7 +121,7 @@ const BusinessProfile = () => {
             placeholder="Enter contact number"
             returnKeyType="next"
             onSubmitEditing={() => ownerRef.current?.focus()}
-            RightAccessory={() => <MaterialCommunityIcons name='phone' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            LeftAccessory={() => <MaterialCommunityIcons name='phone' size={20} color={colors.tintInactive} />}
           />
           <TextField
             ref={ownerRef}
@@ -134,7 +133,7 @@ const BusinessProfile = () => {
             placeholder="Enter owner name"
             returnKeyType="next"
             onSubmitEditing={() => emailRef.current?.focus()}
-            RightAccessory={() => <Octicons name='person' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            LeftAccessory={() => <Octicons name='person' size={20} color={colors.tintInactive} />}
           />
           <TextField
             ref={emailRef}
@@ -147,7 +146,7 @@ const BusinessProfile = () => {
             keyboardType="email-address"
             returnKeyType="next"
             onSubmitEditing={() => addressRef.current?.focus()}
-            RightAccessory={() => <MaterialCommunityIcons name='email' size={20} color={colors.tintInactive} style={{ alignSelf: 'center', marginRight: 10 }} />}
+            LeftAccessory={() => <MaterialCommunityIcons name='email' size={20} color={colors.tintInactive} />}
           />
           <TextField
             ref={addressRef}
@@ -161,11 +160,11 @@ const BusinessProfile = () => {
             returnKeyType="done"
             onSubmitEditing={updateGym}
             blurOnSubmit={true}
-            RightAccessory={() => <Ionicons name='location-sharp' size={20} color={colors.tintInactive} style={{ marginRight: 10, marginTop: 10 }} />}
+            LeftAccessory={() => <Ionicons name='location-sharp' size={20} color={colors.tintInactive} />}
           />
         </ScrollView>
         <View style={themed($footer)}>
-          <Button text={loading ? 'Saving...' : 'Save Changes'} preset="reversed" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={updateGym} />
+          <Button title={loading ? 'Saving...' : 'Save Changes'} variant="primary" LeftAccessory={() => <Ionicons name='save' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={updateGym} />
         </View>
       </View>
       <ImagePickerSheet />

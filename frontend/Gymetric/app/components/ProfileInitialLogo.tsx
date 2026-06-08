@@ -50,5 +50,5 @@ const $image = (size: number): ImageStyle => ({
 
 const $text: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
     color: colors.primary,
-    fontFamily: typography.primary.bold,
+    fontWeight: typography.bold,
 })

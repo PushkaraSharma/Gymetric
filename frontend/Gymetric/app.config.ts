@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     name: "GymKarta",
     slug: "Gymetric",
     scheme: "gymkarta",
-    version: "1.0.0",
+    version: "2.0.0",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
     icon: "./assets/images/app-icon.png",
@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         allowBackup: false,
         edgeToEdgeEnabled: true,
         googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
-        versionCode: 3,
+        versionCode: 4,
     },
     ios: {
         buildNumber: '3',
@@ -45,7 +45,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     plugins: [
         "@react-native-community/datetimepicker",
-        "expo-localization",
         "expo-font",
         [
             "expo-splash-screen",
@@ -87,14 +86,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         ],
         "@react-native-firebase/app",
         "@react-native-firebase/auth",
+        "@react-native-firebase/crashlytics",
+        [
+            "expo-notifications",
+            {
+                icon: "./assets/images/app-icon.png",
+                color: "#4F46E5",
+            },
+        ],
     ],
     experiments: {
         tsconfigPaths: true,
     },
     extra: {
-        ignite: {
-            version: "11.4.0",
-        },
         eas: {
             projectId: "2e469ab5-5d58-49e3-afe3-b245dfa7d3c7",
         },

@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { uploadClientProfilePicture, uploadGymLogo, deleteClientProfilePicture } from '../controllers/uploadController.js';
+import { uploadClientProfilePicture, uploadGymLogo, deleteClientProfilePicture, uploadReceiptAsset } from '../controllers/uploadController.js';
 
 export async function uploadRoutes(fastify: FastifyInstance) {
     fastify.addHook('onRequest', fastify.authenticate);
@@ -9,6 +9,9 @@ export async function uploadRoutes(fastify: FastifyInstance) {
 
     // POST /api/upload/gym-logo - Upload gym logo
     fastify.post('/gym-logo', uploadGymLogo);
+
+    // POST /api/upload/receipt-asset - Upload receipt logo/signature
+    fastify.post('/receipt-asset', uploadReceiptAsset);
 
     // DELETE /api/upload/client-profile/:clientId - Delete client profile picture
     fastify.delete('/client-profile/:clientId', deleteClientProfilePicture);

@@ -1,25 +1,23 @@
-
-import React, { useState, useEffect } from "react"
-import { View, ViewStyle, TextStyle, ActivityIndicator, Image } from "react-native"
+import React, { useState, useEffect, useRef } from "react"
+import { View, ActivityIndicator, Image, TouchableOpacity, Keyboard, StyleSheet, Text, ScrollView, Platform } from "react-native"
 import { Screen } from "@/components/Screen"
-import { Text } from "@/components/Text"
 import { TextField } from "@/components/TextField"
 import { Button } from "@/components/Button"
 import { useAppTheme } from "@/theme/context"
-import { ThemedStyle } from "@/theme/types"
 import { useNavigation, useRoute } from "@react-navigation/native"
 import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
+import { trackEvent, AnalyticsEvents, setAnalyticsUser } from '@/services/analyticsService'
+import { setCrashlyticsUser } from '@/services/crashlyticsService'
 import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
-import { useRef } from "react"
 import { VersionFooter } from "@/components/VersionFooter"
 import { ChevronLeft } from "lucide-react-native"
-import { TouchableOpacity, Keyboard } from "react-native"
 
 export const OTPVerificationScreen = () => {
-    const { themed, theme: { colors, spacing } } = useAppTheme()
+    const { theme, isDark } = useAppTheme()
+    const styles = getStyles(theme)
     const navigation = useNavigation<any>()
     const route = useRoute<any>()
     const dispatch = useAppDispatch()
@@ -30,7 +28,6 @@ export const OTPVerificationScreen = () => {
     const [error, setError] = useState("")
     const [otpSending, setOtpSending] = useState(false)
 
-    // Resend OTP State
     const [confirmResult, setConfirmResult] = useState(confirmation)
     const [timer, setTimer] = useState(30)
     const [canResend, setCanResend] = useState(false)
@@ -49,12 +46,9 @@ export const OTPVerificationScreen = () => {
         return () => clearInterval(interval)
     }, [timer])
 
-    // Handle Auto-Verification & Auth State Changes
     useEffect(() => {
         const unsubscribe = getAuth().onAuthStateChanged((user) => {
             if (user) {
-                // Determine if we need to verify this user with backend
-                // This covers: Auto-verification OR Manual verification state change
                 finalizeLogin(user)
             }
         })
@@ -86,8 +80,6 @@ export const OTPVerificationScreen = () => {
 
         try {
             const idToken = await user.getIdToken()
-
-            // 2. Verify with Backend
             const response = await api.verifyOtp(idToken)
 
             if (response.kind === 'ok') {
@@ -99,10 +91,12 @@ export const OTPVerificationScreen = () => {
                     save("userData", response.data)
                     api.setAuthToken(token)
                     dispatch(setLoggedInUser(response.data))
+                    trackEvent(AnalyticsEvents.SIGN_IN)
+                    setAnalyticsUser({ id: response.data?.userId ?? response.data?.phoneNumber, username: response.data?.username ?? '' })
+                    setCrashlyticsUser(response.data?.userId ?? null)
                 }
             } else {
                 setError("Verification failed.")
-                // Allow retrying if backend verification failed
                 isFinalizing.current = false
             }
         } catch (e: any) {
@@ -111,8 +105,6 @@ export const OTPVerificationScreen = () => {
             isFinalizing.current = false
         } finally {
             setIsLoading(false)
-            // Note: We don't reset isFinalizing.current to false on success 
-            // because we don't want to re-process the same user session.
         }
     }
 
@@ -123,33 +115,22 @@ export const OTPVerificationScreen = () => {
             return
         }
 
-        // Prevent double submission of the manual verification button
         if (isVerifying.current) return
         isVerifying.current = true
         setIsLoading(true)
         setError("")
 
         try {
-            // 1. Confirm OTP with Firebase
-            // If successful, onAuthStateChanged will likely fire and handle finalizeLogin.
-            // But we can also call it explicitly to be safe/swift.
             const result = await confirmResult.confirm(codeToVerify)
-
-            // If confirm succeeds, we proceed. finalizeLogin has its own guard.
             if (result && result.user) {
                 await finalizeLogin(result.user)
             }
-
         } catch (e: any) {
             console.error("Manual Verification Error", e)
             let msg = "Invalid code. Please try again."
             if (e.code === 'auth/invalid-verification-code') msg = "Invalid code."
             if (e.code === 'auth/code-expired') msg = "Code expired. Resend code."
             if (e.code === 'auth/session-expired') msg = "Session expired. Try again."
-            // If the code was auto-retrieved and used, we might get an error here?
-            // Usually if already signed in, confirm might fail or succeed. 
-            // If the underlying issue is that it WAS verified, the listener handles it.
-
             setError(msg)
             isFinalizing.current = false
         } finally {
@@ -158,7 +139,6 @@ export const OTPVerificationScreen = () => {
         }
     }
 
-    // Auto-submit when 6 digits are entered (works with SMS autofill too)
     const handleCodeChange = (text: string) => {
         setCode(text)
         if (text.length === 6) {
@@ -170,19 +150,24 @@ export const OTPVerificationScreen = () => {
     return (
         <Screen
             preset="fixed"
-            contentContainerStyle={themed($screenContentContainer)}
             safeAreaEdges={["top", "bottom"]}
-            backgroundColor={colors.background}
+            {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-                <ChevronLeft color={colors.text} size={24} />
-            </TouchableOpacity>
-            <View style={themed($container)}>
-                <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
-                    <Image source={require("../../../assets/images/app-icon.png")} style={{ width: 80, height: 80, borderRadius: 16 }} />
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <ChevronLeft color={theme.colors.text} size={32} />
+                </TouchableOpacity>
+            </View>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.logoContainer}>
+                    <Image source={isDark ? require("../../../assets/images/app-icon-dark.png") : require("../../../assets/images/app-icon.png")} style={styles.logo} />
                 </View>
-                <Text preset="heading" text="Enter Code" style={themed($title)} />
-                <Text size="md" text={`We sent it to ${phoneNumber}`} style={{ color: colors.textDim, marginBottom: spacing.xl }} />
+                <Text style={styles.title}>Enter Code</Text>
+                <Text style={styles.subtitle}>We sent it to {phoneNumber}</Text>
 
                 <TextField
                     value={code}
@@ -194,54 +179,90 @@ export const OTPVerificationScreen = () => {
                     maxLength={6}
                     autoComplete="sms-otp"
                     textContentType="oneTimeCode"
-                    containerStyle={{ marginBottom: spacing.lg }}
+                    containerStyle={{ marginBottom: theme.spacing.lg }}
+                    returnKeyType="done"
+                    onSubmitEditing={() => handleVerify()}
                 />
 
-                {error ? <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text> : null}
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                 <Button
-                    text={isLoading ? "Verifying..." : "Verify"}
-                    preset="reversed"
+                    title={isLoading ? "Verifying..." : "Verify"}
+                    variant="primary"
                     onPress={() => handleVerify()}
                     disabled={isLoading || otpSending}
-                    style={{ marginTop: spacing.md }}
-                    RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
+                    style={{ marginTop: theme.spacing.md }}
+                    icon={isLoading ? <ActivityIndicator size="small" color="white" /> : undefined}
                 />
 
-                <View style={{ marginTop: spacing.xl, alignItems: 'center' }}>
-                    {
-                        otpSending ? (
-                            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 5 }} />
-                        ) : canResend ? (
-                            <Text
-                                text="Resend Code"
-                                style={{ color: colors.primary, textDecorationLine: 'underline' }}
-                                onPress={handleResendOtp}
-                            />
-                        ) : (
-                            <Text
-                                text={`Resend code in ${timer}s`}
-                                style={{ color: colors.textDim }}
-                            />
-                        )}
+                <View style={styles.resendContainer}>
+                    {otpSending ? (
+                        <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 5 }} />
+                    ) : canResend ? (
+                        <Text
+                            style={styles.resendLink}
+                            onPress={handleResendOtp}
+                        >Resend Code</Text>
+                    ) : (
+                        <Text style={styles.timerText}>Resend code in {timer}s</Text>
+                    )}
                 </View>
-                <VersionFooter />
-            </View>
+            </ScrollView>
+            <VersionFooter />
         </Screen>
     )
 }
 
-const $screenContentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-})
-
-const $container: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    flex: 1,
-    justifyContent: 'center',
-})
-
-const $title: ThemedStyle<TextStyle> = ({ spacing }) => ({
-    marginBottom: spacing.xs,
-})
+const getStyles = (theme: any) => StyleSheet.create({
+    header: {
+        paddingHorizontal: theme.spacing.lg,
+        paddingTop: theme.spacing.md,
+    },
+    backButton: {
+        padding: theme.spacing.xs,
+        marginLeft: -theme.spacing.xs,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: theme.spacing.lg,
+        paddingBottom: 80,
+    },
+    logoContainer: {
+        alignItems: 'center',
+        marginBottom: theme.spacing.xl,
+    },
+    logo: {
+        width: 80,
+        height: 80,
+        borderRadius: 16,
+    },
+    title: {
+        fontSize: theme.typography.xxl,
+        fontWeight: theme.typography.bold,
+        color: theme.colors.text,
+        marginBottom: theme.spacing.xs,
+    },
+    subtitle: {
+        fontSize: theme.typography.m,
+        color: theme.colors.textDim,
+        marginBottom: theme.spacing.xl,
+    },
+    errorText: {
+        color: theme.colors.error,
+        marginBottom: theme.spacing.md,
+    },
+    resendContainer: {
+        marginTop: theme.spacing.xl,
+        alignItems: 'center',
+    },
+    resendLink: {
+        color: theme.colors.primary,
+        textDecorationLine: 'underline',
+        fontSize: theme.typography.m,
+    },
+    timerText: {
+        color: theme.colors.textDim,
+        fontSize: theme.typography.m,
+    },
+});

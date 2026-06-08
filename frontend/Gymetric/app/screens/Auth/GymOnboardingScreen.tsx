@@ -1,21 +1,21 @@
-
-import React, { useState } from "react"
-import { View, ViewStyle, TextStyle, ActivityIndicator } from "react-native"
+import React, { useState, useRef } from "react"
+import { View, ActivityIndicator, StyleSheet, Text, ScrollView, Platform, Pressable, TextInput } from "react-native"
 import { Screen } from "@/components/Screen"
-import { Text } from "@/components/Text"
 import { TextField } from "@/components/TextField"
 import { Button } from "@/components/Button"
 import { useAppTheme } from "@/theme/context"
-import { ThemedStyle } from "@/theme/types"
 import { useNavigation, useRoute } from "@react-navigation/native"
 import { api } from "@/services/Api"
 import { useAppDispatch } from "@/redux/Hooks"
 import { setLoggedInUser } from "@/redux/state/GymStates"
 import { saveString, save } from "@/utils/LocalStorage"
+import { trackEvent, AnalyticsEvents, setAnalyticsUser } from '@/services/analyticsService'
+import { setCrashlyticsUser } from '@/services/crashlyticsService'
 import { EyeOff } from "lucide-react-native"
 
 export const GymOnboardingScreen = () => {
-    const { themed, theme: { colors, spacing } } = useAppTheme()
+    const { theme } = useAppTheme()
+    const styles = getStyles(theme)
     const navigation = useNavigation<any>()
     const route = useRoute<any>()
     const dispatch = useAppDispatch()
@@ -28,6 +28,10 @@ export const GymOnboardingScreen = () => {
     const [isPasswordVisible, setIsPasswordVisible] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
+
+    const ownerRef = useRef<TextInput>(null)
+    const addressRef = useRef<TextInput>(null)
+    const passwordRef = useRef<TextInput>(null)
 
     const handleOnboard = async () => {
         if (!gymName || !ownerName || !password) {
@@ -60,6 +64,9 @@ export const GymOnboardingScreen = () => {
                 save("userData", response.data);
                 api.setAuthToken(token);
                 dispatch(setLoggedInUser(response.data));
+                trackEvent(AnalyticsEvents.SIGN_IN)
+                setAnalyticsUser({ id: response.data?.userId ?? phoneNumber, username: response.data?.username ?? ownerName })
+                setCrashlyticsUser(response.data?.userId ?? null)
             } else {
                 setError("Onboarding failed")
             }
@@ -74,85 +81,102 @@ export const GymOnboardingScreen = () => {
 
     return (
         <Screen
-            preset="scroll"
-            contentContainerStyle={themed($screenContentContainer)}
+            preset="fixed"
             safeAreaEdges={["top", "bottom"]}
-            backgroundColor={colors.background}
+            {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
-            <View style={themed($container)}>
-                <Text preset="heading" text="Setup your Gym" style={themed($title)} />
-                <Text preset="subheading" text="Just a few more details to get you started." style={{ color: colors.textDim, marginBottom: spacing.xl }} />
+            <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                <Text style={styles.title}>Setup your Gym</Text>
+                <Text style={styles.subtitle}>Just a few more details to get you started.</Text>
 
                 <TextField
                     value={gymName}
                     onChangeText={setGymName}
                     label="Gym Name"
                     placeholder="e.g. Spartan Fitness"
-                    containerStyle={{ marginBottom: spacing.md }}
+                    containerStyle={{ marginBottom: theme.spacing.md }}
+                    returnKeyType="next"
+                    onSubmitEditing={() => ownerRef.current?.focus()}
                 />
 
                 <TextField
+                    ref={ownerRef}
                     value={ownerName}
                     onChangeText={setOwnerName}
                     label="Your Name"
                     placeholder="John Doe"
-                    containerStyle={{ marginBottom: spacing.md }}
+                    containerStyle={{ marginBottom: theme.spacing.md }}
+                    returnKeyType="next"
+                    onSubmitEditing={() => addressRef.current?.focus()}
                 />
 
                 <TextField
+                    ref={addressRef}
                     value={gymAddress}
                     onChangeText={setGymAddress}
                     label="Gym Address (Optional)"
                     placeholder="123 Fitness St."
-                    containerStyle={{ marginBottom: spacing.md }}
+                    containerStyle={{ marginBottom: theme.spacing.md }}
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
                 />
 
                 <TextField
+                    ref={passwordRef}
                     value={password}
                     onChangeText={setPassword}
                     label="Create Password"
                     placeholder="Min 6 characters"
                     secureTextEntry={!isPasswordVisible}
-                    containerStyle={{ marginBottom: spacing.lg }}
+                    containerStyle={{ marginBottom: theme.spacing.lg }}
+                    returnKeyType="done"
+                    onSubmitEditing={handleOnboard}
                     RightAccessory={() => (
-                        <View style={{ paddingRight: 12 }}>
+                        <Pressable style={{ paddingRight: 12 }} onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
                             <EyeOff
                                 size={20}
-                                color={colors.textDim}
-                                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                                color={theme.colors.textDim}
                                 style={{ opacity: isPasswordVisible ? 0.5 : 1 }}
                             />
-                        </View>
+                        </Pressable>
                     )}
                 />
 
-                {error ? <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text> : null}
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                 <Button
-                    text={isLoading ? "Setting up..." : "Complete Setup"}
-                    preset="reversed"
+                    title={isLoading ? "Setting up..." : "Complete Setup"}
+                    variant="primary"
                     onPress={handleOnboard}
                     disabled={isLoading}
-                    style={{ marginTop: spacing.md }}
-                    RightAccessory={isLoading ? () => <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} /> : undefined}
+                    style={{ marginTop: theme.spacing.md }}
+                    icon={isLoading ? <ActivityIndicator size="small" color="white" /> : undefined}
                 />
-            </View>
+            </ScrollView>
         </Screen>
     )
 }
 
-const $screenContentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    paddingVertical: spacing.xl,
-})
-
-const $container: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    flex: 1,
-    justifyContent: 'center',
-})
-
-const $title: ThemedStyle<TextStyle> = ({ spacing }) => ({
-    marginBottom: spacing.xs,
-})
+const getStyles = (theme: any) => StyleSheet.create({
+    scrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.xl,
+        paddingBottom: 40,
+    },
+    title: {
+        fontSize: theme.typography.xxl,
+        fontWeight: theme.typography.bold,
+        color: theme.colors.text,
+        marginBottom: theme.spacing.xs,
+    },
+    subtitle: {
+        fontSize: theme.typography.m,
+        color: theme.colors.textDim,
+        marginBottom: theme.spacing.xl,
+    },
+    errorText: {
+        color: theme.colors.error,
+        marginBottom: theme.spacing.md,
+    },
+});

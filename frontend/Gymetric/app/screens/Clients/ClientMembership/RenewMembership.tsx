@@ -3,22 +3,26 @@ import React, { useEffect, useState } from 'react'
 import { Screen } from '@/components/Screen';
 import { $styles } from '@/theme/styles';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import OnBoardingStepsHeader from '@/components/OnBoardingStepsHeader';
+import { ClientWizardStepper } from '@/components/clients/ClientWizardStepper';
 import { ClientOnBoardingType, MembershipRenewType, STEPS } from '@/utils/types';
 import SelectMembership from './SelectMembership';
 import { api } from '@/services/Api';
 import MembershipPayment from './MembershipPayment';
 import { Button } from '@/components/Button';
 import { colors } from '@/theme/colors';
-import { selectLoading, setLoading } from '@/redux/state/GymStates';
+import { selectGymInfo, selectLoading, setLoading } from '@/redux/state/GymStates';
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { goBack } from '@/navigators/navigationUtilities';
+import { incrementActionAndReview } from '@/services/storeReviewService';
+import { trackEvent, AnalyticsEvents } from '@/services/analyticsService';
 import { addDays, format } from 'date-fns';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DEVICE_WIDTH } from '@/utils/Constants';
 import { validateNextStep } from '@/utils/Helper';
+import { getAutoShareReceiptPreference } from '@/utils/receiptPreferences';
+import ShareReceiptModal from '@/components/ShareReceiptModal';
 
 const RenewMembership = ({ route }: any) => {
     const client = route?.params?.client;
@@ -26,14 +30,18 @@ const RenewMembership = ({ route }: any) => {
 
     const dispatch = useAppDispatch();
     const loader = useAppSelector(selectLoading);
+    const gymInfo = useAppSelector(selectGymInfo);
 
     const [datePicker, setDatePicker] = useState<boolean>(false);
-    const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { id: client?._id, name: client?.name, phoneNumber: client?.phoneNumber, gender: client?.gender }, amount: 0, method: 'Cash', paymentReceived: true, startDate: newStartDate, dependents: [] });
+    const [form, setForm] = useState<ClientOnBoardingType>({ primaryDetails: { id: client?._id, name: client?.name, phoneNumber: client?.phoneNumber, gender: client?.gender }, amount: 0, amountReceived: 0, method: 'Cash', startDate: newStartDate, dependents: [] });
     const Steps = ["Membership", "Payment"] as STEPS[];
     const [currentStep, setCurrentStep] = useState<STEPS>("Membership");
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
     const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([]);
     const [duplicateNo, setDuplicateNo] = useState<string>('');
+    const [showReceipt, setShowReceipt] = useState(false);
+    const [receiptClient, setReceiptClient] = useState<any>(null);
+    const [receiptPayment, setReceiptPayment] = useState<any>(null);
     const translateX = useSharedValue(0);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -60,6 +68,11 @@ const RenewMembership = ({ route }: any) => {
         )
     }
 
+    const handleStepperBack = () => {
+        if (currentStep === 'Membership') goBack()
+        else moveStep('prev')
+    };
+
     const moveStep = (direction: "next" | "prev") => {
         if (currentStep === 'Membership' && direction === 'next') {
             const isValid = validateNextStep(form, selectedMembership);
@@ -79,7 +92,8 @@ const RenewMembership = ({ route }: any) => {
         if (currentStep === 'Membership') {
             return !duplicateNo && !(form.dependents.length + 1 < selectedMembership?.[0]?.membersAllowed);
         }
-        return true;
+        const received = form.amountReceived ?? 0;
+        return received >= 0 && received <= (form.amount || 0);
     };
 
     const getMemberships = async () => {
@@ -89,6 +103,7 @@ const RenewMembership = ({ route }: any) => {
             const defaultMem = memberships.find((item: any) => item._id === client?.activeMembership?.planId) ?? memberships?.[0];
             setSelectedMembership([defaultMem]);
             handleForm('amount', defaultMem?.price);
+            handleForm('amountReceived', defaultMem?.price);
             setMemberships(memberships);
         }
     };
@@ -100,7 +115,20 @@ const RenewMembership = ({ route }: any) => {
         dispatch(setLoading({ loading: false }));
         if (response.kind == 'ok') {
             Toast.show({ type: 'success', text1: 'Membership renewed successfully' });
-            goBack();
+            trackEvent(AnalyticsEvents.MEMBERSHIP_RENEWED);
+            incrementActionAndReview();
+            if (getAutoShareReceiptPreference() && (form.amountReceived ?? 0) > 0) {
+                setReceiptClient(response.data);
+                setReceiptPayment({
+                    amount: form.amountReceived,
+                    method: form.method,
+                    date: new Date(),
+                    remarks: (form.amountReceived ?? 0) < (form.amount || 0) ? `Partial payment (₹${form.amountReceived} of ₹${form.amount})` : 'Membership renewal',
+                });
+                setShowReceipt(true);
+            } else {
+                goBack();
+            }
         }
     };
 
@@ -118,7 +146,7 @@ const RenewMembership = ({ route }: any) => {
             <DateTimePickerModal
                 isVisible={datePicker}
                 mode="date"
-                minimumDate={newStartDate}
+                minimumDate={new Date(new Date().setFullYear(new Date().getFullYear() - 1))}
                 date={form.startDate ?? new Date()}
                 onConfirm={async (date) => {
                     handleForm('startDate', date);
@@ -126,8 +154,22 @@ const RenewMembership = ({ route }: any) => {
                 }}
                 onCancel={() => setDatePicker(false)}
             />
+            <ShareReceiptModal
+                visible={showReceipt}
+                onClose={() => {
+                    setShowReceipt(false);
+                    goBack();
+                }}
+                gym={gymInfo}
+                client={receiptClient || client}
+                payment={receiptPayment}
+                membership={{
+                    planName: selectedMembership?.[0]?.planName,
+                    startDate: form.startDate,
+                }}
+            />
             <View style={{ flex: 1 }}>
-                <OnBoardingStepsHeader moveStep={moveStep} currentStep={currentStep} steps={Steps} renew={true} />
+                <ClientWizardStepper steps={Steps} currentStep={currentStep} onBack={handleStepperBack} title="Renew Membership" />
                 <Animated.View style={[{ flex: 1 }, animatedStyle]}>
                     <ScrollView style={{ paddingHorizontal: 15, flex: 1 }}>
                         {
@@ -141,7 +183,7 @@ const RenewMembership = ({ route }: any) => {
                 </Animated.View>
 
                 <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-                    <Button disabled={!validateSteps()} disabledStyle={{ opacity: 0.4 }} text={currentStep === 'Payment' ? (loader ? 'Renewing...' : 'Renew Membership') : 'Next Step'} preset="reversed" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.background} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleRenew() : moveStep('next') }} />
+                    <Button disabled={!validateSteps()} title={currentStep === 'Payment' ? (loader ? 'Renewing...' : 'Renew Membership') : 'Next Step'} variant="primary" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.background} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleRenew() : moveStep('next') }} />
                 </View>
             </View>
         </Screen>

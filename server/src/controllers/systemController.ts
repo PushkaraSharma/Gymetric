@@ -6,7 +6,12 @@ import Settings from "../models/Settings.js";
 import Gym from "../models/Gym.js";
 import { getISTMidnightToday, formatShortDate } from "../utils/timeUtils.js";
 import { sendWhatsAppTemplate } from "../services/Whatsapp.js";
+import { sendExpoPush } from "../services/pushNotificationService.js";
+import { invalidateClientCachesMany } from "../utils/cache.js";
+import User from "../models/User.js";
 import dayjs from "dayjs";
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const performExpiryChecks = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -17,9 +22,9 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
 
         const today = getISTMidnightToday();
         console.log('Running Daily Membership Expiry Check...', today);
+        const affectedGymIds = new Set<string>();
 
         // STEP 1: PROMOTE UPCOMING MEMBERSHIPS STARTING TODAY
-        // We find all clients who have an upcoming membership that starts today or earlier
         const clientsReadyForPromotion = await Client.find({
             upcomingMembership: { $ne: null }
         }).populate('upcomingMembership');
@@ -27,11 +32,9 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
         for (const client of clientsReadyForPromotion) {
             const upcomingMemb: any = client.upcomingMembership;
             if (upcomingMemb && new Date(upcomingMemb.startDate) <= today) {
-                // 1. Promote Membership to Active
                 upcomingMemb.status = 'active';
                 await upcomingMemb.save();
 
-                // 2. Promote the Client
                 client.activeMembership = upcomingMemb._id;
                 client.membershipStatus = 'active';
                 client.upcomingMembership = undefined;
@@ -43,13 +46,13 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                     title: 'Membership Activated',
                     description: `${client.name}'s plan ${upcomingMemb.planName} is now active.`,
                     memberId: client._id,
-                    date: today
+                    date: new Date(),
                 });
+                affectedGymIds.add(String(client.gymId));
             }
         }
 
         // STEP 2: HANDLE EXPIRIES
-        // Find memberships that ended before today and are still marked 'active' or 'trial'
         const membershipsToExpire = await AssignedMembership.find({
             endDate: { $lt: today },
             status: { $in: ['active', 'trial'] }
@@ -59,13 +62,9 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
             for (const memb of membershipsToExpire) {
                 const newStatus = memb.status === 'trial' ? 'trial_expired' : 'expired';
 
-                // Update Membership Status
                 memb.status = newStatus;
                 await memb.save();
 
-                // Update all members belonging to this membership
-                // CRITICAL FIX: Only update clients if this is their CURRENT active membership.
-                // If they have renewed, their activeMembership will point to a new plan, so we skip them.
                 await Client.updateMany(
                     {
                         _id: { $in: memb.memberIds },
@@ -73,8 +72,8 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                     },
                     { $set: { membershipStatus: newStatus } }
                 );
+                affectedGymIds.add(String(memb.gymId));
 
-                // Log Activity
                 const primaryMember = await Client.findById(memb.primaryMemberId).select('name phoneNumber activeMembership');
 
                 if (primaryMember && String(primaryMember.activeMembership) !== String(memb._id)) {
@@ -87,32 +86,28 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                     title: newStatus === 'trial_expired' ? 'Trial Ended' : 'Membership Expired',
                     description: `Membership for ${primaryMember?.name || 'Member'} has ended.`,
                     memberId: memb.primaryMemberId,
-                    date: today
+                    date: new Date(),
                 });
 
-                // Send WhatsApp Notification (Expired)
                 if (primaryMember?.phoneNumber) {
                     const settings = await Settings.findOne({ gymId: memb.gymId });
                     if (settings?.whatsapp?.active && settings?.whatsapp?.sendOnExpiry !== false) {
                         const gym = await Gym.findById(memb.gymId);
                         const templateName = "expired";
                         const params = [primaryMember.name, gym?.name, formatShortDate(memb.endDate)];
-                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, settings.whatsapp, gym?.name);
+                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, settings.whatsapp, gym?.name, { gymId: String(memb.gymId), clientId: String(primaryMember._id) });
                     }
                 }
             }
         }
 
         // STEP 3: SEND REMINDERS (Upcoming Expiries)
-        // Find settings where WhatsApp is active AND reminders are enabled (default true)
         const allSettings = await Settings.find({
             'whatsapp.active': true,
             'whatsapp.sendOnReminder': { $ne: false }
         });
         for (const setting of allSettings) {
             const reminderDays = setting.whatsapp.reminderDays || 3;
-            // Target date is 'reminderDays' from today
-            // e.g., if today is Jan 30, and reminder is 3 days, we check for Feb 2
             const targetDateStart = dayjs(today).add(reminderDays, 'day').startOf('day').toDate();
             const targetDateEnd = dayjs(today).add(reminderDays, 'day').endOf('day').toDate();
             const expiringMemberships = await AssignedMembership.find({
@@ -127,25 +122,122 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                     const primaryMember: any = memb.primaryMemberId;
                     const plan: any = memb.planId;
 
-                    // Condition 1: Only for memberships defined in months (exclude daily passes)
                     if (plan?.durationInMonths <= 0) continue;
-
-                    // Condition 2: Don't send if they already have an upcoming membership set
                     if (primaryMember?.upcomingMembership) continue;
 
                     if (primaryMember?.phoneNumber) {
                         const remainingDays = dayjs(memb.endDate).diff(today, 'day');
                         const templateName = "renewal";
                         const params = [primaryMember.name, gym?.name, remainingDays, formatShortDate(memb.endDate)];
-                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, setting.whatsapp, gym?.name);
+                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, setting.whatsapp, gym?.name, { gymId: String(setting.gymId), clientId: String(primaryMember._id) });
                     }
                 }
             }
         }
 
+        if (affectedGymIds.size > 0) {
+            invalidateClientCachesMany(affectedGymIds);
+            console.log(`Invalidated client caches for ${affectedGymIds.size} gym(s)`);
+        }
+
         return reply.status(200).send({ success: true, data: { message: 'Expiry check completed successfully' } });
     } catch (error: any) {
         console.error('CRON Error:', error);
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};
+
+export const performPushSummary = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { secret } = request.body as { secret: string };
+        if (secret !== process.env.CRON_SECRET) {
+            return reply.status(401).send({ success: false, message: 'Unauthorized' });
+        }
+
+        const today = getISTMidnightToday();
+        console.log('Running Daily Push Summary...', today);
+
+        const gymIds = await Client.distinct('gymId');
+        let notificationsSent = 0;
+
+        for (const gymId of gymIds) {
+            const owners = await User.find({
+                gymId,
+                expoPushToken: { $exists: true, $ne: null },
+                pushNotificationsEnabled: { $ne: false },
+            });
+
+            if (owners.length === 0) continue;
+
+            const [expiringTodayCount, outstandingAgg, expiringSoonCount] = await Promise.all([
+                Client.aggregate([
+                    { $match: { gymId, membershipStatus: 'active' } },
+                    { $lookup: { from: 'assignedmemberships', localField: 'activeMembership', foreignField: '_id', as: 'plan' } },
+                    { $unwind: '$plan' },
+                    { $match: { 'plan.endDate': { $gte: today, $lt: dayjs(today).add(1, 'day').toDate() } } },
+                    { $count: 'count' },
+                ]),
+                Client.aggregate([
+                    { $match: { gymId, balance: { $gt: 0 } } },
+                    { $group: { _id: null, total: { $sum: '$balance' }, count: { $sum: 1 } } },
+                ]),
+                Client.aggregate([
+                    { $match: { gymId, membershipStatus: 'active', upcomingMembership: null } },
+                    { $lookup: { from: 'assignedmemberships', localField: 'activeMembership', foreignField: '_id', as: 'plan' } },
+                    { $unwind: '$plan' },
+                    { $match: { 'plan.endDate': { $gte: today, $lte: dayjs(today).add(7, 'day').endOf('day').toDate() } } },
+                    { $count: 'count' },
+                ]),
+            ]);
+
+            const expToday = expiringTodayCount[0]?.count || 0;
+            const outstanding = outstandingAgg[0]?.total || 0;
+            const balanceClients = outstandingAgg[0]?.count || 0;
+            const expSoon = expiringSoonCount[0]?.count || 0;
+
+            const alerts: { prefKey: string; title: string; body: string }[] = [];
+            if (expToday > 0) {
+                alerts.push({
+                    prefKey: 'expiringToday',
+                    title: 'Expiring Today',
+                    body: `${expToday} membership${expToday > 1 ? 's' : ''} expiring today`,
+                });
+            }
+            if (expSoon > 0) {
+                alerts.push({
+                    prefKey: 'expiringSoon',
+                    title: 'Expiring Soon',
+                    body: `${expSoon} membership${expSoon > 1 ? 's' : ''} expiring in the next 7 days`,
+                });
+            }
+            if (outstanding > 0) {
+                alerts.push({
+                    prefKey: 'outstandingBalance',
+                    title: 'Outstanding Balance',
+                    body: `₹${outstanding} outstanding from ${balanceClients} client${balanceClients > 1 ? 's' : ''}`,
+                });
+            }
+
+            if (alerts.length === 0) continue;
+
+            for (const owner of owners) {
+                if (!owner.expoPushToken) continue;
+                const prefs = owner.pushPrefs || {};
+
+                for (const alert of alerts) {
+                    if (prefs.dailySummary === false) continue;
+                    if (prefs[alert.prefKey as keyof typeof prefs] === false) continue;
+
+                    await sendExpoPush(owner.expoPushToken, alert.title, alert.body, { screen: 'Home' });
+                    notificationsSent++;
+                    await sleep(1500);
+                }
+            }
+        }
+
+        return reply.status(200).send({ success: true, data: { message: 'Push summary completed', notificationsSent } });
+    } catch (error: any) {
+        console.error('Push Summary Error:', error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };

@@ -36,7 +36,7 @@ const Slide = memo(({ item, width, colors, typography }: any) => {
                 from={{ opacity: 0, translateY: 20 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ delay: 200, type: 'timing' }}
-                style={[$title, { color: colors.text, fontFamily: typography.secondary.bold, fontSize: 32 }]}
+                style={[$title, { color: colors.text, fontWeight: typography.bold, fontSize: 32 }]}
             >
                 GymKarta
             </MotiText>
@@ -59,7 +59,7 @@ const Slide = memo(({ item, width, colors, typography }: any) => {
                 from={{ opacity: 0, translateY: 20 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ delay: 200, type: 'timing' }}
-                style={[$title, { color: colors.text, fontFamily: typography.secondary.bold }]}
+                style={[$title, { color: colors.text, fontWeight: typography.bold }]}
             >
                 {item.title}
             </MotiText>
@@ -67,7 +67,7 @@ const Slide = memo(({ item, width, colors, typography }: any) => {
                 from={{ opacity: 0, translateY: 20 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ delay: 400, type: 'timing' }}
-                style={[$description, { color: colors.textDim, fontFamily: typography.primary.normal }]}
+                style={[$description, { color: colors.textDim, fontWeight: typography.normal }]}
             >
                 {item.description}
             </MotiText>
@@ -155,7 +155,7 @@ export const OnboardingScreen = () => {
                     style={[$button, { backgroundColor: colors.primary }]}
                     activeOpacity={0.8}
                 >
-                    <Text style={[$buttonText, { color: colors.background, fontFamily: typography.primary.semiBold }]}>
+                    <Text style={[$buttonText, { color: colors.background, fontWeight: typography.semiBold }]}>
                         {currentIndex === ONBOARDING_DATA.length - 1 ? "Get Started" : "Next"}
                     </Text>
                     <ChevronRight color={colors.background} size={20} />

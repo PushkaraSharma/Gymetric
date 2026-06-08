@@ -13,6 +13,7 @@ const ClientSchema = new Schema<IClient>({
     profilePicture: { type: String }, // Cloudinary URL
     gymId: { type: Schema.Types.ObjectId, ref: 'Gym', required: true },
     balance: { type: Number, default: 0 },
+    isSeeded: { type: Boolean, default: false },
     role: { type: String, enum: ['primary', 'dependent'], default: 'primary' },
     membershipStatus: { type: String, enum: MEMBERSHIP_TYPES },
     activeMembership: { type: Schema.Types.ObjectId, ref: 'AssignedMembership' },
@@ -23,7 +24,8 @@ const ClientSchema = new Schema<IClient>({
         amount: Number,
         method: { type: String, enum: ['Cash', 'UPI', 'Card', 'Transfer'] },
         date: { type: Date, default: Date.now },
-        remarks: String
+        remarks: String,
+        type: { type: String, enum: ['membership', 'balance_collection'], default: 'membership' },
     }],
 }, { timestamps: true });
 

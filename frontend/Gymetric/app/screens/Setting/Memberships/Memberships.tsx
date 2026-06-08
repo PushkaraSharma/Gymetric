@@ -4,7 +4,6 @@ import React, { useCallback, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { Header } from '@/components/Header'
-import HeaderbackButton from '@/components/HeaderbackButton'
 import { Text } from '@/components/Text'
 import { Button } from '@/components/Button'
 import { FontAwesome6, Ionicons } from '@expo/vector-icons'
@@ -24,7 +23,7 @@ const Memberships = () => {
     const [memberships, setMemberships] = useState<{ [key: string]: any }[]>([]);
 
     const MembershipCards = ({ item }: { item: any }) => (
-        <Pressable style={[themed($card), $styles.flexRow, { padding: spacing.sm, marginVertical: spacing.xs, opacity: item.active ? 1 : 0.5 }]} onPress={() => navigate('Create Edit Membership', { membership: item })}>
+        <Pressable style={[themed($card), $styles.flexRow, { padding: spacing.sm, opacity: item.active ? 1 : 0.5 }]} onPress={() => navigate('Create Edit Membership', { membership: item })}>
             <View style={{ flex: 1, maxWidth: '85%' }}>
                 <Text preset={'formLabel'}>{item.planName}</Text>
                 <View style={{ marginTop: 5, borderRadius: 6, backgroundColor: isDark ? colors.palette.slate800 : colors.palette.slate100, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2 }}>
@@ -32,7 +31,7 @@ const Memberships = () => {
                 </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text preset='subheading' style={{ color: colors.tint, marginRight: 15 }}>₹{item.price}</Text>
+                <Text preset='formLabel' style={{ color: colors.tint, marginRight: 15 }}>₹{item.price}</Text>
                 <Ionicons name='chevron-forward' size={20} color={colors.tintInactive} />
             </View>
         </Pressable>
@@ -60,7 +59,7 @@ const Memberships = () => {
             contentContainerStyle={[$styles.flex1]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
-            <Header title='Memberships' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
+            <Header title='Memberships' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} safeAreaTop={true} />
             <View style={{ paddingTop: 10, flex: 1 }}>
                 <ScrollView style={{ paddingHorizontal: 15, }}>
                     <Text style={{ marginBottom: 10 }}>Manage your gym's subscription plans</Text>
@@ -73,7 +72,7 @@ const Memberships = () => {
                     }
                 </ScrollView>
                 <View style={themed($footer)}>
-                    <Button text={'Add New Membership'} preset="reversed" LeftAccessory={() => <FontAwesome6 name='circle-plus' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={() => { navigate('Create Edit Membership') }} />
+                    <Button title={'Add New Membership'} variant="primary" LeftAccessory={() => <FontAwesome6 name='circle-plus' size={20} color={colors.white} style={{ marginRight: 10 }} />} onPress={() => { navigate('Create Edit Membership') }} />
                 </View>
             </View>
         </Screen>
@@ -91,7 +90,7 @@ const $footer: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
 const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     backgroundColor: colors.surface,
     borderRadius: 16,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
 })

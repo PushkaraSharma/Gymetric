@@ -11,7 +11,14 @@ const AssignedMembershipSchema = new Schema<IAssignedMembership>({
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     status: { type: String, enum: MEMBERSHIP_TYPES, required: true },
-    totalAmount: { type: Number, required: true } // Renamed from amount to match fixed logic
+    totalAmount: { type: Number, required: true },
+    pauseHistory: [{
+        startedAt: { type: Date, required: true },
+        endedAt: Date,
+        days: Number,
+        reason: String,
+    }],
+    totalPausedDays: { type: Number, default: 0 },
 }, { timestamps: true });
 
 // Add index for performance in expiry checks

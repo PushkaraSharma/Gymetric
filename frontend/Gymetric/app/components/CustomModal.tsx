@@ -39,21 +39,20 @@ export const CustomModal = ({
                 <View style={themed($overlay)}>
                     <TouchableWithoutFeedback>
                         <View style={themed($modalContainer)}>
-                            <Text preset="subheading" weight="bold" style={{ marginBottom: spacing.xs, textAlign: 'center' }}>{title}</Text>
+                            <Text preset="subheading" weight="bold" style={{ marginBottom: spacing.xs }}>{title}</Text>
                             <Text style={{ marginBottom: spacing.lg, color: colors.textDim }}>{message}</Text>
 
                             <View style={$buttonContainer}>
                                 <Button
-                                    text={cancelText}
-                                    preset="default"
+                                    title={cancelText}
+                                    variant="outline"
                                     style={{ flex: 1, marginRight: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
                                     textStyle={{ color: colors.text }}
                                     onPress={onCancel}
                                 />
                                 <Button
-                                    text={confirmText}
+                                    title={confirmText}
                                     textStyle={{ color: colors.white }}
-                                    preset={type === 'destructive' ? 'filled' : 'filled'}
                                     style={{ flex: 1, marginLeft: spacing.sm, backgroundColor: type === 'destructive' ? colors.error : colors.primary }}
                                     onPress={onConfirm}
                                 />

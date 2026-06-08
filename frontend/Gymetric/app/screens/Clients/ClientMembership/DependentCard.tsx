@@ -60,7 +60,6 @@ const DependentCard = ({ item, index, updateDependent, duplicateNo, updateExisti
                                     ref={phoneRef}
                                     status={duplicateNo === index.toString() ? 'error' : undefined}
                                     helper={duplicateNo === index.toString() ? 'Phone already exists' : undefined}
-                                    HelperTextProps={{ style: { fontSize: 12 } }}
                                     value={item?.phoneNumber}
                                     onChangeText={(val) => { updateDependent(index, 'phoneNumber', val) }}
                                     keyboardType='number-pad'

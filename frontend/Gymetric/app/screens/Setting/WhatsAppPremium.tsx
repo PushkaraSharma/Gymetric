@@ -59,6 +59,7 @@ export const WhatsAppPremium = () => {
                 leftIcon="caretLeft"
                 onLeftPress={() => navigation.goBack()}
                 backgroundColor={colors.surface}
+                safeAreaTop
             />
             <ScrollView contentContainerStyle={{ padding: spacing.md }}>
                 <View style={themed($heroSection)}>
@@ -99,8 +100,8 @@ export const WhatsAppPremium = () => {
                         Setup requires manual verification and configuration. Our team will guide you through the process.
                     </Text>
                     <Button
-                        text="Contact Setup Team"
-                        preset="reversed"
+                        title="Contact Setup Team"
+                        variant="primary"
                         onPress={() => navigation.navigate("Help Center")}
                         RightAccessory={() => <ArrowRight size={20} color="white" style={{ marginLeft: 8 }} />}
                     />

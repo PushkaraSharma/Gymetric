@@ -9,7 +9,15 @@ const UserSchema = new mongoose.Schema({
     role: { type: String, enum: ['admin', 'staff'], required: true },
     permissions: { type: [String], default: [] },
     gymId: { type: mongoose.Schema.Types.ObjectId, ref: 'Gym', required: true },
-    isActive: { type: Boolean, default: true }, // Changed default to true as most users are active on creation
+    isActive: { type: Boolean, default: true },
+    expoPushToken: String,
+    pushNotificationsEnabled: { type: Boolean, default: true },
+    pushPrefs: {
+        expiringToday: { type: Boolean, default: true },
+        expiringSoon: { type: Boolean, default: true },
+        outstandingBalance: { type: Boolean, default: true },
+        dailySummary: { type: Boolean, default: true },
+    },
 }, { timestamps: true });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);

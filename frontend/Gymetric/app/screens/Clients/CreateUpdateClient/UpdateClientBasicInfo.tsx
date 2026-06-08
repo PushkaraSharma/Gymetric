@@ -5,7 +5,6 @@ import PersonalInfo from './PersonalInfo';
 import { Screen } from '@/components/Screen';
 import { $styles } from '@/theme/styles';
 import { Header } from '@/components/Header';
-import HeaderbackButton from '@/components/HeaderbackButton';
 import { Button } from '@/components/Button';
 import { useAppTheme } from '@/theme/context';
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks';
@@ -99,12 +98,12 @@ const UpdateClientbasicInfo = ({ route }: any) => {
         }}
         onCancel={() => setDatePicker({ visible: false, type: 'birthday' })}
       />
-      <Header title='Update Client' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} />
+      <Header title='Update Client' backgroundColor={colors.surface} leftIcon="caretLeft" onLeftPress={goBack} safeAreaTop />
       <ScrollView style={{ paddingHorizontal: 15, flex: 1 }}>
         <PersonalInfo handleForm={handleForm} form={form} setDatePicker={setDatePicker} isUpdate validNumber={validNumber} />
       </ScrollView>
       <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-        <Button preset='reversed' disabled={(form?.phoneNumber.length !== 10) || !form.name || !validNumber} disabledStyle={{ opacity: 0.4 }} text={loading ? 'Updating...' : 'Update'} onPress={handleUpdate} />
+        <Button variant="primary" disabled={(form?.phoneNumber.length !== 10) || !form.name || !validNumber} title={loading ? 'Updating...' : 'Update'} onPress={handleUpdate} />
       </View>
     </Screen>
   )

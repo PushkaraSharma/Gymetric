@@ -33,14 +33,14 @@ export const useToastConfig = () => {
 
     const titleStyle: TextStyle = {
         fontSize: 15,
-        fontFamily: typography.primary.medium,
+        fontWeight: typography.medium,
         color: colors.text,
         lineHeight: 20,
     };
 
     const messageStyle: TextStyle = {
         fontSize: 13,
-        fontFamily: typography.primary.normal,
+        fontWeight: typography.regular,
         color: colors.textDim,
         marginTop: 2,
         lineHeight: 18,

@@ -27,6 +27,10 @@ export interface Theme {
   spacing: Spacing
   typography: Typography
   timing: Timing
+  shadows: {
+    small: any;
+    medium: any;
+  }
   isDark: boolean
 }
 

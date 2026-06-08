@@ -16,14 +16,6 @@ export function openLinkInBrowser(url: string) {
   Linking.canOpenURL(url).then((canOpen) => canOpen && Linking.openURL(url))
 };
 
-export const getGreeting = (date = new Date()) => {
-  const hour = getHours(date);
-  if (hour >= 5 && hour < 12) return "Good Morning"
-  if (hour >= 12 && hour < 17) return "Good Afternoon"
-  if (hour >= 17 && hour < 21) return "Good Evening"
-  return "Good Night"
-};
-
 export const alreadyExists = (ph: string) => {
   const allClients = store.getState().GymStates.allClients;
   return allClients?.some((item) => item.phoneNumber === ph);

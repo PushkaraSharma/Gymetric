@@ -1,38 +1,31 @@
 import { ComponentProps } from "react"
-import { BottomTabScreenProps } from "@react-navigation/bottom-tabs"
-import {
-  CompositeScreenProps,
-  NavigationContainer,
-  NavigatorScreenParams,
-} from "@react-navigation/native"
-import { NativeStackScreenProps } from "@react-navigation/native-stack"
+import { NavigationContainer } from "@react-navigation/native"
 
-// Demo Tab Navigator types
-export type DemoTabParamList = {
-  DemoCommunity: undefined
-  DemoShowroom: { queryIndex?: string; itemIndex?: string }
-  DemoDebug: undefined
-  DemoPodcastList: undefined
-}
-
-// App Stack Navigator types
 export type AppStackParamList = {
-  Welcome: undefined
-  Login: undefined
-  Demo: NavigatorScreenParams<DemoTabParamList>
-  // 🔥 Your screens go here
-  // IGNITE_GENERATOR_ANCHOR_APP_STACK_PARAM_LIST
+  Onboarding: undefined
+  Main: undefined
+  PhoneLogin: undefined
+  OTPVerification: { confirmation: any; phoneNumber: string }
+  GymOnboarding: { idToken: string; phoneNumber: string }
+  PasswordLogin: { phoneNumber?: string }
+  "Add Client": undefined
+  "Client Profile": { data: { _id: string } }
+  "Update Basic Information": { client: any }
+  "Renew Membership": { client: any }
+  "Edit Membership": { client: any; membership: any }
+  "Search Client": undefined
+  Memberships: undefined
+  "Create Edit Membership": { membership?: any }
+  "Business Profile": undefined
+  "Help Center": undefined
+  "Notification Settings": undefined
+  "WhatsApp Premium": undefined
+  Revenue: undefined
+  "Change Password": undefined
+  "Receipt Settings": undefined
+  "Push Notification Settings": undefined
+  "Seed Data": undefined
 }
-
-export type AppStackScreenProps<T extends keyof AppStackParamList> = NativeStackScreenProps<
-  AppStackParamList,
-  T
->
-
-export type DemoTabScreenProps<T extends keyof DemoTabParamList> = CompositeScreenProps<
-  BottomTabScreenProps<DemoTabParamList, T>,
-  AppStackScreenProps<keyof AppStackParamList>
->
 
 export interface NavigationProps extends Partial<
   ComponentProps<typeof NavigationContainer<AppStackParamList>>

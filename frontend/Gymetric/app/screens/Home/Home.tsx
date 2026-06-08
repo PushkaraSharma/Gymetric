@@ -1,583 +1,311 @@
-import { Platform, Pressable, ScrollView, TextStyle, View, ViewStyle, TouchableOpacity, RefreshControl } from 'react-native'
-import React, { JSX, useCallback, useMemo, useState } from 'react'
-import { Drawer } from "react-native-drawer-layout"
+import { ScrollView, Pressable, RefreshControl, View, StyleSheet, Text } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppTheme } from '@/theme/context'
-import { ThemedStyle } from '@/theme/types'
-import { Screen } from '@/components/Screen'
-import { $styles } from '@/theme/styles'
-import { Text } from "@/components/Text"
-import { Button } from "@/components/Button"
-import {
-    Users,
-    Activity as ActivityIconLucide,
-    TrendingUp,
-    Wallet,
-    Clock,
-    RefreshCw,
-    UserPlus,
-    AlertCircle,
-    Plus,
-    Menu,
-    X,
-    MessageCircle
-} from 'lucide-react-native'
+import { Plus, Users, Activity as ActivityIconLucide, Clock, UserPlus, UserX, Wallet, IndianRupee } from 'lucide-react-native'
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
-import { selectGymInfo, setLoading } from '@/redux/state/GymStates'
+import { selectDashboardSummary, selectGymInfo, setDashboardSummary } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { navigate } from '@/navigators/navigationUtilities'
 import { useFocusEffect } from '@react-navigation/native'
-import SideDrawer from './SideDrawer'
-import { getGreeting } from '@/utils/Helper'
-import { formatDistanceToNow } from 'date-fns'
-import { MotiView } from 'moti'
 import { Skeleton } from '@/components/Skeleton'
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
+import { RevenueCard } from '@/components/dashboard/RevenueCard'
+import { StatGrid, StatItem } from '@/components/dashboard/StatGrid'
+import { RevenueTrendChart } from '@/components/dashboard/RevenueTrendChart'
+import { ActionAlertCard } from '@/components/dashboard/ActionAlertCard'
+import { GetStartedCard } from '@/components/dashboard/GetStartedCard'
+import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
+import { WhatsAppBanner } from '@/components/dashboard/WhatsAppBanner'
+import { setGymStats, setEnrichedUserProperties } from '@/services/analyticsService'
+import { OTA_VERSION } from '@/utils/Constants'
+import Constants from 'expo-constants'
+import { WhatsNewModal } from '@/components/WhatsNewModal'
+import { load, save } from '@/utils/LocalStorage'
 
-let hasShownBannerSession = false;
+let hasShownBannerSession = false
 
-const Home = () => {
-    const { themed, theme: { colors, spacing, typography } } = useAppTheme();
-    const dispatch = useAppDispatch();
-    const gymInfo = useAppSelector(selectGymInfo);
-    const [open, setOpen] = useState(false);
-    const [summary, setSummary] = useState<{ [key: string]: any } | null>(null);
-    const [showBanner, setShowBanner] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const greeting = useMemo(() => getGreeting(), []);
-
-    const ActivityIcons: { [key: string]: JSX.Element } = {
-        'ONBOARDING': <UserPlus size={20} color={colors.success} />,
-        'RENEWAL': <RefreshCw size={20} color={colors.primary} />,
-        'EXPIRY': <AlertCircle size={20} color={colors.error} />,
-        'PAYMENT': <Wallet size={20} color={colors.success} />,
-        'ADVANCE_RENEWAL': <RefreshCw size={20} color={colors.primary} />
-    };
-
-    const loadData = async (isRefresh = false) => {
-        if (isRefresh) setRefreshing(true);
-        // Stale-while-revalidate: only show skeleton if we have NO data to show yet
-        else if (!summary) setIsLoading(true);
-
-        const response = await api.dashboardAPI();
-        if (response.kind === 'ok') {
-            setSummary(response.data);
-        }
-
-        // Check if WhatsApp is configured, only once per session
-        if (!hasShownBannerSession) {
-            const settingsRes = await api.getSettings();
-            if (settingsRes.kind === 'ok' && !settingsRes.data?.hasWhatsappConfigured) {
-                setShowBanner(true);
-            }
-            hasShownBannerSession = true;
-        }
-
-        if (isRefresh) setRefreshing(false);
-        else setIsLoading(false);
-    };
-
-    const onRefresh = useCallback(() => {
-        loadData(true);
-    }, []);
-
-    useFocusEffect(
-        useCallback(() => {
-            loadData(false);
-        }, [])
-    );
-
-    return (
-        <Drawer
-            open={open}
-            onOpen={() => setOpen(true)}
-            onClose={() => setOpen(false)}
-            drawerType="slide"
-            renderDrawerContent={() => <SideDrawer />}
-        >
-            <Screen
-                preset="fixed"
-                safeAreaEdges={["top"]}
-                backgroundColor={colors.background}
-                contentContainerStyle={[$styles.flex1]}
-            >
-                <ScrollView
-                    style={{ flex: 1 }}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            tintColor={colors.text}
-                            colors={[colors.primary]}
-                        />
-                    }
-                    contentContainerStyle={{ paddingBottom: 100 }}
-                    showsVerticalScrollIndicator={false}
-                >
-                    <View style={themed($header)}>
-                        <Pressable onPress={() => { setOpen(!open) }} style={themed($menuBtn)}>
-                            <Menu size={24} color={colors.text} />
-                        </Pressable>
-                        <View style={$headerText}>
-                            <Text style={themed($greeting)}>{greeting},</Text>
-                            <Text style={themed($ownerName)}>{gymInfo?.ownerName || 'Admin'}</Text>
-                        </View>
-                    </View>
-
-                    <View style={{ paddingHorizontal: spacing.md }}>
-                        {isLoading ? (
-                            <View style={{ marginTop: spacing.md }}>
-                                {/* Revenue Card Skeleton */}
-                                <Skeleton width="100%" height={180} borderRadius={24} style={{ marginBottom: 24 }} />
-
-                                {/* Stats Gird Skeleton */}
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-                                    <Skeleton width="48%" height={120} borderRadius={20} />
-                                    <Skeleton width="48%" height={120} borderRadius={20} />
-                                </View>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
-                                    <Skeleton width="48%" height={120} borderRadius={20} />
-                                    <Skeleton width="48%" height={120} borderRadius={20} />
-                                </View>
-
-                                {/* Recent Activity Skeleton */}
-                                <View style={{ marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Skeleton width={150} height={24} />
-                                    <Skeleton width={20} height={20} borderRadius={10} />
-                                </View>
-
-                                {[1, 2, 3].map(i => (
-                                    <View key={i} style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
-                                        <Skeleton width={40} height={40} borderRadius={12} style={{ marginRight: 12 }} />
-                                        <View style={{ flex: 1 }}>
-                                            <Skeleton width="60%" height={16} style={{ marginBottom: 6 }} />
-                                            <Skeleton width="40%" height={12} />
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-                        ) : (
-                            <>
-                                {showBanner && (
-                                    <MotiView
-                                        from={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        style={themed($banner)}
-                                    >
-                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                <MessageCircle size={20} color="white" style={{ marginRight: 8 }} />
-                                                <Text preset="bold" style={{ color: 'white', fontSize: 16 }}>Premium Integration</Text>
-                                            </View>
-                                            <TouchableOpacity onPress={() => setShowBanner(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                                                <X color="white" size={20} />
-                                            </TouchableOpacity>
-                                        </View>
-                                        <Text size="xs" style={{ color: 'rgba(255,255,255,0.9)', marginTop: 8, marginBottom: 12, lineHeight: 18 }}>
-                                            Automate reminders, welcome messages & engage clients seamlessly on WhatsApp.
-                                        </Text>
-                                        <Button
-                                            text="Learn More"
-                                            preset="reversed"
-                                            style={{ backgroundColor: 'white', height: 36, minHeight: 36, paddingVertical: 0, alignSelf: 'flex-start', paddingHorizontal: 16 }}
-                                            textStyle={{ color: colors.primary, fontSize: 12, fontFamily: typography.primary.bold }}
-                                            onPress={() => navigate('WhatsApp Premium')}
-                                        />
-                                    </MotiView>
-                                )}
-
-                                <View style={$revenueCardContainer}>
-                                    <Pressable onPress={() => navigate('Revenue')}>
-                                        <MotiView
-                                            from={{ opacity: 0, translateY: 10 }}
-                                            animate={{ opacity: 1, translateY: 0 }}
-                                            style={themed($revenueCard)}
-                                        >
-                                            <View style={$revenueHeader}>
-                                                <Text style={themed($revenueLabel)}>Revenue this month</Text>
-                                                <Wallet size={24} color={colors.white} opacity={0.8} />
-                                            </View>
-                                            <Text size='xl' style={themed($revenueValue)} numberOfLines={1}>
-                                                ₹{summary?.revenueThisMonth?.value ?? 0}
-                                            </Text>
-                                            <View style={$revenueFooter}>
-                                                <View style={themed($revenueTrend)}>
-                                                    <TrendingUp size={14} color={colors.white} />
-                                                    <Text style={themed($revenueTrendText)} size="xs">
-                                                        +{summary?.revenueThisMonth?.trend || 0}% from last month
-                                                    </Text>
-                                                </View>
-                                            </View>
-                                        </MotiView>
-                                    </Pressable>
-                                </View>
-
-                                <View style={$statsGrid}>
-                                    <StatCard
-                                        label="Total Members"
-                                        value={summary?.totalClients ?? 0}
-                                        icon={<Users size={20} color={colors.primary} />}
-                                        color={colors.primary}
-                                        onPress={() => navigate('Clients', { filter: 'All Clients' })}
-                                    />
-                                    <StatCard
-                                        label="Active Now"
-                                        value={summary?.activeMembers?.value ?? 0}
-                                        trend={summary?.activeMembers?.trend}
-                                        icon={<ActivityIconLucide size={20} color={colors.success} />}
-                                        color={colors.success}
-                                        onPress={() => navigate('Clients', { filter: 'Active' })}
-                                    />
-                                </View>
-
-                                <View style={$statsGrid}>
-                                    <StatCard
-                                        label="Expiring Soon (7 Days)"
-                                        value={summary?.expiringIn7Days ?? 0}
-                                        icon={<Clock size={20} color={colors.error} />}
-                                        color={colors.error}
-                                        onPress={() => navigate('Clients', { filter: 'Expiring Soon' })}
-                                    />
-                                    <StatCard
-                                        label="New Joinees (This month)"
-                                        value={summary?.newlyJoinedThisMonth?.value ?? 0}
-                                        icon={<UserPlus size={20} color={colors.palette.indigo500} />}
-                                        color={colors.palette.indigo500}
-                                        // Logic: Just show active, but maybe future update can support 'Joined Recently' filter
-                                        onPress={() => navigate('Clients', { filter: 'All Clients' })}
-                                    />
-                                </View>
-
-                                <View style={$sectionHeader}>
-                                    <Text style={themed($sectionTitle)}>Recent Activity</Text>
-                                </View>
-
-                                <View style={$activityList}>
-                                    {summary?.activities?.map((activity: any, index: number) => (
-                                        <ActivityCard item={activity} key={activity._id || index} />
-                                    ))}
-                                </View>
-                            </>
-                        )}
-                    </View>
-                </ScrollView>
-            </Screen>
-
-            <Pressable
-                style={themed($fab)}
-                onPress={() => navigate('Add Client')}
-            >
-                <Plus size={28} color={colors.background} />
-            </Pressable>
-        </Drawer>
-    )
+export interface DashboardSummary {
+  totalClients: number
+  activeMembers: { value: number; trend: number | null }
+  expiredMembers: number
+  expiringIn7Days: number
+  expiringToday?: number
+  retentionRate: number
+  avgRevenuePerMember: number
+  revenueTrend: { label: string; amount: number }[]
+  revenueThisMonth: { value: number; trend: number | null }
+  newlyJoinedThisMonth: { value: number; trend: number | null }
+  todayCollection?: number
+  totalOutstanding?: number
+  clientsWithBalance?: number
+  paymentMethodsToday?: { method: string; amount: number; count: number }[]
+  topBalanceClients?: { _id: string; name: string; balance: number }[]
+  activities: any[]
 }
 
-const StatCard = React.memo(({ label, value, trend, icon, color, isLarge = false, onPress }: any) => {
-    const { themed, theme: { colors } } = useAppTheme();
-    return (
-        <Pressable
-            style={({ pressed }) => [
-                themed($statCard),
-                isLarge && { width: '100%', marginBottom: 16 },
-                { opacity: pressed ? 0.8 : 1 }
-            ]}
-            onPress={onPress}
-        >
-            <View style={$statHeader}>
-                <View style={[themed($iconContainer), { backgroundColor: color + '15' }]}>
-                    {icon}
-                </View>
-                {trend && (
-                    <View style={[themed($trendBadge), { backgroundColor: colors.successBackground }]}>
-                        <TrendingUp size={12} color={colors.success} />
-                        <Text size="xxs" style={themed({ color: colors.success, marginLeft: 4 })}>{trend}%</Text>
-                    </View>
-                )}
+const Home = () => {
+  const { theme, isDark } = useAppTheme()
+  const styles = getStyles(theme)
+  const dispatch = useAppDispatch()
+  const gymInfo = useAppSelector(selectGymInfo)
+  const cachedSummary = useAppSelector(selectDashboardSummary) as DashboardSummary | null
+  const [summary, setSummary] = useState<DashboardSummary | null>(cachedSummary)
+  const [showBanner, setShowBanner] = useState(false)
+  const [hasWhatsapp, setHasWhatsapp] = useState(false)
+  const [hasMembershipPlans, setHasMembershipPlans] = useState(false)
+  const [isLoading, setIsLoading] = useState(!cachedSummary)
+  const [refreshing, setRefreshing] = useState(false)
+  const [showWhatsNew, setShowWhatsNew] = useState(false)
+  const summaryRef = useRef<DashboardSummary | null>(cachedSummary)
+
+  useEffect(() => {
+    summaryRef.current = summary ?? cachedSummary
+  }, [cachedSummary, summary])
+
+  useEffect(() => {
+    const lastSeen = load<number>('@last_seen_ota_version')
+    if (lastSeen !== OTA_VERSION) {
+      setShowWhatsNew(true)
+      save('@last_seen_ota_version', OTA_VERSION)
+    }
+  }, [])
+
+  const handleWhatsNewClose = () => setShowWhatsNew(false)
+
+  const loadData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true)
+    else if (!summaryRef.current) setIsLoading(true)
+
+    const [dashboardRes, settingsRes, membershipsRes] = await Promise.all([
+      api.dashboardAPI(),
+      !hasShownBannerSession || isRefresh ? api.getSettings() : Promise.resolve(null),
+      api.allMemberships(),
+    ])
+
+    if (dashboardRes.kind === 'ok') {
+      setSummary(dashboardRes.data as DashboardSummary)
+      dispatch(setDashboardSummary({ dashboardSummary: dashboardRes.data as DashboardSummary }))
+      setGymStats({
+        totalClients: dashboardRes.data?.totalClients ?? 0,
+        activeMembers: dashboardRes.data?.activeMembers?.value ?? 0,
+        hasWhatsapp: settingsRes?.kind === 'ok' ? !!settingsRes.data?.hasWhatsappConfigured : hasWhatsapp,
+      })
+    }
+
+    if (membershipsRes.kind === 'ok') {
+      setHasMembershipPlans((membershipsRes.data as any[])?.length > 0)
+    }
+
+    if (settingsRes?.kind === 'ok') {
+      const whatsappConfigured = !!settingsRes.data?.hasWhatsappConfigured
+      setHasWhatsapp(whatsappConfigured)
+      if (!hasShownBannerSession && !whatsappConfigured) {
+        setShowBanner(true)
+      }
+      hasShownBannerSession = true
+    }
+
+    setEnrichedUserProperties({
+      appVersion: `${Constants.expoConfig?.version}_${OTA_VERSION}`,
+      darkMode: isDark,
+      gymId: gymInfo?._id,
+    })
+
+    if (isRefresh) setRefreshing(false)
+    else setIsLoading(false)
+  }, [dispatch, gymInfo?._id, hasWhatsapp, isDark])
+
+  const onRefresh = useCallback(() => { loadData(true) }, [loadData])
+
+  useFocusEffect(useCallback(() => { loadData(false) }, [loadData]))
+
+  const statItems: StatItem[] = useMemo(() => [
+    {
+      label: 'Active Now',
+      value: summary?.activeMembers?.value ?? 0,
+      trend: summary?.activeMembers?.trend,
+      icon: <ActivityIconLucide size={20} color={theme.colors.success} />,
+      color: theme.colors.success,
+      filter: 'Active',
+    },
+    {
+      label: 'Expired',
+      value: summary?.expiredMembers ?? 0,
+      icon: <UserX size={20} color={theme.colors.error} />,
+      color: theme.colors.error,
+      filter: 'Expired',
+    },
+    {
+      label: 'Expiring Soon',
+      value: summary?.expiringIn7Days ?? 0,
+      icon: <Clock size={20} color={theme.colors.palette.indigo500} />,
+      color: theme.colors.palette.indigo500,
+      filter: 'Expiring Soon',
+    },
+    {
+      label: 'New Joinees',
+      value: summary?.newlyJoinedThisMonth?.value ?? 0,
+      trend: summary?.newlyJoinedThisMonth?.trend,
+      icon: <UserPlus size={20} color={theme.colors.primary} />,
+      color: theme.colors.primary,
+      filter: 'All Clients',
+    },
+  ], [summary, theme.colors])
+
+  const handleStatPress = (filter: string) => navigate('Clients', { filter })
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        style={{ flex: 1 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.text} colors={[theme.colors.primary]} />}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <DashboardHeader
+          ownerName={gymInfo?.ownerName || 'Admin'}
+          gymLogo={gymInfo?.logo}
+          isDark={isDark}
+          onNotificationsPress={() => setShowWhatsNew(true)}
+        />
+
+        <View style={{ paddingHorizontal: theme.spacing.md }}>
+          {isLoading ? (
+            <View style={{ marginTop: theme.spacing.md }}>
+              <Skeleton width="100%" height={180} borderRadius={24} style={{ marginBottom: 24 }} />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                <Skeleton width="48%" height={120} borderRadius={20} />
+                <Skeleton width="48%" height={120} borderRadius={20} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
+                <Skeleton width="48%" height={120} borderRadius={20} />
+                <Skeleton width="48%" height={120} borderRadius={20} />
+              </View>
+              <Skeleton width="100%" height={160} borderRadius={20} style={{ marginBottom: 16 }} />
             </View>
-            <Text style={themed($statValue)}>{value}</Text>
-            <Text style={themed($statLabel)}>{label}</Text>
-        </Pressable>
-    );
-});
+          ) : (
+            <>
+              {showBanner && <WhatsAppBanner onDismiss={() => setShowBanner(false)} />}
 
-const ActivityCard = React.memo(({ item }: { item: any }) => {
-    const { themed, theme: { colors } } = useAppTheme();
+              <GetStartedCard
+                totalClients={summary?.totalClients ?? 0}
+                hasMembershipPlans={hasMembershipPlans}
+              />
 
-    const ActivityIcons: { [key: string]: JSX.Element } = {
-        'ONBOARDING': <UserPlus size={20} color={colors.success} />,
-        'RENEWAL': <RefreshCw size={20} color={colors.primary} />,
-        'EXPIRY': <AlertCircle size={20} color={colors.error} />,
-        'PAYMENT': <Wallet size={20} color={colors.success} />,
-        'ADVANCE_RENEWAL': <RefreshCw size={20} color={colors.primary} />
-    };
+              <View style={{ marginBottom: theme.spacing.md }}>
+                <RevenueCard
+                  value={summary?.revenueThisMonth?.value ?? 0}
+                  trend={summary?.revenueThisMonth?.trend ?? null}
+                  retentionRate={summary?.retentionRate}
+                  avgRevenuePerMember={summary?.avgRevenuePerMember}
+                  todayCollection={summary?.todayCollection}
+                  onPress={() => navigate('Revenue')}
+                />
+              </View>
 
-    return (
-        <MotiView
-            from={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-        >
-            <Pressable
-                style={themed($activityCard)}
-                onPress={() => item?.memberId && navigate('Client Profile', { data: { _id: item.memberId } })}
-            >
-                <View style={themed($activityIconWrapper)}>
-                    {ActivityIcons[item?.type] || <ActivityIconLucide size={20} color={colors.primary} />}
-                </View>
-                <View style={$activityContent}>
-                    <View style={$activityTopRow}>
-                        <Text style={themed($activityTitle)}>{item?.title}</Text>
-                        <Text style={themed($activityTime)}>{formatDistanceToNow(new Date(item?.date || new Date()), { addSuffix: true })}</Text>
-                    </View>
-                    <Text style={themed($activityDesc)} numberOfLines={1}>{item?.description}</Text>
-                    {item?.amount ? (
-                        <Text style={themed($activityAmount)}>₹{item?.amount}</Text>
-                    ) : null}
-                </View>
-            </Pressable>
-        </MotiView>
-    );
-});
+
+              {(summary?.expiringIn7Days ?? 0) > 0 && (
+                <ActionAlertCard
+                  label="EXPIRING SOON"
+                  title={String(summary?.expiringIn7Days)}
+                  description={`member${summary?.expiringIn7Days === 1 ? '' : 's'} expiring in the next 7 days`}
+                  primaryAction="View Members"
+                  secondaryAction={hasWhatsapp ? 'Reminders' : undefined}
+                  onPrimaryPress={() => navigate('Clients', { filter: 'Expiring Soon' })}
+                  onSecondaryPress={hasWhatsapp ? () => navigate('Notification Settings') : undefined}
+                  variant="warning"
+                />
+              )}
+
+              {(summary?.expiredMembers ?? 0) > 0 && (
+                <ActionAlertCard
+                  label="EXPIRED MEMBERS"
+                  title={String(summary?.expiredMembers)}
+                  description="members with expired memberships — win them back"
+                  primaryAction="Re-engage"
+                  onPrimaryPress={() => navigate('Clients', { filter: 'Expired' })}
+                  variant="danger"
+                />
+              )}
+
+              {(summary?.totalOutstanding ?? 0) > 0 && (
+                <ActionAlertCard
+                  label="OUTSTANDING"
+                  title={`₹${summary?.totalOutstanding}`}
+                  description={`from ${summary?.clientsWithBalance} client(s) with pending dues`}
+                  primaryAction="View Balances"
+                  onPrimaryPress={() => navigate('Clients', { filter: 'Has Balance' })}
+                  variant="warning"
+                />
+              )}
+
+              {(summary?.expiringToday ?? 0) > 0 && (
+                <ActionAlertCard
+                  label="EXPIRING TODAY"
+                  title={String(summary?.expiringToday)}
+                  description="memberships expiring today"
+                  primaryAction="View"
+                  onPrimaryPress={() => navigate('Clients', { filter: 'Expiring Soon' })}
+                  variant="danger"
+                />
+              )}
+
+              <StatGrid stats={statItems} onStatPress={handleStatPress} />
+
+              <RevenueTrendChart trends={summary?.revenueTrend ?? []} />
+
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Activity</Text>
+              </View>
+
+              <ActivityFeed activities={summary?.activities ?? []} />
+            </>
+          )}
+        </View>
+      </ScrollView>
+
+      <Pressable style={styles.fab} onPress={() => navigate('Add Client')}>
+        <Plus size={28} color={theme.colors.background} />
+      </Pressable>
+      <WhatsNewModal visible={showWhatsNew} onClose={handleWhatsNewClose} />
+    </SafeAreaView>
+  )
+}
 
 export default Home
 
-const $header: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-})
-
-const $menuBtn: ThemedStyle<ViewStyle> = ({ colors }) => ({
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-})
-
-const $headerText: ViewStyle = {
+const getStyles = (theme: any) => StyleSheet.create({
+  container: {
     flex: 1,
-    marginLeft: 16,
-}
-
-const $greeting: ThemedStyle<TextStyle> = ({ colors }) => ({
-    fontSize: 14,
-    color: colors.textDim,
-})
-
-const $ownerName: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
-    fontFamily: typography.secondary.bold,
-    fontSize: 18,
-    color: colors.text,
-})
-
-const $content: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-    paddingHorizontal: spacing.md,
-    paddingBottom: 100,
-})
-
-const $revenueCardContainer: ViewStyle = {
-    marginVertical: 16,
-}
-
-const $banner: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    backgroundColor: colors.palette.indigo500,
-    borderRadius: 16,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    marginTop: spacing.sm,
-    shadowColor: colors.palette.indigo500,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-})
-
-const $revenueCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    backgroundColor: colors.palette.indigo600,
-    borderRadius: 24,
-    padding: spacing.md,
-    shadowColor: colors.palette.indigo600,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
-})
-
-const $revenueHeader: ViewStyle = {
+    backgroundColor: theme.colors.background,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-}
-
-const $revenueLabel: TextStyle = {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-}
-
-const $revenueValue: ThemedStyle<TextStyle> = ({ typography }) => ({
-    color: '#FFFFFF',
-    fontSize: 32,
-    fontFamily: typography.secondary.bold,
+    marginTop: 8,
     marginBottom: 16,
-})
-
-const $revenueFooter: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-}
-
-const $revenueTrend: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-}
-
-const $revenueTrendText: ThemedStyle<TextStyle> = ({ typography }) => ({
-    color: '#FFFFFF',
-    marginLeft: 4,
-    fontFamily: typography.primary.medium,
-})
-
-const $statsGrid: ViewStyle = {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-}
-
-const $statCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    backgroundColor: colors.surface,
-    width: '48%',
-    borderRadius: 20,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-})
-
-const $statHeader: ViewStyle = {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-}
-
-const $iconContainer: ViewStyle = {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-}
-
-const $trendBadge: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-}
-
-const $statValue: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
-    fontSize: 24,
-    fontFamily: typography.secondary.bold,
-    color: colors.text,
-    marginBottom: 4,
-})
-
-const $statLabel: ThemedStyle<TextStyle> = ({ colors }) => ({
-    fontSize: 12,
-    color: colors.textDim,
-})
-
-const $sectionHeader: ViewStyle = {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 16,
-}
-
-const $sectionTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
-    fontFamily: typography.secondary.bold,
+  },
+  sectionTitle: {
+    fontWeight: theme.typography.bold,
     fontSize: 20,
-    color: colors.text,
-})
-
-const $activityList: ViewStyle = {
-    marginBottom: 20,
-}
-
-const $activityCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-})
-
-const $activityIconWrapper: ThemedStyle<ViewStyle> = ({ colors }) => ({
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-})
-
-const $activityContent: ViewStyle = {
-    flex: 1,
-}
-
-const $activityTopRow: ViewStyle = {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-}
-
-const $activityTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
-    fontFamily: typography.primary.semiBold,
-    fontSize: 14,
-    color: colors.text,
-})
-
-const $activityTime: ThemedStyle<TextStyle> = ({ colors }) => ({
-    fontSize: 10,
-    color: colors.textDim,
-})
-
-const $activityDesc: ThemedStyle<TextStyle> = ({ colors }) => ({
-    fontSize: 12,
-    color: colors.textDim,
-})
-
-const $activityAmount: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
-    fontSize: 14,
-    fontFamily: typography.primary.bold,
-    color: colors.text,
-    marginTop: 4,
-})
-
-const $fab: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    color: theme.colors.text,
+  },
+  fab: {
     position: 'absolute',
     bottom: 24,
     right: 24,
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.primary,
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
+  },
 })

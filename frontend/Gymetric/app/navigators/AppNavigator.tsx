@@ -1,4 +1,4 @@
-import { NavigationContainer } from "@react-navigation/native"
+import { NavigationContainer, NavigationState, DefaultTheme, DarkTheme } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import Config from "@/config"
@@ -31,6 +31,20 @@ import { ActivityIndicator, TextStyle, View } from "react-native"
 import { ThemedStyle } from "@/theme/types"
 import Revenue from "@/screens/Revenue/Revenue"
 import { WhatsAppPremium } from "@/screens/Setting/WhatsAppPremium"
+import EditMembershipScreen from "@/screens/Clients/EditMembershipScreen"
+import ReceiptSettingsScreen from "@/screens/Setting/ReceiptSettingsScreen"
+import PushNotificationSettings from "@/screens/Setting/PushNotificationSettings"
+import SeedDataScreen from "@/screens/Setting/SeedDataScreen"
+import { trackScreenView } from "@/services/analyticsService"
+import { registerPushToken } from "@/services/pushNotificationService"
+import React, { useEffect } from "react"
+
+const getActiveRouteName = (state: NavigationState | undefined): string | undefined => {
+  if (!state) return undefined
+  const route = state.routes[state.index]
+  if (route.state) return getActiveRouteName(route.state as NavigationState)
+  return route.name
+}
 
 const exitRoutes = Config.exitRoutes
 
@@ -41,6 +55,12 @@ const AppStack = () => {
   const [hasSeenOnboarding] = useMMKVBoolean('hasSeenOnboarding');
   const isLoading = useAppSelector(selectLoading);
   const { themed, theme: { colors } } = useAppTheme()
+
+  useEffect(() => {
+    if (authToken) {
+      registerPushToken();
+    }
+  }, [authToken]);
 
   return (
     <>
@@ -63,6 +83,7 @@ const AppStack = () => {
               <Stack.Screen name="Client Profile" component={ClientDetails} />
               <Stack.Screen name="Update Basic Information" component={UpdateClientbasicInfo} />
               <Stack.Screen name="Renew Membership" component={RenewMembership} />
+              <Stack.Screen name="Edit Membership" component={EditMembershipScreen} />
               <Stack.Screen name="Search Client" component={SearchClient} options={{ presentation: 'fullScreenModal' }} />
             </Stack.Group>
             <Stack.Group>
@@ -76,6 +97,9 @@ const AppStack = () => {
               <Stack.Screen name="WhatsApp Premium" component={WhatsAppPremium} />
               <Stack.Screen name="Revenue" component={Revenue} />
               <Stack.Screen name="Change Password" component={ChangePassword} />
+              <Stack.Screen name="Receipt Settings" component={ReceiptSettingsScreen} />
+              <Stack.Screen name="Push Notification Settings" component={PushNotificationSettings} />
+              <Stack.Screen name="Seed Data" component={SeedDataScreen} />
             </Stack.Group>
           </>
         ) : (
@@ -97,12 +121,33 @@ const AppStack = () => {
 }
 
 export const AppNavigator = (props: NavigationProps) => {
-  const { navigationTheme } = useAppTheme()
+  const { theme, isDark } = useAppTheme()
 
   useBackButtonHandler((routeName) => exitRoutes.includes(routeName))
 
+  const handleStateChange = (state: NavigationState | undefined) => {
+    const routeName = getActiveRouteName(state)
+    if (routeName) trackScreenView(routeName)
+    props.onStateChange?.(state)
+  }
+
+  const baseTheme = isDark ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...baseTheme,
+    dark: isDark,
+    colors: {
+      ...baseTheme.colors,
+      primary: theme.colors.primary,
+      background: theme.colors.background,
+      card: theme.colors.surface,
+      text: theme.colors.text,
+      border: theme.colors.border,
+      notification: theme.colors.primary,
+    },
+  };
+
   return (
-    <NavigationContainer ref={navigationRef} theme={navigationTheme} {...props}>
+    <NavigationContainer ref={navigationRef} theme={navTheme} {...props} onStateChange={handleStateChange}>
       <ErrorBoundary catchErrors={Config.catchErrors}>
         <AppStack />
       </ErrorBoundary>

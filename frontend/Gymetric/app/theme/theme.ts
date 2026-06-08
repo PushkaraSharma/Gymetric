@@ -6,18 +6,38 @@ import { timing } from "./timing"
 import type { Theme } from "./types"
 import { typography } from "./typography"
 
-// Here we define our themes.
+const shadows = {
+  small: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.18,
+    shadowRadius: 1.00,
+    elevation: 1,
+  },
+  medium: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+}
+
 export const lightTheme: Theme = {
   colors: colorsLight,
   spacing: spacingLight,
   typography,
   timing,
+  shadows,
   isDark: false,
 }
+
 export const darkTheme: Theme = {
   colors: colorsDark,
   spacing: spacingDark,
   typography,
   timing,
+  shadows,
   isDark: true,
 }
+

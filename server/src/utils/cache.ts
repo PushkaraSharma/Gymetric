@@ -11,3 +11,15 @@ export const getCacheKey = (prefix: string, gymId: string) => `${prefix}_${gymId
  * - 'dashboard_summary'
  * - 'client_list'
  */
+
+export const invalidateClientCaches = (gymId: string) => {
+    cache.del([getCacheKey('client_list', gymId), getCacheKey('dashboard_summary', gymId)]);
+};
+
+export const invalidateClientCachesMany = (gymIds: Iterable<string>) => {
+    const keys: string[] = [];
+    for (const gymId of gymIds) {
+        keys.push(getCacheKey('client_list', gymId), getCacheKey('dashboard_summary', gymId));
+    }
+    if (keys.length > 0) cache.del(keys);
+};

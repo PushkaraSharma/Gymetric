@@ -48,7 +48,7 @@ const SearchClient = ({ route }: any) => {
             safeAreaEdges={["bottom"]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
-            <Header title={`Add Dependent ${route?.params?.index + 1}`} backgroundColor={colors.surface} LeftActionComponent={<Pressable style={[$styles.row, { paddingHorizontal: 10 }]} onPress={goBack}>
+            <Header safeAreaTop title={`Add Dependent ${route?.params?.index + 1}`} backgroundColor={colors.surface} leftAction={<Pressable style={[$styles.row, { paddingHorizontal: 10 }]} onPress={goBack}>
                 <Ionicons name={'close'} size={25} color={colors.text} />
             </Pressable>} />
             <View style={{ flex: 1, paddingTop: 10 }}>
