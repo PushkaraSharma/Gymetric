@@ -72,7 +72,7 @@ const ClientDetails = ({ route }: any) => {
     }
 
     const clientInfo = async () => {
-        setIsLoading(true)
+        !client && setIsLoading(true)
         const [clientRes, activityRes] = await Promise.all([
             api.getClient(route?.params?.data?._id),
             api.getClientActivity(route?.params?.data?._id),
@@ -172,8 +172,6 @@ const ClientDetails = ({ route }: any) => {
         ) || [],
         [client]
     )
-
-    console.log(client?.membershipStatus)
 
     const sortedPayments = useMemo(() =>
         client?.paymentHistory?.slice().sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],

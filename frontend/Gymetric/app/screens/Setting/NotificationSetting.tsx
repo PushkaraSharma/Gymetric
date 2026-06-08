@@ -92,6 +92,7 @@ const NotificationSetting = ({ navigation }: any) => {
                 leftIcon="caretLeft"
                 onLeftPress={goBack}
                 backgroundColor={colors.background}
+                safeAreaTop
             />
             <ScrollView contentContainerStyle={{ padding: spacing.md }}>
                 {isLoading ? (

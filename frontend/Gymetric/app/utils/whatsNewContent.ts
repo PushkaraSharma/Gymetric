@@ -8,7 +8,7 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW_CONTENT: WhatsNewEntry[] = [
   {
-    version: 2,
+    version: OTA_VERSION,
     title: 'What\'s New',
     highlights: [
       'New updated UI',

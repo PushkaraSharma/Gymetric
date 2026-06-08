@@ -48,12 +48,13 @@ const Slide = memo(({ item, width, colors, typography }: any) => {
                     $imageContainer,
                     {
                         borderColor: colors.textDim,
-                        shadowColor: colors.text,
                         backgroundColor: colors.surface
                     }
                 ]}
             >
-                <Image source={item.image} style={$image} resizeMode="cover" />
+                <View style={$imageWrapper}>
+                    <Image source={item.image} style={$image} resizeMode="cover" />
+                </View>
             </MotiView>
             <MotiText
                 from={{ opacity: 0, translateY: 20 }}
@@ -180,13 +181,19 @@ const $imageContainer: ViewStyle = {
     width: "100%",
     aspectRatio: 1,
     borderRadius: 24,
-    borderWidth: 4,
     marginBottom: 40,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 12,
+}
+
+const $imageWrapper: ViewStyle = {
+    width: "100%",
+    height: "100%",
+    borderRadius: 16,
     overflow: "hidden",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
 }
 
 const $image: ImageStyle = {
