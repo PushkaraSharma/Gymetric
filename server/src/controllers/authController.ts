@@ -267,10 +267,8 @@ export const resetPassword = async (request: FastifyRequest, reply: FastifyReply
 
 export const checkUser = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        console.log("here it is")
         const { phoneNumber } = request.body as any;
         const user = await User.findOne({ phoneNumber }).populate('gymId');
-        console.log(user)
         if (user) {
             const name = (user.gymId as any)?.ownerName || user.username || '';
             return reply.status(200).send({

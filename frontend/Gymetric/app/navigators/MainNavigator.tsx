@@ -8,7 +8,8 @@ import ClientsList from "@/screens/Clients/ClientsList"
 import Setting from "@/screens/Setting/Setting"
 import { LayoutDashboard, Users, Settings } from "lucide-react-native"
 import { hapticsSelection } from "@/utils/haptics"
-import { api } from "@/services/Api"
+import { useAppDispatch } from "@/redux/Hooks"
+import { warmSession } from "@/services/sessionBootstrapService"
 
 const Tab = createBottomTabNavigator();
 
@@ -16,11 +17,11 @@ export function MainNavigator() {
     const { theme } = useAppTheme()
     const insets = useSafeAreaInsets()
     const isAndroid = Platform.OS === 'android';
+    const dispatch = useAppDispatch()
 
     useEffect(() => {
-        api.gymInfo(); //later will move to initial fetch
-        api.allClients();
-    }, []);
+        warmSession(dispatch)
+    }, [dispatch]);
 
     return (
         <Tab.Navigator

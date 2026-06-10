@@ -1,6 +1,6 @@
 import { Pressable, View, ViewStyle } from 'react-native'
 import React, { FC, Dispatch, SetStateAction, useRef, useCallback } from 'react'
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet'
+import { BottomSheetModal, BottomSheetBackdrop, BottomSheetFlatList } from '@gorhom/bottom-sheet'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Text } from '@/components/Text'
 import { spacing } from '@/theme/spacing'
@@ -131,53 +131,58 @@ const SelectMembership: FC<Props> = ({
             <BottomSheetModal
                 ref={bottomSheetModalRef}
                 snapPoints={["60%", "85%"]}
-                index={0}
+                index={1}
+                enableDynamicSizing={false}
                 backdropComponent={renderBackdrop}
                 backgroundStyle={{ backgroundColor: colors.surface }}
                 handleIndicatorStyle={{ backgroundColor: colors.border }}
             >
-                <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingBottom: bottom + spacing.md }}>
-                    <View style={themed($sheetHeader)}>
-                        <Text weight="bold" size="lg" style={{ color: colors.text }}>Choose Plan</Text>
-                        <Text size="xs" style={{ color: colors.textDim }}>Select a membership tier for the client</Text>
-                    </View>
-
-                    <BottomSheetScrollView
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.xs }}
-                    >
-                        {memberships.map((plan) => {
-                            const isSelected = selected?._id === plan._id
-                            return (
-                                <Pressable
-                                    key={plan._id}
-                                    onPress={() => selectPlan(plan)}
-                                    style={[
-                                        themed($planCard),
-                                        isSelected && {
-                                            borderColor: colors.primary,
-                                            borderWidth: 2,
-                                            backgroundColor: colors.primaryBackground
-                                        }
-                                    ]}
-                                >
-                                    <View style={{ flex: 1 }}>
-                                        <Text weight="semiBold" size="md" style={{ color: colors.text }}>{plan.planName}</Text>
-                                        <Text size="xs" style={{ color: colors.textDim, marginTop: 2 }}>{getDuration(plan)} · {plan.planType}</Text>
-                                    </View>
-                                    <View style={{ alignItems: 'flex-end' }}>
-                                        <Text weight="bold" size="lg" style={{ color: colors.text }}>₹{plan.price}</Text>
-                                        {isSelected && (
-                                            <View style={[themed($check), { backgroundColor: colors.primary }]}>
-                                                <Check size={14} color={colors.background} />
-                                            </View>
-                                        )}
-                                    </View>
-                                </Pressable>
-                            )
-                        })}
-                    </BottomSheetScrollView>
-                </View>
+                <BottomSheetFlatList
+                    data={memberships}
+                    keyExtractor={(plan) => plan._id}
+                    style={{ marginBottom: bottom }}
+                    contentContainerStyle={{
+                        paddingHorizontal: spacing.md,
+                        paddingBottom: bottom + spacing.md,
+                        gap: spacing.sm,
+                    }}
+                    showsVerticalScrollIndicator={false}
+                    ListHeaderComponent={
+                        <View style={themed($sheetHeader)}>
+                            <Text weight="bold" size="lg" style={{ color: colors.text }}>Choose Plan</Text>
+                            <Text size="xs" style={{ color: colors.textDim }}>Select a membership tier for the client</Text>
+                        </View>
+                    }
+                    renderItem={({ item: plan }) => {
+                        const isSelected = selected?._id === plan._id
+                        return (
+                            <Pressable
+                                onPress={() => selectPlan(plan)}
+                                style={[
+                                    themed($planCard),
+                                    isSelected && {
+                                        borderColor: colors.primary,
+                                        borderWidth: 2,
+                                        backgroundColor: colors.primaryBackground,
+                                    },
+                                ]}
+                            >
+                                <View style={{ flex: 1 }}>
+                                    <Text weight="semiBold" size="md" style={{ color: colors.text }}>{plan.planName}</Text>
+                                    <Text size="xs" style={{ color: colors.textDim, marginTop: 2 }}>{getDuration(plan)} · {plan.planType}</Text>
+                                </View>
+                                <View style={{ alignItems: 'flex-end' }}>
+                                    <Text weight="bold" size="lg" style={{ color: colors.text }}>₹{plan.price}</Text>
+                                    {isSelected && (
+                                        <View style={[themed($check), { backgroundColor: colors.primary }]}>
+                                            <Check size={14} color={colors.background} />
+                                        </View>
+                                    )}
+                                </View>
+                            </Pressable>
+                        )
+                    }}
+                />
             </BottomSheetModal>
 
             {selected && selected.planType !== 'indivisual' && (

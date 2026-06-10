@@ -37,6 +37,7 @@ import PushNotificationSettings from "@/screens/Setting/PushNotificationSettings
 import SeedDataScreen from "@/screens/Setting/SeedDataScreen"
 import { trackScreenView } from "@/services/analyticsService"
 import { registerPushToken } from "@/services/pushNotificationService"
+import { SessionBootstrapOverlay } from "@/components/SessionBootstrapOverlay"
 import React, { useEffect } from "react"
 
 const getActiveRouteName = (state: NavigationState | undefined): string | undefined => {
@@ -111,6 +112,7 @@ const AppStack = () => {
           </Stack.Group>
         )}
       </Stack.Navigator>
+      <SessionBootstrapOverlay />
       {isLoading && (
         <View style={themed($isLoading)}>
           <ActivityIndicator color={colors.primary} />
