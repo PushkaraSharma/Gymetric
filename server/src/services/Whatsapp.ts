@@ -13,15 +13,18 @@ export const sendWhatsAppTemplate = async (
     try {
         const url = `https://graph.facebook.com/v22.0/${whatsapp?.phoneNumberId}/messages`;
         const components = [];
-        if (whatsapp?.headerImageId || headerText) {
+        // Meta templates use an IMAGE header; gym name belongs in body params, not header text.
+        if (whatsapp?.headerImageId) {
             components.push({
                 type: "header",
                 parameters: [
-                    {
-                        type: headerText ? "text" : "image",
-                        ...(headerText ? { text: headerText } : { image: { id: whatsapp?.headerImageId } })
-                    }
-                ]
+                    { type: "image", image: { id: whatsapp.headerImageId } },
+                ],
+            });
+        } else if (headerText) {
+            components.push({
+                type: "header",
+                parameters: [{ type: "text", text: headerText }],
             });
         }
         if (bodyParams.length > 0) {
