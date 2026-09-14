@@ -184,9 +184,15 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
                 .lean(),
             AssignedMembership.aggregate([
                 { $match: { gymId: new mongoose.Types.ObjectId(gymId), createdAt: { $gte: sixMonthsAgo } } },
-                { $group: { _id: '$planId', planName: { $first: '$planName' }, count: { $sum: 1 } } },
+                {
+                    $group: {
+                        _id: '$planId',
+                        planName: { $first: '$planName' },
+                        count: { $sum: 1 },
+                        revenue: { $sum: '$totalAmount' },
+                    },
+                },
                 { $sort: { count: -1 } },
-                { $limit: 5 },
             ]),
         ]);
 
@@ -204,14 +210,23 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             (sum: number, p: { count: number }) => sum + p.count,
             0
         );
-        const topSellingPlansLast6Months = topSellingPlansRaw.map((p: any) => ({
-            planId: String(p._id),
-            planName: p.planName || 'Unknown plan',
-            count: p.count,
-            sharePercent: totalPlanSalesLast6Months > 0
-                ? Math.round((p.count / totalPlanSalesLast6Months) * 100)
-                : 0,
-        }));
+        const totalPlanRevenueLast6Months = topSellingPlansRaw.reduce(
+            (sum: number, p: { revenue?: number }) => sum + (p.revenue || 0),
+            0
+        );
+        const topSellingPlansLast6Months = topSellingPlansRaw.map((p: any) => {
+            const revenue = p.revenue || 0;
+            return {
+                planId: String(p._id),
+                planName: p.planName || 'Unknown plan',
+                count: p.count,
+                sharePercent: totalPlanSalesLast6Months > 0
+                    ? Math.round((p.count / totalPlanSalesLast6Months) * 100)
+                    : 0,
+                revenue,
+                avgSaleAmount: p.count > 0 ? Math.round(revenue / p.count) : 0,
+            };
+        });
 
         const expiringMembers = expiringMembersList.map((member: any) => {
             const endDate = new Date(member.endDate);
@@ -263,6 +278,7 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             })),
             topSellingPlansLast6Months,
             totalPlanSalesLast6Months,
+            totalPlanRevenueLast6Months,
         };
 
         cache.set(cacheKey, responseData);

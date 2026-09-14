@@ -15,6 +15,7 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { RevenueCard } from '@/components/dashboard/RevenueCard'
 import { StatGrid, StatItem } from '@/components/dashboard/StatGrid'
 import { RevenueTrendChart } from '@/components/dashboard/RevenueTrendChart'
+import { TopSellingPlanCard } from '@/components/dashboard/TopSellingPlanCard'
 import { ActionAlertCard } from '@/components/dashboard/ActionAlertCard'
 import { GetStartedCard } from '@/components/dashboard/GetStartedCard'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
@@ -44,6 +45,16 @@ export interface DashboardSummary {
   paymentMethodsToday?: { method: string; amount: number; count: number }[]
   topBalanceClients?: { _id: string; name: string; balance: number }[]
   activities: any[]
+  topSellingPlansLast6Months?: {
+    planId: string
+    planName: string
+    count: number
+    sharePercent: number
+    revenue?: number
+    avgSaleAmount?: number
+  }[]
+  totalPlanSalesLast6Months?: number
+  totalPlanRevenueLast6Months?: number
 }
 
 const Home = () => {
@@ -259,6 +270,12 @@ const Home = () => {
               )}
 
               <StatGrid stats={statItems} onStatPress={handleStatPress} />
+
+              <TopSellingPlanCard
+                plans={summary?.topSellingPlansLast6Months ?? []}
+                totalSales={summary?.totalPlanSalesLast6Months ?? 0}
+                totalRevenue={summary?.totalPlanRevenueLast6Months ?? 0}
+              />
 
               <RevenueTrendChart trends={summary?.revenueTrend ?? []} />
 

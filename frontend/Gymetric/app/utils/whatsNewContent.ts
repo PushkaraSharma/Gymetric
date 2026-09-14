@@ -11,12 +11,13 @@ export const WHATS_NEW_CONTENT: WhatsNewEntry[] = [
     version: OTA_VERSION,
     title: 'What\'s New',
     highlights: [
-      'New updated UI',
+      'Top Selling Plans breakdown in dashboard',
       'Membership pause/edit',
       'Member balances clear',
       'Rent Receipts now can be generated and shared',
       'More detailed dashboard for better insights',
       'Push Notifications ',
+      'Bug fixes and improvements',
     ],
   },
 ]

@@ -1,5 +1,5 @@
-import React from 'react'
-import { View, Dimensions, ViewStyle, TextStyle } from 'react-native'
+import React, { useState } from 'react'
+import { View, Dimensions, ViewStyle, TextStyle, Pressable } from 'react-native'
 import { BarChart3 } from 'lucide-react-native'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
@@ -15,9 +15,11 @@ interface RevenueTrendChartProps {
 }
 
 const CHART_HEIGHT = 100
+const AMOUNT_LABEL_HEIGHT = 22
 
 export function RevenueTrendChart({ trends }: RevenueTrendChartProps) {
   const { themed, theme: { colors, spacing } } = useAppTheme()
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const visibleTrends = trends.filter(t => t.amount > 0)
   const maxVal = Math.max(...visibleTrends.map(t => t.amount), 1)
   const chartWidth = Dimensions.get('window').width - 64
@@ -40,18 +42,52 @@ export function RevenueTrendChart({ trends }: RevenueTrendChartProps) {
     )
   }
 
+  const toggleBar = (index: number) => {
+    setSelectedIndex(prev => (prev === index ? null : index))
+  }
+
   return (
     <View style={themed($container)}>
       <Text style={themed($title)} text="Last 6 Months" />
-      <View style={[themed($chartContainer), { height: CHART_HEIGHT + 24 }]}>
+      <Text style={themed($hint)} text="Tap a bar for amount" />
+      <View style={[themed($chartContainer), { height: CHART_HEIGHT + AMOUNT_LABEL_HEIGHT + 24 }]}>
         {visibleTrends.map((item, i) => {
           const barH = (item.amount / maxVal) * CHART_HEIGHT
           const gap = (chartWidth - visibleTrends.length * barWidth) / (visibleTrends.length + 1)
+          const isSelected = selectedIndex === i
           return (
-            <View key={i} style={{ position: 'absolute', left: gap + i * (barWidth + gap), bottom: 0, alignItems: 'center' }}>
-              <View style={[themed($bar), { width: barWidth, height: Math.max(barH, 4), backgroundColor: colors.primary }]} />
+            <Pressable
+              key={i}
+              onPress={() => toggleBar(i)}
+              style={{
+                position: 'absolute',
+                left: gap + i * (barWidth + gap),
+                bottom: 0,
+                alignItems: 'center',
+                minWidth: barWidth + 8,
+              }}
+            >
+              {isSelected && (
+                <Text
+                  style={themed($amountLabel)}
+                  text={`₹${item.amount.toLocaleString('en-IN')}`}
+                  numberOfLines={1}
+                />
+              )}
+              {!isSelected && <View style={{ height: AMOUNT_LABEL_HEIGHT }} />}
+              <View
+                style={[
+                  themed($bar),
+                  {
+                    width: isSelected ? barWidth + 4 : barWidth,
+                    height: Math.max(barH, 4),
+                    backgroundColor: isSelected ? colors.palette.indigo600 : colors.primary,
+                    opacity: selectedIndex !== null && !isSelected ? 0.45 : 1,
+                  },
+                ]}
+              />
               <Text style={themed($barLabel)} text={item.label} />
-            </View>
+            </Pressable>
           )
         })}
       </View>
@@ -81,14 +117,26 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderWidth: 1,
   borderColor: colors.border,
 })
-const $title: ThemedStyle<TextStyle> = ({ typography, colors, spacing }) => ({
+const $title: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
   fontWeight: typography.bold,
   fontSize: 16,
   color: colors.text,
+})
+const $hint: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 11,
+  color: colors.textDim,
+  marginTop: 2,
   marginBottom: spacing.sm,
 })
 const $chartContainer: ThemedStyle<ViewStyle> = () => ({ position: 'relative', width: '100%' })
 const $bar: ThemedStyle<ViewStyle> = () => ({ borderRadius: 6 })
+const $amountLabel: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
+  fontSize: 10,
+  fontWeight: typography.bold,
+  color: colors.text,
+  height: AMOUNT_LABEL_HEIGHT,
+  textAlign: 'center',
+})
 const $barLabel: ThemedStyle<TextStyle> = ({ colors }) => ({ fontSize: 10, color: colors.textDim, marginTop: 6, fontWeight: '600' })
 const $statsRow: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: 'row',

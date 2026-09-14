@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Pressable, View, ViewStyle, TextStyle, Modal, TouchableWithoutFeedback } from 'react-native'
 import { MotiView } from 'moti'
-import { TrendingUp, Wallet, Info } from 'lucide-react-native'
+import { TrendingUp, Wallet, Info, ChevronRight } from 'lucide-react-native'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { Text } from '@/components/Text'
@@ -24,24 +24,31 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
 
   return (
     <>
-      <Pressable onPress={onPress}>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+      >
         <MotiView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} style={themed($card)}>
           <View style={$header}>
             <Text style={themed($label)} text="REVENUE THIS MONTH" />
-            <Wallet size={22} color={colors.white} opacity={0.8} />
+            <View style={$headerIcons}>
+              <Wallet size={22} color={colors.white} opacity={0.8} />
+              <ChevronRight size={20} color={colors.white} opacity={0.9} />
+            </View>
           </View>
-          <Text style={themed($value)} text={`₹${value.toLocaleString()}`} />
+          <Text style={themed($value)} text={`₹${value.toLocaleString('en-IN')}`} />
           <View style={$footer}>
             <View style={$trendBadge}>
               <TrendingUp size={14} color={colors.white} />
               <Text style={themed($trendText)} size="xs" text={trendText} />
             </View>
+            <Text style={themed($viewBreakdown)} text="View breakdown" />
           </View>
           {(todayCollection !== undefined || retentionRate !== undefined || avgRevenuePerMember !== undefined) && (
             <View style={[themed($statsRow), { marginTop: spacing.sm }]}>
               {todayCollection !== undefined && (
                 <View style={themed($statItem)}>
-                  <Text style={themed($statValue)} text={`₹${todayCollection.toLocaleString()}`} />
+                  <Text style={themed($statValue)} text={`₹${todayCollection.toLocaleString('en-IN')}`} />
                   <Text style={themed($statLabel)} text="Today" />
                 </View>
               )}
@@ -49,7 +56,10 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
                 <View style={themed($statItem)}>
                   <View style={$statHeader}>
                     <Text style={themed($statValue)} text={`${retentionRate}%`} />
-                    <Pressable onPress={() => setTooltipVisible('retention')} style={{ marginLeft: 4 }}>
+                    <Pressable
+                      onPress={(e) => { e.stopPropagation?.(); setTooltipVisible('retention') }}
+                      style={{ marginLeft: 4 }}
+                    >
                       <Info size={12} color="rgba(255,255,255,0.7)" />
                     </Pressable>
                   </View>
@@ -60,7 +70,10 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
                 <View style={[themed($statItem), themed($statBorder)]}>
                   <View style={$statHeader}>
                     <Text style={themed($statValue)} text={`₹${avgRevenuePerMember}`} />
-                    <Pressable onPress={() => setTooltipVisible('avgMember')} style={{ marginLeft: 4 }}>
+                    <Pressable
+                      onPress={(e) => { e.stopPropagation?.(); setTooltipVisible('avgMember') }}
+                      style={{ marginLeft: 4 }}
+                    >
                       <Info size={12} color="rgba(255,255,255,0.7)" />
                     </Pressable>
                   </View>
@@ -115,9 +128,11 @@ const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 })
 
 const $header: ViewStyle = { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }
+const $headerIcons: ViewStyle = { flexDirection: 'row', alignItems: 'center', gap: 6 }
+const $viewBreakdown: ThemedStyle<TextStyle> = () => ({ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginLeft: 10 })
 const $label: ThemedStyle<TextStyle> = () => ({ color: 'rgba(255,255,255,0.7)', fontSize: 11, letterSpacing: 1, fontWeight: '700' })
 const $value: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', fontSize: 32, lineHeight: 40, fontWeight: typography.bold, marginBottom: 12 })
-const $footer: ViewStyle = { flexDirection: 'row', alignItems: 'center' }
+const $footer: ViewStyle = { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }
 const $trendBadge: ViewStyle = { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }
 const $trendText: ThemedStyle<TextStyle> = ({ typography }) => ({ color: '#FFFFFF', marginLeft: 4, fontWeight: typography.medium, fontSize: 12 })
 const $statsRow: ThemedStyle<ViewStyle> = () => ({ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingVertical: 10 })

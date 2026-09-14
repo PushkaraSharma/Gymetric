@@ -76,6 +76,7 @@ const applyPayment = (
 export const getAllClients = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        console.log('gymId', gymId);
         const cacheKey = getCacheKey('client_list', gymId);
 
         const cachedClients = cache.get(cacheKey);
