@@ -16,9 +16,8 @@ import { ClientSearchBar } from '@/components/clients/ClientSearchBar'
 import { ClientFilterChips } from '@/components/clients/ClientFilterChips'
 import { ClientListCard } from '@/components/clients/ClientListCard'
 import { Button } from '@/components/Button'
-import { spacing } from '@/theme/spacing'
 
-const FILTER_IDS = ['All Clients', 'Active', 'Expiring Today', 'Expiring Soon', 'Has Balance', 'Expired', 'Trial', 'Paused', 'Inactive'] as const
+const FILTER_IDS = ['All Clients', 'Active', 'Expiring Today', 'Expiring Soon', 'Has Balance', 'Expired', 'Trial', 'Paused'] as const
 
 const isExpiringToday = (c: any, now: Date) => {
   if (c.membershipStatus !== 'active' || !c.activeMembership?.endDate) return false
@@ -78,7 +77,6 @@ const ClientsList = ({ route }: any) => {
       if (c.membershipStatus === 'trial') counts['Trial'] = (counts['Trial'] || 0) + 1
       if ((c.balance || 0) > 0) counts['Has Balance'] = (counts['Has Balance'] || 0) + 1
       if (c.membershipStatus === 'paused') counts['Paused'] = (counts['Paused'] || 0) + 1
-      if (c.membershipStatus === 'cancelled') counts['Inactive'] = (counts['Inactive'] || 0) + 1
       if (isExpiringToday(c, now)) counts['Expiring Today'] = (counts['Expiring Today'] || 0) + 1
       if (isExpiringSoon(c, now, sevenDays)) counts['Expiring Soon'] = (counts['Expiring Soon'] || 0) + 1
     })

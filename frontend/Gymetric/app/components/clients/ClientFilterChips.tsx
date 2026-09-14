@@ -52,7 +52,7 @@ export function ClientFilterChips({ filters, selected, onSelect }: Props) {
                         <Text
                             size="xs"
                             weight={isActive ? 'semiBold' : 'normal'}
-                            style={{ color: isActive ? colors.background : colors.textDim }}
+                            style={{ color: isActive ? colors.background : colors.textDim, textAlign: 'center' }}
                         >
                             {f.label}{f.count !== undefined ? ` (${f.count})` : ''}
                         </Text>
@@ -64,14 +64,12 @@ export function ClientFilterChips({ filters, selected, onSelect }: Props) {
 }
 
 const $chip: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    alignSelf: 'flex-start',
     flexGrow: 0,
     flexShrink: 0,
-    height: 44,
     minWidth: 72,
+    paddingVertical: 5,
     maxWidth: 156,
     paddingHorizontal: 14,
-    paddingVertical: 0,
     borderRadius: 18,
     backgroundColor: colors.surface,
     borderWidth: 1,

@@ -74,8 +74,8 @@ const $badgeText: ThemedStyle<TextStyle> = () => ({ fontSize: 9, fontWeight: '70
 const $title: ThemedStyle<TextStyle> = ({ typography, colors, spacing }) => ({ fontWeight: typography.bold, fontSize: 28, color: colors.text, marginBottom: spacing.xs, lineHeight: 28 })
 const $description: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({ fontSize: 13, color: colors.textDim, marginBottom: spacing.md })
 const $actionRow: ViewStyle = { flexDirection: 'row', alignItems: 'center', gap: 8 }
-const $button: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({ flex: 1, backgroundColor: colors.primary, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 12, alignItems: 'center' })
+const $button: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({ flex: 1, backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: spacing.md, borderRadius: 12, alignItems: 'center' })
 const $buttonText: ThemedStyle<TextStyle> = ({ colors, typography }) => ({ color: colors.background, fontWeight: typography.semiBold, fontSize: 14 })
-const $secondaryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({ paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 12, borderWidth: 1, borderColor: colors.border })
+const $secondaryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({ paddingVertical: 10, paddingHorizontal: spacing.md, borderRadius: 12, borderWidth: 1, borderColor: colors.border })
 const $secondaryButtonText: ThemedStyle<TextStyle> = ({ colors, typography }) => ({ color: colors.text, fontWeight: typography.medium, fontSize: 13 })
 const $navButton: ThemedStyle<ViewStyle> = ({ colors }) => ({ width: 46, height: 46, borderRadius: 12, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border })

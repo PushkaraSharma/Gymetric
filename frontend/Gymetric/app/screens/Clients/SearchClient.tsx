@@ -59,7 +59,7 @@ const SearchClient = ({ route }: any) => {
                     inputWrapperStyle={themed($textField)}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    placeholder="Seach by name or phone number"
+                    placeholder="Search by name or phone number"
                     returnKeyType="search"
                     LeftAccessory={() => <Ionicons name='search' size={22} color={colors.tint} />}
                 />
