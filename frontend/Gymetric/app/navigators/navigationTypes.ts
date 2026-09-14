@@ -1,9 +1,15 @@
 import { ComponentProps } from "react"
-import { NavigationContainer } from "@react-navigation/native"
+import { NavigationContainer, NavigatorScreenParams } from "@react-navigation/native"
+
+export type MainTabParamList = {
+  Home: undefined
+  Clients: { filter?: string } | undefined
+  Setting: undefined
+}
 
 export type AppStackParamList = {
   Onboarding: undefined
-  Main: undefined
+  Main: NavigatorScreenParams<MainTabParamList> | undefined
   PhoneLogin: undefined
   OTPVerification: { confirmation: any; phoneNumber: string }
   GymOnboarding: { idToken: string; phoneNumber: string }

@@ -10,8 +10,9 @@ import { LayoutDashboard, Users, Settings } from "lucide-react-native"
 import { hapticsSelection } from "@/utils/haptics"
 import { useAppDispatch } from "@/redux/Hooks"
 import { warmSession } from "@/services/sessionBootstrapService"
+import type { MainTabParamList } from "./navigationTypes"
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export function MainNavigator() {
     const { theme } = useAppTheme()

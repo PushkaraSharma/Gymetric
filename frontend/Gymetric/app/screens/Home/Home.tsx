@@ -7,7 +7,9 @@ import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectDashboardSummary, selectGymInfo, setDashboardSummary } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { navigate } from '@/navigators/navigationUtilities'
-import { useFocusEffect } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
+import type { MainTabParamList } from '@/navigators/navigationTypes'
 import { Skeleton } from '@/components/Skeleton'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { RevenueCard } from '@/components/dashboard/RevenueCard'
@@ -45,6 +47,7 @@ export interface DashboardSummary {
 }
 
 const Home = () => {
+  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>()
   const { theme, isDark } = useAppTheme()
   const styles = getStyles(theme)
   const dispatch = useAppDispatch()
@@ -153,7 +156,11 @@ const Home = () => {
     },
   ], [summary, theme.colors])
 
-  const handleStatPress = (filter: string) => navigate('Clients', { filter })
+  const navigateToMembers = (filter: string) => {
+    tabNavigation.navigate('Clients', { filter })
+  }
+
+  const handleStatPress = (filter: string) => navigateToMembers(filter)
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -212,7 +219,7 @@ const Home = () => {
                   description={`member${summary?.expiringIn7Days === 1 ? '' : 's'} expiring in the next 7 days`}
                   primaryAction="View Members"
                   secondaryAction={hasWhatsapp ? 'Reminders' : undefined}
-                  onPrimaryPress={() => navigate('Clients', { filter: 'Expiring Soon' })}
+                  onPrimaryPress={() => navigateToMembers('Expiring Soon')}
                   onSecondaryPress={hasWhatsapp ? () => navigate('Notification Settings') : undefined}
                   variant="warning"
                 />
@@ -224,7 +231,7 @@ const Home = () => {
                   title={String(summary?.expiredMembers)}
                   description="members with expired memberships — win them back"
                   primaryAction="Re-engage"
-                  onPrimaryPress={() => navigate('Clients', { filter: 'Expired' })}
+                  onPrimaryPress={() => navigateToMembers('Expired')}
                   variant="danger"
                 />
               )}
@@ -235,7 +242,7 @@ const Home = () => {
                   title={`₹${summary?.totalOutstanding}`}
                   description={`from ${summary?.clientsWithBalance} client(s) with pending dues`}
                   primaryAction="View Balances"
-                  onPrimaryPress={() => navigate('Clients', { filter: 'Has Balance' })}
+                  onPrimaryPress={() => navigateToMembers('Has Balance')}
                   variant="warning"
                 />
               )}
@@ -246,7 +253,7 @@ const Home = () => {
                   title={String(summary?.expiringToday)}
                   description="memberships expiring today"
                   primaryAction="View"
-                  onPrimaryPress={() => navigate('Clients', { filter: 'Expiring Soon' })}
+                  onPrimaryPress={() => navigateToMembers('Expiring Today')}
                   variant="danger"
                 />
               )}

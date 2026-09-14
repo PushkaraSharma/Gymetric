@@ -1,16 +1,16 @@
-import { FlatList, Pressable, View, ViewStyle, TextStyle, RefreshControl, StyleSheet } from 'react-native'
+import { FlatList, Pressable, View, ViewStyle, TextStyle, RefreshControl } from 'react-native'
 import React, { useCallback, useMemo, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Text } from '@/components/Text'
 import { ThemedStyle } from '@/theme/types'
 import { Plus, Users } from 'lucide-react-native'
 import { useAppTheme } from '@/theme/context'
-import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
+import { useAppSelector } from '@/redux/Hooks'
 import { selectAllClients } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { navigate } from '@/navigators/navigationUtilities'
-import { useFocusEffect } from '@react-navigation/native'
-import { addDays, isAfter, isBefore, parseISO } from 'date-fns'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { addDays, isAfter, isBefore, isSameDay, parseISO } from 'date-fns'
 import { Skeleton } from '@/components/Skeleton'
 import { ClientSearchBar } from '@/components/clients/ClientSearchBar'
 import { ClientFilterChips } from '@/components/clients/ClientFilterChips'
@@ -18,21 +18,54 @@ import { ClientListCard } from '@/components/clients/ClientListCard'
 import { Button } from '@/components/Button'
 import { spacing } from '@/theme/spacing'
 
-const FILTER_IDS = ['All Clients', 'Active', 'Expiring Soon', 'Has Balance', 'Expired', 'Trial', 'Paused', 'Inactive'] as const
+const FILTER_IDS = ['All Clients', 'Active', 'Expiring Today', 'Expiring Soon', 'Has Balance', 'Expired', 'Trial', 'Paused', 'Inactive'] as const
+
+const isExpiringToday = (c: any, now: Date) => {
+  if (c.membershipStatus !== 'active' || !c.activeMembership?.endDate) return false
+  return isSameDay(parseISO(c.activeMembership.endDate), now)
+}
+
+const isExpiringSoon = (c: any, now: Date, sevenDays: Date) => {
+  if (c.membershipStatus !== 'active' || !c.activeMembership?.endDate) return false
+  const end = parseISO(c.activeMembership.endDate)
+  return isAfter(end, now) && isBefore(end, sevenDays)
+}
 
 const ClientsList = ({ route }: any) => {
-  const { themed, theme: { colors, spacing, typography } } = useAppTheme()
-  const dispatch = useAppDispatch()
+  const { themed, theme: { colors, spacing } } = useAppTheme()
+  const navigation = useNavigation<any>()
   const clients = useAppSelector(selectAllClients)
 
   const [searchText, setSearchText] = useState('')
-  const [selectedFilter, setSelectedFilter] = useState<string>(route?.params?.filter || 'All Clients')
-  const [isLoading, setIsLoading] = useState(true)
+  const selectedFilter = route?.params?.filter ?? 'All Clients'
+  const [isLoading, setIsLoading] = useState(!clients?.length)
   const [refreshing, setRefreshing] = useState(false)
 
+  const handleSelectFilter = useCallback((id: string) => {
+    navigation.setParams({ filter: id })
+  }, [navigation])
+
+  const getClients = useCallback(async (isRefresh = false) => {
+    // Stale-while-revalidate: only show skeletons when we have nothing to display
+    if (isRefresh) setRefreshing(true)
+    else if (!clients?.length) setIsLoading(true)
+
+    try {
+      await api.allClients()
+    } finally {
+      setRefreshing(false)
+      setIsLoading(false)
+    }
+  }, [clients?.length])
+
+  // Clear loading as soon as Redux has data (e.g. from warmSession) even if a fetch is in flight
   React.useEffect(() => {
-    if (route?.params?.filter) setSelectedFilter(route.params.filter)
-  }, [route?.params?.filter])
+    if (clients?.length) setIsLoading(false)
+  }, [clients?.length])
+
+  useFocusEffect(useCallback(() => {
+    getClients(false)
+  }, [getClients]))
 
   const filterCounts = useMemo(() => {
     if (!clients?.length) return {}
@@ -46,12 +79,8 @@ const ClientsList = ({ route }: any) => {
       if ((c.balance || 0) > 0) counts['Has Balance'] = (counts['Has Balance'] || 0) + 1
       if (c.membershipStatus === 'paused') counts['Paused'] = (counts['Paused'] || 0) + 1
       if (c.membershipStatus === 'cancelled') counts['Inactive'] = (counts['Inactive'] || 0) + 1
-      if (c.activeMembership?.endDate) {
-        const end = parseISO(c.activeMembership.endDate)
-        if (c.membershipStatus === 'active' && isAfter(end, now) && isBefore(end, sevenDays)) {
-          counts['Expiring Soon'] = (counts['Expiring Soon'] || 0) + 1
-        }
-      }
+      if (isExpiringToday(c, now)) counts['Expiring Today'] = (counts['Expiring Today'] || 0) + 1
+      if (isExpiringSoon(c, now, sevenDays)) counts['Expiring Soon'] = (counts['Expiring Soon'] || 0) + 1
     })
     return counts
   }, [clients])
@@ -77,25 +106,12 @@ const ClientsList = ({ route }: any) => {
         case 'Trial': return c.membershipStatus === 'trial'
         case 'Has Balance': return (c.balance || 0) > 0
         case 'Paused': return c.membershipStatus === 'paused'
-        // case 'Inactive': return c.membershipStatus === 'cancelled'
-        case 'Expiring Soon':
-          if (!c.activeMembership?.endDate) return false
-          const endDate = parseISO(c.activeMembership.endDate)
-          return c.membershipStatus === 'active' && isAfter(endDate, now) && isBefore(endDate, sevenDaysFromNow)
+        case 'Expiring Today': return isExpiringToday(c, now)
+        case 'Expiring Soon': return isExpiringSoon(c, now, sevenDaysFromNow)
         default: return true
       }
     })
   }, [clients, selectedFilter, searchText])
-
-  const getClients = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true)
-    else if (!clients?.length) setIsLoading(true)
-    await api.allClients()
-    if (isRefresh) setRefreshing(false)
-    setIsLoading(false)
-  }
-
-  useFocusEffect(useCallback(() => { getClients() }, []))
 
   const activeCount = filterCounts['Active'] || 0
   const balanceCount = filterCounts['Has Balance'] || 0
@@ -112,33 +128,44 @@ const ClientsList = ({ route }: any) => {
       </View>
 
       <View style={{ paddingHorizontal: spacing.md, flex: 1 }}>
-        <FlatList
-          data={filteredClients}
-          keyExtractor={(item) => item._id || item.phoneNumber}
-          renderItem={({ item, index }) => (
-            <ClientListCard
-              client={item}
-              index={index}
-              onPress={() => navigate('Client Profile', { data: item })}
-            />
-          )}
-          contentContainerStyle={{ paddingBottom: 120 }}
-          keyboardShouldPersistTaps="handled"
-          nestedScrollEnabled
-          stickyHeaderIndices={[0]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => getClients(true)} tintColor={colors.primary} colors={[colors.primary]} />
-          }
-          ListHeaderComponent={
+        {isLoading && !clients?.length ? (
+          <View style={{ flex: 1, marginTop: spacing.md }}>
             <View style={themed($stickyHeader)}>
               <ClientSearchBar value={searchText} onChangeText={setSearchText} />
-              <ClientFilterChips filters={filters} selected={selectedFilter} onSelect={setSelectedFilter} />
+              <ClientFilterChips filters={filters} selected={selectedFilter} onSelect={handleSelectFilter} />
             </View>
-          }
-          ListHeaderComponentStyle={{ backgroundColor: colors.background }}
-          ListEmptyComponent={
-            !isLoading ? (
+            {[1, 2, 3, 4, 5].map(i => (
+              <Skeleton key={i} width="100%" height={80} borderRadius={20} style={{ marginBottom: spacing.sm }} />
+            ))}
+          </View>
+        ) : (
+          <FlatList
+            style={{ flex: 1 }}
+            data={filteredClients}
+            keyExtractor={(item) => item._id || item.phoneNumber}
+            renderItem={({ item, index }) => (
+              <ClientListCard
+                client={item}
+                index={index}
+                onPress={() => navigate('Client Profile', { data: item })}
+              />
+            )}
+            contentContainerStyle={{ paddingBottom: 120 }}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            stickyHeaderIndices={[0]}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={() => getClients(true)} tintColor={colors.primary} colors={[colors.primary]} />
+            }
+            ListHeaderComponent={
+              <View style={themed($stickyHeader)}>
+                <ClientSearchBar value={searchText} onChangeText={setSearchText} />
+                <ClientFilterChips filters={filters} selected={selectedFilter} onSelect={handleSelectFilter} />
+              </View>
+            }
+            ListHeaderComponentStyle={{ backgroundColor: colors.background }}
+            ListEmptyComponent={
               <View style={themed($empty)}>
                 <View style={[themed($emptyIcon), { backgroundColor: colors.primaryBackground }]}>
                   <Users size={32} color={colors.primary} />
@@ -151,16 +178,9 @@ const ClientsList = ({ route }: any) => {
                   <Button title="Add Member" onPress={() => navigate('Add Client')} style={{ marginTop: spacing.lg, minWidth: 160 }} />
                 )}
               </View>
-            ) : null
-          }
-        />
-        {isLoading ? (
-          <View style={{ marginTop: spacing.md }}>
-            {[1, 2, 3, 4, 5].map(i => (
-              <Skeleton key={i} width="100%" height={80} borderRadius={20} style={{ marginBottom: spacing.sm }} />
-            ))}
-          </View>
-        ) : null}
+            }
+          />
+        )}
       </View>
 
       <Pressable style={themed($fab)} onPress={() => navigate('Add Client')}>
