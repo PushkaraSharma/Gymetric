@@ -33,7 +33,7 @@ export const verifyOtp = async (request: FastifyRequest, reply: FastifyReply) =>
             const token = jwt.sign(
                 { userId: user._id, gymId: user.gymId._id, role: user.role },
                 process.env.JWT_SECRET || 'secret',
-                { expiresIn: '30d' }
+                { expiresIn: '90d' }
             );
             return reply.status(200).send({
                 success: true,
@@ -112,7 +112,7 @@ export const onboard = async (request: FastifyRequest, reply: FastifyReply) => {
         const token = jwt.sign(
             { userId: newUser._id, gymId: newGym._id, role: newUser.role },
             process.env.JWT_SECRET || 'secret',
-            { expiresIn: '30d' }
+            { expiresIn: '90d' }
         );
 
         return reply.status(201).send({
@@ -154,7 +154,7 @@ export const passwordLogin = async (request: FastifyRequest, reply: FastifyReply
         const token = jwt.sign(
             { userId: user._id, gymId: user.gymId._id, role: user.role },
             process.env.JWT_SECRET || 'secret',
-            { expiresIn: '30d' }
+            { expiresIn: '90d' }
         );
 
         return reply.status(200).send({
@@ -216,7 +216,7 @@ export const loginAdmin = async (request: FastifyRequest, reply: FastifyReply) =
         if (!isCorrect) {
             return reply.status(401).send({ success: false, message: 'Invalid username or password' });
         }
-        const token = jwt.sign({ userId: user._id, gymId: user.gymId._id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '1d' });
+        const token = jwt.sign({ userId: user._id, gymId: user.gymId._id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '90d' });
         return reply.status(200).send({
             success: true,
             data: {

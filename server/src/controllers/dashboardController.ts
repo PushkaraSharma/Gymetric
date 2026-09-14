@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import Activity from "../models/Activity.js";
 import Client from "../models/Client.js";
+import AssignedMembership from "../models/AssignedMembership.js";
 import mongoose from "mongoose";
 import { addUtcDays, utcStartOfDay, utcStartOfMonth } from "../utils/timeUtils.js";
 import { cache, getCacheKey } from "../utils/cache.js";
@@ -10,10 +11,15 @@ const calculateTrend = (current: number, previous: number) => {
     return parseFloat(((current - previous) / previous * 100).toFixed(1));
 };
 
-const getRevenueTrend = async (gymId: string, today: Date) => {
+const getSixMonthsAgoStart = (today: Date) => {
     const sixMonthsAgo = new Date(today);
     sixMonthsAgo.setMonth(today.getMonth() - 5);
     sixMonthsAgo.setDate(1);
+    return sixMonthsAgo;
+};
+
+const getRevenueTrend = async (gymId: string, today: Date) => {
+    const sixMonthsAgo = getSixMonthsAgoStart(today);
 
     const monthlyRevenueRaw = await Client.aggregate([
         { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
@@ -56,6 +62,7 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
         const sevenDaysFromNow = addUtcDays(today, 7);
 
         const tomorrow = addUtcDays(today, 1);
+        const sixMonthsAgo = getSixMonthsAgoStart(today);
 
         const [
             totalClients,
@@ -76,6 +83,7 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             expiringToday,
             paymentMethodsToday,
             topBalanceClients,
+            topSellingPlansRaw,
         ] = await Promise.all([
             Client.countDocuments({ gymId }),
             Client.countDocuments({ gymId, membershipStatus: 'active' }),
@@ -174,6 +182,12 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
                 .sort({ balance: -1 })
                 .limit(3)
                 .lean(),
+            AssignedMembership.aggregate([
+                { $match: { gymId: new mongoose.Types.ObjectId(gymId), createdAt: { $gte: sixMonthsAgo } } },
+                { $group: { _id: '$planId', planName: { $first: '$planName' }, count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 5 },
+            ]),
         ]);
 
         const revCurrentVal = revenueCurrent[0]?.total || 0;
@@ -185,6 +199,19 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
         const avgRevenuePerMember = activeCount > 0
             ? parseFloat((revCurrentVal / activeCount).toFixed(0))
             : 0;
+
+        const totalPlanSalesLast6Months = topSellingPlansRaw.reduce(
+            (sum: number, p: { count: number }) => sum + p.count,
+            0
+        );
+        const topSellingPlansLast6Months = topSellingPlansRaw.map((p: any) => ({
+            planId: String(p._id),
+            planName: p.planName || 'Unknown plan',
+            count: p.count,
+            sharePercent: totalPlanSalesLast6Months > 0
+                ? Math.round((p.count / totalPlanSalesLast6Months) * 100)
+                : 0,
+        }));
 
         const expiringMembers = expiringMembersList.map((member: any) => {
             const endDate = new Date(member.endDate);
@@ -234,6 +261,8 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
                 name: c.name,
                 balance: c.balance,
             })),
+            topSellingPlansLast6Months,
+            totalPlanSalesLast6Months,
         };
 
         cache.set(cacheKey, responseData);
