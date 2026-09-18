@@ -486,9 +486,9 @@ const ClientDetails = ({ route }: any) => {
                                     <View style={{ flex: 1, marginLeft: spacing.sm }}>
                                         <Text weight="medium" size="xs">{item.title}</Text>
                                         {item.description && <Text size="xxs" style={{ color: colors.textDim }}>{item.description}</Text>}
-                                        {isWhatsApp && waStatus === 'failed' && item.errorMessage ? (
+                                        {/* {isWhatsApp && waStatus === 'failed' && item.errorMessage ? (
                                             <Text size="xxs" style={{ color: colors.error, marginTop: 2 }}>{item.errorMessage}</Text>
-                                        ) : null}
+                                        ) : null} */}
                                         <Text size="xxs" style={{ color: colors.textDim, marginTop: 2 }}>{formatDate(item.date, 'dd MMM yyyy · HH:mm')}</Text>
                                     </View>
                                     {isWhatsApp && waStatus ? (
