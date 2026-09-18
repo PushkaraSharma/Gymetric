@@ -6,7 +6,6 @@ import { useAppTheme } from '@/theme/context'
 import { $styles } from '@/theme/styles'
 import { Text } from '@/components/Text'
 import { Switch } from '@/components/Toggle/Switch'
-import { TextField } from '@/components/TextField'
 import { Button } from '@/components/Button'
 import { api } from '@/services/Api'
 import Toast from 'react-native-toast-message'
@@ -32,7 +31,6 @@ const NotificationSetting = ({ navigation }: any) => {
         sendOnRenewal: true,
         sendOnExpiry: true,
         sendOnReminder: true,
-        reminderDays: '3'
     });
 
     const [hasChanges, setHasChanges] = useState(false);
@@ -52,7 +50,6 @@ const NotificationSetting = ({ navigation }: any) => {
                 sendOnRenewal: data.sendOnRenewal ?? true,
                 sendOnExpiry: data.sendOnExpiry ?? true,
                 sendOnReminder: data.sendOnReminder ?? true,
-                reminderDays: String(data.reminderDays ?? 3),
             });
         }
         setIsLoading(false);
@@ -67,7 +64,7 @@ const NotificationSetting = ({ navigation }: any) => {
                 sendOnRenewal: settings.sendOnRenewal,
                 sendOnExpiry: settings.sendOnExpiry,
                 sendOnReminder: settings.sendOnReminder,
-                reminderDays: parseInt(settings.reminderDays) || 3
+                reminderDays: 1
             }
         };
 
@@ -144,30 +141,10 @@ const NotificationSetting = ({ navigation }: any) => {
 
                                     <Switch
                                         label="Reminder Notification"
-                                        helper="Send a reminder before membership expires"
+                                        helper="Sends 1 day before membership expires"
                                         value={settings.sendOnReminder}
                                         onValueChange={(val: boolean) => updateSetting('sendOnReminder', val)}
-                                        containerStyle={{ marginBottom: spacing.sm }}
                                     />
-
-                                    {settings.sendOnReminder && (
-                                        <View style={{ marginTop: spacing.xs }}>
-                                            <TextField
-                                                label="Days before expiry"
-                                                value={settings.reminderDays}
-                                                onChangeText={(val: string) => updateSetting('reminderDays', val)}
-                                                keyboardType="numeric"
-                                                placeholder="e.g. 3"
-                                                returnKeyType="done"
-                                                onSubmitEditing={handleSave}
-                                                containerStyle={{ backgroundColor: colors.surface }}
-                                                inputWrapperStyle={{ backgroundColor: colors.background }}
-                                            />
-                                            <Text size="xs" style={{ color: colors.textDim, marginTop: 15, marginLeft: 5 }}>
-                                                Default is 3 days.
-                                            </Text>
-                                        </View>
-                                    )}
                                 </View>
                             </>
                         )}

@@ -107,7 +107,7 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
             'whatsapp.sendOnReminder': { $ne: false }
         });
         for (const setting of allSettings) {
-            const reminderDays = setting.whatsapp.reminderDays || 3;
+            const reminderDays = 1;
             const targetDateStart = dayjs(today).add(reminderDays, 'day').startOf('day').toDate();
             const targetDateEnd = dayjs(today).add(reminderDays, 'day').endOf('day').toDate();
             const expiringMemberships = await AssignedMembership.find({

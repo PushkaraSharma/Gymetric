@@ -16,6 +16,7 @@ import multipart from '@fastify/multipart';
 import { settingRoutes } from './src/routes/settings.js';
 import { uploadRoutes } from './src/routes/upload.js';
 import { userRoutes } from './src/routes/user.js';
+import { whatsappRoutes } from './src/routes/whatsapp.js';
 
 // on onboarding or any other time -> use AI to share some insights ( like workout plan etc )
 const start = async () => {
@@ -55,6 +56,7 @@ const start = async () => {
     await app.register(settingRoutes, { prefix: '/api/settings' });
     await app.register(uploadRoutes, { prefix: '/api/upload' });
     await app.register(userRoutes, { prefix: '/api/user' });
+    await app.register(whatsappRoutes, { prefix: '/api/whatsapp' });
 
     app.setErrorHandler((error: any, request: any, reply: any) => {
         Sentry.captureException(error);

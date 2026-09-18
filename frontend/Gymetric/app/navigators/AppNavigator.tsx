@@ -31,6 +31,7 @@ import { ActivityIndicator, TextStyle, View } from "react-native"
 import { ThemedStyle } from "@/theme/types"
 import Revenue from "@/screens/Revenue/Revenue"
 import { WhatsAppPremium } from "@/screens/Setting/WhatsAppPremium"
+import WhatsAppMessages from "@/screens/Setting/WhatsAppMessages"
 import EditMembershipScreen from "@/screens/Clients/EditMembershipScreen"
 import ReceiptSettingsScreen from "@/screens/Setting/ReceiptSettingsScreen"
 import PushNotificationSettings from "@/screens/Setting/PushNotificationSettings"
@@ -96,6 +97,7 @@ const AppStack = () => {
               <Stack.Screen name="Help Center" component={HelpCenter} />
               <Stack.Screen name="Notification Settings" component={NotificationSetting} />
               <Stack.Screen name="WhatsApp Premium" component={WhatsAppPremium} />
+              <Stack.Screen name="WhatsApp Messages" component={WhatsAppMessages} />
               <Stack.Screen name="Revenue" component={Revenue} />
               <Stack.Screen name="Change Password" component={ChangePassword} />
               <Stack.Screen name="Receipt Settings" component={ReceiptSettingsScreen} />

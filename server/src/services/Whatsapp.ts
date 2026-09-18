@@ -1,5 +1,6 @@
 import axios from 'axios';
 import MessageLog from '../models/MessageLog.js';
+import { graphErrorFromAxios } from '../utils/whatsappStatus.js';
 
 export const sendWhatsAppTemplate = async (
     to: string,
@@ -51,13 +52,16 @@ export const sendWhatsAppTemplate = async (
         });
 
         if (logContext?.gymId) {
+            const providerMessageId = response.data?.messages?.[0]?.id;
             await MessageLog.create({
                 gymId: logContext.gymId,
                 clientId: logContext.clientId,
                 channel: 'whatsapp',
                 template: templateName,
-                status: 'sent',
+                status: 'queued',
                 summary,
+                providerMessageId,
+                statusUpdatedAt: new Date(),
             });
         }
 
@@ -65,6 +69,7 @@ export const sendWhatsAppTemplate = async (
     } catch (error: any) {
         console.error("WhatsApp Error:", error.response?.data || error.message);
         if (logContext?.gymId) {
+            const { errorCode, errorMessage } = graphErrorFromAxios(error);
             await MessageLog.create({
                 gymId: logContext.gymId,
                 clientId: logContext.clientId,
@@ -72,6 +77,9 @@ export const sendWhatsAppTemplate = async (
                 template: templateName,
                 status: 'failed',
                 summary,
+                errorCode,
+                errorMessage,
+                statusUpdatedAt: new Date(),
             });
         }
     }
@@ -90,5 +98,6 @@ export const logSkippedWhatsApp = async (
         template: templateName,
         status: 'skipped',
         summary: reason,
+        statusUpdatedAt: new Date(),
     });
 };
