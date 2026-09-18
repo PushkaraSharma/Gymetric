@@ -2,6 +2,9 @@ import axios from 'axios';
 import MessageLog from '../models/MessageLog.js';
 import { graphErrorFromAxios } from '../utils/whatsappStatus.js';
 
+const IMAGE_HEADER_TEMPLATES = new Set(['onboarding']);
+const TEXT_HEADER_TEMPLATES = new Set(['renewal', 'renewal_complete', 'expired']);
+
 export const sendWhatsAppTemplate = async (
     to: string,
     templateName: string,
@@ -14,15 +17,14 @@ export const sendWhatsAppTemplate = async (
     try {
         const url = `https://graph.facebook.com/v22.0/${whatsapp?.phoneNumberId}/messages`;
         const components = [];
-        // Meta templates use an IMAGE header; gym name belongs in body params, not header text.
-        if (whatsapp?.headerImageId) {
+        if (IMAGE_HEADER_TEMPLATES.has(templateName) && whatsapp?.headerImageId) {
             components.push({
                 type: "header",
                 parameters: [
                     { type: "image", image: { id: whatsapp.headerImageId } },
                 ],
             });
-        } else if (headerText) {
+        } else if (TEXT_HEADER_TEMPLATES.has(templateName) && headerText) {
             components.push({
                 type: "header",
                 parameters: [{ type: "text", text: headerText }],
