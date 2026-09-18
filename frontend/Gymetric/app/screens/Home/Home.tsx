@@ -20,6 +20,7 @@ import { ActionAlertCard } from '@/components/dashboard/ActionAlertCard'
 import { GetStartedCard } from '@/components/dashboard/GetStartedCard'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { WhatsAppBanner } from '@/components/dashboard/WhatsAppBanner'
+import { WhatsAppWidget } from '@/components/dashboard/WhatsAppWidget'
 import { setGymStats, setEnrichedUserProperties } from '@/services/analyticsService'
 import { OTA_VERSION } from '@/utils/Constants'
 import Constants from 'expo-constants'
@@ -67,6 +68,7 @@ const Home = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(cachedSummary)
   const [showBanner, setShowBanner] = useState(false)
   const [hasWhatsapp, setHasWhatsapp] = useState(false)
+  const [whatsappSummary, setWhatsappSummary] = useState<any>(null)
   const [hasMembershipPlans, setHasMembershipPlans] = useState(false)
   const [isLoading, setIsLoading] = useState(!cachedSummary)
   const [refreshing, setRefreshing] = useState(false)
@@ -91,10 +93,11 @@ const Home = () => {
     if (isRefresh) setRefreshing(true)
     else if (!summaryRef.current) setIsLoading(true)
 
-    const [dashboardRes, settingsRes, membershipsRes] = await Promise.all([
+    const [dashboardRes, settingsRes, membershipsRes, waSummaryRes] = await Promise.all([
       api.dashboardAPI(),
       !hasShownBannerSession || isRefresh ? api.getSettings() : Promise.resolve(null),
       api.allMemberships(),
+      api.getWhatsappSummary(),
     ])
 
     if (dashboardRes.kind === 'ok') {
@@ -118,6 +121,10 @@ const Home = () => {
         setShowBanner(true)
       }
       hasShownBannerSession = true
+    }
+
+    if (waSummaryRes.kind === 'ok') {
+      setWhatsappSummary(waSummaryRes.data)
     }
 
     setEnrichedUserProperties({
@@ -222,7 +229,6 @@ const Home = () => {
                 />
               </View>
 
-
               {(summary?.expiringIn7Days ?? 0) > 0 && (
                 <ActionAlertCard
                   label="EXPIRING SOON"
@@ -231,7 +237,7 @@ const Home = () => {
                   primaryAction="View Members"
                   secondaryAction={hasWhatsapp ? 'Reminders' : undefined}
                   onPrimaryPress={() => navigateToMembers('Expiring Soon')}
-                  onSecondaryPress={hasWhatsapp ? () => navigate('Notification Settings') : undefined}
+                  onSecondaryPress={hasWhatsapp ? () => navigate('WhatsApp Messages') : undefined}
                   variant="warning"
                 />
               )}
@@ -278,6 +284,14 @@ const Home = () => {
               />
 
               <RevenueTrendChart trends={summary?.revenueTrend ?? []} />
+
+              {hasWhatsapp && (
+                <WhatsAppWidget
+                  today={whatsappSummary?.today}
+                  last7Days={whatsappSummary?.last7Days}
+                  onPress={() => navigate('WhatsApp Messages')}
+                />
+              )}
 
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Recent Activity</Text>

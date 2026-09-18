@@ -24,6 +24,7 @@ import {
 import { Header } from '@/components/Header'
 import { StatItem } from '@/components/clients/ClientStatGrid'
 import { ImagePreviewModal } from '@/components/common/ImagePreviewModal'
+import { whatsappStatusLabel } from '@/utils/whatsappLabels'
 
 const ClientDetails = ({ route }: any) => {
     const { theme: { colors }, themed } = useAppTheme()
@@ -467,18 +468,37 @@ const ClientDetails = ({ route }: any) => {
 
                     {activeTab === 'Activity' && (
                         <>
-                            {activity.length ? activity.map((item, i) => (
+                            {activity.length ? activity.map((item, i) => {
+                                const isWhatsApp = item.activityType === 'WHATSAPP'
+                                const waStatus = item.status as string | undefined
+                                const waColors = waStatus === 'failed'
+                                    ? { bg: colors.errorBackground, text: colors.error }
+                                    : waStatus === 'delivered' || waStatus === 'read'
+                                        ? { bg: colors.successBackground, text: colors.success }
+                                        : { bg: colors.surface, text: colors.textDim }
+                                return (
                                 <View key={i} style={[themed($listRow), i === 0 && { marginTop: 0 }]}>
                                     <View style={[themed($rowIcon), { backgroundColor: colors.surface }]}>
-                                        <Activity size={16} color={colors.textDim} />
+                                        {isWhatsApp
+                                            ? <Ionicons name="logo-whatsapp" size={16} color={colors.success} />
+                                            : <Activity size={16} color={colors.textDim} />}
                                     </View>
                                     <View style={{ flex: 1, marginLeft: spacing.sm }}>
                                         <Text weight="medium" size="xs">{item.title}</Text>
                                         {item.description && <Text size="xxs" style={{ color: colors.textDim }}>{item.description}</Text>}
+                                        {isWhatsApp && waStatus === 'failed' && item.errorMessage ? (
+                                            <Text size="xxs" style={{ color: colors.error, marginTop: 2 }}>{item.errorMessage}</Text>
+                                        ) : null}
                                         <Text size="xxs" style={{ color: colors.textDim, marginTop: 2 }}>{formatDate(item.date, 'dd MMM yyyy · HH:mm')}</Text>
                                     </View>
+                                    {isWhatsApp && waStatus ? (
+                                        <View style={{ backgroundColor: waColors.bg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                                            <Text size="xxs" weight="semiBold" style={{ color: waColors.text }}>{whatsappStatusLabel(waStatus)}</Text>
+                                        </View>
+                                    ) : null}
                                 </View>
-                            )) : (
+                                )
+                            }) : (
                                 <NoDataFound title="No Activity" msg="No activity recorded yet" />
                             )}
                         </>

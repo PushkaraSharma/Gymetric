@@ -728,6 +728,7 @@ export const getClientActivity = async (request: FastifyRequest, reply: FastifyR
                 description: m.summary,
                 date: m.sentAt,
                 status: m.status,
+                errorMessage: m.errorMessage,
             })),
         ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

@@ -165,13 +165,22 @@ const Setting = () => {
               <Skeleton width="100%" height={44} borderRadius={12} />
             </View>
           ) : hasWhatsapp ? (
-            <SettingItem
-              icon={MessageCircle}
-              label="WhatsApp Settings"
-              description="WhatsApp alerts and reminders"
-              onPress={() => navigate('Notification Settings')}
-              color="#10B981"
-            />
+            <>
+              <SettingItem
+                icon={MessageCircle}
+                label="WhatsApp Messages"
+                description="Delivery status and message history"
+                onPress={() => navigate('WhatsApp Messages')}
+                color="#10B981"
+              />
+              <SettingItem
+                icon={MessageCircle}
+                label="WhatsApp Settings"
+                description="WhatsApp alerts and reminders"
+                onPress={() => navigate('Notification Settings')}
+                color="#10B981"
+              />
+            </>
           ) : (
             <SettingItem
               icon={MessageCircle}

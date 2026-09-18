@@ -53,7 +53,7 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
                 </View>
               )}
               {retentionRate !== undefined && (
-                <View style={themed($statItem)}>
+                <View style={[themed($statItem), themed($statBorder)]}>
                   <View style={$statHeader}>
                     <Text style={themed($statValue)} text={`${retentionRate}%`} />
                     <Pressable
@@ -67,7 +67,7 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
                 </View>
               )}
               {avgRevenuePerMember !== undefined && (
-                <View style={[themed($statItem), themed($statBorder)]}>
+                <View style={[themed($statItem)]}>
                   <View style={$statHeader}>
                     <Text style={themed($statValue)} text={`₹${avgRevenuePerMember}`} />
                     <Pressable

@@ -8,6 +8,7 @@ export const setSettings = async (request: any, reply: any) => {
         let updateData = { ...request.body, gymId };
 
         if (updateData.whatsapp) {
+            updateData.whatsapp.reminderDays = 1;
             const existingSettings: any = await Settings.findOne({ gymId }).lean();
             if (existingSettings && existingSettings.whatsapp) {
                 // Preserve accessToken if not provided

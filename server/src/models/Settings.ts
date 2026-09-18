@@ -7,7 +7,7 @@ const SettingsSchema = new mongoose.Schema({
         phoneNumberId: { type: String, required: true },
         active: { type: Boolean, default: false },
         headerImageId: { type: String, required: false },
-        reminderDays: { type: Number, default: 3 },
+        reminderDays: { type: Number, default: 1 },
         sendOnOnboarding: { type: Boolean, default: true },
         sendOnRenewal: { type: Boolean, default: true },
         sendOnExpiry: { type: Boolean, default: true },

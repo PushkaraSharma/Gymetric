@@ -180,6 +180,17 @@ export class Api {
     return await this.apiRequest('post', '/api/settings/', body);
   };
 
+  getWhatsappSummary = async () => {
+    return await this.apiRequest('get', '/api/whatsapp/summary');
+  };
+
+  getWhatsappLogs = async (params?: { page?: number; limit?: number; status?: string; template?: string; search?: string }) => {
+    const clean = Object.fromEntries(
+      Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== '')
+    )
+    return await this.apiRequest('get', '/api/whatsapp/logs', undefined, clean);
+  };
+
   uploadClientProfilePicture = async (clientId: string, imageUri: string) => {
     const formData = new FormData();
     const filename = imageUri.split('/').pop() || 'photo.jpg';
