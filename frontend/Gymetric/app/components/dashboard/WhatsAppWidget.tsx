@@ -23,7 +23,7 @@ type Props = {
 
 export function WhatsAppWidget({ today, last7Days, onPress }: Props) {
   const { themed, theme: { colors } } = useAppTheme()
-  const sentToday = (today?.queued || 0) + (today?.sent || 0) + (today?.delivered || 0) + (today?.read || 0)
+  const totalToday = (today?.queued || 0) + (today?.sent || 0) + (today?.delivered || 0) + (today?.read || 0)
   const deliveredToday = (today?.delivered || 0) + (today?.read || 0)
   const failedToday = today?.failed || 0
   const weekRate = last7Days?.deliveryRate ?? 0
@@ -40,8 +40,8 @@ export function WhatsAppWidget({ today, last7Days, onPress }: Props) {
         </View>
         <View style={$statsRow}>
           <View style={themed($stat)}>
-            <Text weight="bold" size="lg">{sentToday}</Text>
-            <Text size="xxs" style={{ color: colors.textDim }}>Sent</Text>
+            <Text weight="bold" size="lg">{totalToday}</Text>
+            <Text size="xxs" style={{ color: colors.textDim }}>Total</Text>
           </View>
           <View style={themed($stat)}>
             <Text weight="bold" size="lg" style={{ color: colors.success }}>{deliveredToday}</Text>
