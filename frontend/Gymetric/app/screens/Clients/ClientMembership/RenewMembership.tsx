@@ -17,16 +17,21 @@ import Toast from 'react-native-toast-message';
 import { goBack } from '@/navigators/navigationUtilities';
 import { incrementActionAndReview } from '@/services/storeReviewService';
 import { trackEvent, AnalyticsEvents } from '@/services/analyticsService';
-import { addDays, format } from 'date-fns';
+import { format } from 'date-fns';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DEVICE_WIDTH } from '@/utils/Constants';
 import { validateNextStep } from '@/utils/Helper';
 import { getAutoShareReceiptPreference } from '@/utils/receiptPreferences';
+import { getRenewalStartDate, getRenewalStartDateNote } from '@/utils/renewalStartDate';
 import ShareReceiptModal from '@/components/ShareReceiptModal';
+import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 
 const RenewMembership = ({ route }: any) => {
     const client = route?.params?.client;
-    const newStartDate = ['trial_expired', 'trial'].includes(client?.membershipStatus) ? new Date() : addDays(new Date(client?.activeMembership?.endDate), 1); //if was on trial then his membership new should start from today else from last expiry date
+    const { startDate: newStartDate, daysSinceEnd, showLapseConfirm } = getRenewalStartDate(client);
+    const startDateNote = ['trial', 'trial_expired'].includes(client?.membershipStatus || '')
+        ? undefined
+        : getRenewalStartDateNote(client?.activeMembership?.endDate);
 
     const dispatch = useAppDispatch();
     const loader = useAppSelector(selectLoading);
@@ -40,6 +45,8 @@ const RenewMembership = ({ route }: any) => {
     const [selectedMembership, setSelectedMembership] = useState<{ [key: string]: any }[]>([]);
     const [duplicateNo, setDuplicateNo] = useState<string>('');
     const [showReceipt, setShowReceipt] = useState(false);
+    const [showLapseModal, setShowLapseModal] = useState(false);
+    const [lapseAcknowledged, setLapseAcknowledged] = useState(false);
     const [receiptClient, setReceiptClient] = useState<any>(null);
     const [receiptPayment, setReceiptPayment] = useState<any>(null);
     const translateX = useSharedValue(0);
@@ -86,6 +93,24 @@ const RenewMembership = ({ route }: any) => {
             }
             return Steps[Math.max(currentIndex - 1, 0)]
         })
+    };
+
+    const handleNextStep = () => {
+        if (currentStep === 'Membership' && showLapseConfirm && !lapseAcknowledged) {
+            if (!validateNextStep(form, selectedMembership)) return;
+            setShowLapseModal(true);
+            return;
+        }
+        moveStep('next');
+    };
+
+    const lapseMessage = () => {
+        const daysLabel = daysSinceEnd === 1 ? '1 day' : `${daysSinceEnd} days`;
+        const expiredOn = client?.activeMembership?.endDate
+            ? ` on ${format(new Date(client.activeMembership.endDate), 'dd MMM yyyy')}`
+            : '';
+        const startsOn = form.startDate ? format(form.startDate, 'dd MMM yyyy') : 'today';
+        return `This member's membership expired ${daysLabel} ago${expiredOn}. The new plan will start from ${startsOn}`;
     };
 
     const validateSteps = () => {
@@ -154,6 +179,20 @@ const RenewMembership = ({ route }: any) => {
                 }}
                 onCancel={() => setDatePicker(false)}
             />
+            <ConfirmationModal
+                visible={showLapseModal}
+                variant="warning"
+                title="Membership renew"
+                message={lapseMessage()}
+                cancelText="Cancel"
+                confirmText="Confirm"
+                onClose={() => setShowLapseModal(false)}
+                onConfirm={() => {
+                    setShowLapseModal(false);
+                    setLapseAcknowledged(true);
+                    moveStep('next');
+                }}
+            />
             <ShareReceiptModal
                 visible={showReceipt}
                 onClose={() => {
@@ -175,7 +214,7 @@ const RenewMembership = ({ route }: any) => {
                         {
                             currentStep === 'Membership' ?
                                 <SelectMembership setForm={setForm} memberships={memberships} setSelectedMembership={setSelectedMembership} selectedMembership={selectedMembership} handleForm={handleForm} handleDatePicker={() => { setDatePicker(true) }} form={form}
-                                    duplicateNo={duplicateNo} setDuplicateNo={setDuplicateNo} />
+                                    duplicateNo={duplicateNo} setDuplicateNo={setDuplicateNo} startDateNote={startDateNote} />
                                 :
                                 <MembershipPayment handleForm={handleForm} form={form} selectedMembership={selectedMembership?.[0]} />
                         }
@@ -183,7 +222,7 @@ const RenewMembership = ({ route }: any) => {
                 </Animated.View>
 
                 <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: 15, borderColor: colors.border }}>
-                    <Button disabled={!validateSteps()} title={currentStep === 'Payment' ? (loader ? 'Renewing...' : 'Renew Membership') : 'Next Step'} variant="primary" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.background} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleRenew() : moveStep('next') }} />
+                    <Button disabled={!validateSteps()} title={currentStep === 'Payment' ? (loader ? 'Renewing...' : 'Renew Membership') : 'Next Step'} variant="primary" RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name='arrow-forward' size={20} color={colors.background} style={{ marginLeft: 5 }} />} onPress={async () => { currentStep == 'Payment' ? await handleRenew() : handleNextStep() }} />
                 </View>
             </View>
         </Screen>

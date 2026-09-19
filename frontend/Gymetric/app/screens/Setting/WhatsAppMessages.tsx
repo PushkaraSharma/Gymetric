@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, View, ViewStyle } from 'react-native'
 import { Screen } from '@/components/Screen'
 import { Header } from '@/components/Header'
@@ -13,24 +13,7 @@ import { spacing } from '@/theme/spacing'
 import { ThemedStyle } from '@/theme/types'
 import { formatDate } from 'date-fns'
 import { MessageCircle } from 'lucide-react-native'
-import { whatsappStatusLabel, whatsappTemplateLabel } from '@/utils/whatsappLabels'
-
-const TEMPLATE_CHIPS = [
-  { id: 'all', label: 'All' },
-  { id: 'onboarding', label: 'Welcome' },
-  { id: 'renewal_complete', label: 'Renewal' },
-  { id: 'renewal', label: 'Reminder' },
-  { id: 'expired', label: 'Expired' },
-]
-
-const STATUS_CHIPS = [
-  { id: 'all', label: 'All status' },
-  { id: 'delivered', label: 'Delivered' },
-  { id: 'read', label: 'Read' },
-  { id: 'queued', label: 'Queued' },
-  { id: 'failed', label: 'Failed' },
-  { id: 'skipped', label: 'Skipped' },
-]
+import { WHATSAPP_STATUS_CHIPS, WHATSAPP_TEMPLATE_CHIPS, whatsappStatusLabel, whatsappTemplateLabel } from '@/utils/whatsappLabels'
 
 export const WhatsAppMessages = () => {
   const { themed, theme: { colors } } = useAppTheme()
@@ -42,14 +25,16 @@ export const WhatsAppMessages = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [template, setTemplate] = useState('all')
   const [status, setStatus] = useState('all')
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [filtering, setFiltering] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const isFirstLoad = useRef(true)
+  const requestId = useRef(0)
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300)
-    return () => clearTimeout(t)
-  }, [search])
+  const week = summary?.last7Days
+  const total = (week?.queued || 0) + (week?.sent || 0) + (week?.delivered || 0) + (week?.read || 0)
+  const delivered = (week?.delivered || 0) + (week?.read || 0)
+  const hasFilters = template !== 'all' || status !== 'all' || !!debouncedSearch
 
   const loadSummary = useCallback(async () => {
     const res = await api.getWhatsappSummary()
@@ -57,6 +42,7 @@ export const WhatsAppMessages = () => {
   }, [])
 
   const loadLogs = useCallback(async (nextPage = 1, replace = true) => {
+    const reqId = ++requestId.current
     const res = await api.getWhatsappLogs({
       page: nextPage,
       limit: 30,
@@ -64,6 +50,8 @@ export const WhatsAppMessages = () => {
       template: template === 'all' ? undefined : template,
       status: status === 'all' ? undefined : status,
     })
+    // A newer request started while this one was in flight, so drop the stale result
+    if (reqId !== requestId.current) return
     if (res.kind === 'ok') {
       const data = res.data as any
       setItems((prev) => replace ? (data.items || []) : [...prev, ...(data.items || [])])
@@ -71,22 +59,6 @@ export const WhatsAppMessages = () => {
       setPage(nextPage)
     }
   }, [debouncedSearch, template, status])
-
-  const reload = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true)
-    else setLoading(true)
-    await Promise.all([loadSummary(), loadLogs(1, true)])
-    setLoading(false)
-    setRefreshing(false)
-  }, [loadSummary, loadLogs])
-
-  useEffect(() => {
-    reload(false)
-  }, [reload])
-
-  const week = summary?.last7Days
-  const accepted = (week?.queued || 0) + (week?.sent || 0) + (week?.delivered || 0) + (week?.read || 0)
-  const delivered = (week?.delivered || 0) + (week?.read || 0)
 
   const statusColor = (st: string) => {
     switch (st) {
@@ -98,48 +70,71 @@ export const WhatsAppMessages = () => {
     }
   }
 
-  const header = useMemo(() => (
-    <View>
-      <View style={themed($statsCard)}>
-        <Text size="xxs" weight="semiBold" style={{ color: colors.textDim, letterSpacing: 1 }}>LAST 7 DAYS</Text>
-        <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
-          <View style={{ flex: 1 }}>
-            <Text weight="bold" size="lg">{accepted}</Text>
-            <Text size="xxs" style={{ color: colors.textDim }}>Sent</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text weight="bold" size="lg">{delivered}</Text>
-            <Text size="xxs" style={{ color: colors.textDim }}>Delivered</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text weight="bold" size="lg">{week?.failed || 0}</Text>
-            <Text size="xxs" style={{ color: colors.textDim }}>Failed</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text weight="bold" size="lg">{week?.skipped || 0}</Text>
-            <Text size="xxs" style={{ color: colors.textDim }}>Skipped</Text>
-          </View>
-        </View>
-        <Text size="xs" style={{ color: colors.textDim, marginTop: spacing.sm }}>
-          {week?.deliveryRate ?? 0}% delivery rate
-        </Text>
-      </View>
-      <ClientSearchBar value={search} onChangeText={setSearch} placeholder="Search member or phone" />
-      <View style={{ marginBottom: spacing.xs }}>
-        <ClientFilterChips filters={TEMPLATE_CHIPS} selected={template} onSelect={setTemplate} />
-      </View>
-      <View style={{ marginBottom: spacing.sm }}>
-        <ClientFilterChips filters={STATUS_CHIPS} selected={status} onSelect={setStatus} />
-      </View>
-    </View>
-  ), [accepted, colors, delivered, search, status, template, themed, week])
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  useEffect(() => {
+    loadSummary()
+  }, [loadSummary])
+
+  useEffect(() => {
+    const run = async () => {
+      if (!isFirstLoad.current) setFiltering(true)
+      await loadLogs(1, true)
+      isFirstLoad.current = false
+      setInitialLoading(false)
+      setFiltering(false)
+    }
+    run()
+  }, [loadLogs])
 
   return (
     <Screen preset="fixed" contentContainerStyle={{ flex: 1 }} safeAreaEdges={['bottom']}>
       <Header title="WhatsApp Messages" showBack onBack={goBack} safeAreaTop backgroundColor={colors.background} />
-      {loading && items.length === 0 ? (
-        <View style={{ padding: spacing.md }}>
-          <Skeleton width="100%" height={110} borderRadius={16} style={{ marginBottom: 12 }} />
+
+      <View style={{ paddingHorizontal: spacing.md }}>
+        {summary ? (
+          <View style={themed($statsCard)}>
+            <Text size="xxs" weight="semiBold" style={{ color: colors.textDim, letterSpacing: 1 }}>LAST 7 DAYS</Text>
+            <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <Text weight="bold" size="lg">{total}</Text>
+                <Text size="xxs" style={{ color: colors.textDim }}>Total</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text weight="bold" size="lg">{delivered}</Text>
+                <Text size="xxs" style={{ color: colors.textDim }}>Delivered</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text weight="bold" size="lg">{week?.failed || 0}</Text>
+                <Text size="xxs" style={{ color: colors.textDim }}>Failed</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text weight="bold" size="lg">{week?.skipped || 0}</Text>
+                <Text size="xxs" style={{ color: colors.textDim }}>Skipped</Text>
+              </View>
+            </View>
+            <Text size="xs" style={{ color: colors.textDim, marginTop: spacing.sm }}>
+              {week?.deliveryRate ?? 0}% delivery rate
+            </Text>
+          </View>
+        ) : (
+          <Skeleton width="100%" height={110} borderRadius={16} style={{ marginTop: spacing.sm, marginBottom: spacing.md }} />
+        )}
+
+        <ClientSearchBar value={search} onChangeText={setSearch} placeholder="Search member or phone" />
+        <View style={{ marginBottom: spacing.xs }}>
+          <ClientFilterChips filters={WHATSAPP_TEMPLATE_CHIPS} selected={template} onSelect={setTemplate} />
+        </View>
+        <View style={{ marginBottom: spacing.sm }}>
+          <ClientFilterChips filters={WHATSAPP_STATUS_CHIPS} selected={status} onSelect={setStatus} />
+        </View>
+      </View>
+
+      {initialLoading ? (
+        <View style={{ paddingHorizontal: spacing.md }}>
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} width="100%" height={72} borderRadius={16} style={{ marginBottom: 10 }} />
           ))}
@@ -147,12 +142,12 @@ export const WhatsAppMessages = () => {
       ) : (
         <FlatList
           data={items}
+          style={{ opacity: filtering ? 0.5 : 1 }}
           keyExtractor={(item) => item._id}
           contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 40 }}
-          ListHeaderComponent={header}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => reload(true)} tintColor={colors.primary} />}
+          keyboardShouldPersistTaps="handled"
           onEndReached={() => {
-            if (hasMore && !loadingMore && !loading) {
+            if (hasMore && !loadingMore && !filtering) {
               setLoadingMore(true)
               loadLogs(page + 1, false).finally(() => setLoadingMore(false))
             }
@@ -161,9 +156,13 @@ export const WhatsAppMessages = () => {
           ListEmptyComponent={
             <View style={{ alignItems: 'center', marginTop: 48 }}>
               <MessageCircle size={32} color={colors.textDim} />
-              <Text weight="semiBold" style={{ marginTop: 12 }}>No messages yet</Text>
+              <Text weight="semiBold" style={{ marginTop: 12 }}>
+                {hasFilters ? 'No matching messages' : 'No messages yet'}
+              </Text>
               <Text size="sm" style={{ color: colors.textDim, marginTop: 4, textAlign: 'center' }}>
-                Automated WhatsApp sends will show up here.
+                {hasFilters
+                  ? 'Try a different status, template, or search.'
+                  : 'Automated WhatsApp sends will show up here.'}
               </Text>
             </View>
           }

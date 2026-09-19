@@ -1,12 +1,13 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
-import MessageLog from '../models/MessageLog.js';
+import MessageLog, { MESSAGE_LOG_STATUSES } from '../models/MessageLog.js';
 import Client from '../models/Client.js';
 import { getISTMidnightToday, addUtcDays } from '../utils/timeUtils.js';
 import { shouldApplyWhatsAppStatus } from '../utils/whatsappStatus.js';
 
 const META_STATUSES = new Set(['sent', 'delivered', 'read', 'failed']);
+const WHATSAPP_TEMPLATES = ['onboarding', 'renewal', 'renewal_complete', 'expired'] as const;
 
 const emptyCounts = () => ({
     queued: 0,
@@ -39,10 +40,86 @@ export const verifyWhatsAppWebhook = async (request: FastifyRequest, reply: Fast
     const mode = query['hub.mode'] || query.hub?.mode;
     const token = query['hub.verify_token'] || query.hub?.verify_token;
     const challenge = query['hub.challenge'] || query.hub?.challenge;
-    if (mode === 'subscribe' && token && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+    const tokenOk = !!(mode === 'subscribe' && token && token === process.env.WHATSAPP_VERIFY_TOKEN);
+    console.log('WhatsApp webhook verify', { mode, tokenOk, hasChallenge: !!challenge });
+    if (tokenOk) {
         return reply.status(200).header('Content-Type', 'text/plain').send(String(challenge ?? ''));
     }
     return reply.status(403).send({ success: false, message: 'Forbidden' });
+};
+
+const wamidSuffix = (id?: string) => (id && id.length > 8 ? id.slice(-8) : id || '');
+
+export const handleWhatsAppWebhook = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const signature = request.headers['x-hub-signature-256'] as string | undefined;
+        const rawIsString = typeof request.body === 'string';
+        if (process.env.WHATSAPP_APP_SECRET) {
+            if (rawIsString) {
+                if (!verifyMetaSignature(request.body as string, signature)) {
+                    console.warn('WhatsApp webhook signature rejected');
+                    return reply.status(200).send({ success: true });
+                }
+                console.log('WhatsApp webhook signature ok');
+            } else {
+                console.warn('WhatsApp webhook signature skipped (parsed JSON body, no raw payload)');
+            }
+        }
+
+        const body = rawIsString ? JSON.parse(request.body as string) : request.body as any;
+        const entries = body?.entry || [];
+        let statusCount = 0;
+        let inboundCount = 0;
+        for (const entry of entries) {
+            for (const change of entry?.changes || []) {
+                statusCount += (change?.value?.statuses || []).length;
+                inboundCount += (change?.value?.messages || []).length;
+            }
+        }
+        console.log('WhatsApp webhook POST', { entries: entries.length, statuses: statusCount, inboundMessages: inboundCount });
+
+        for (const entry of entries) {
+            for (const change of entry?.changes || []) {
+                const statuses = change?.value?.statuses || [];
+                for (const st of statuses) {
+                    const wamid = st?.id;
+                    const nextStatus = String(st?.status || '').toLowerCase();
+                    if (!wamid || !META_STATUSES.has(nextStatus)) {
+                        console.log('WhatsApp webhook status skipped', { suffix: wamidSuffix(wamid), nextStatus });
+                        continue;
+                    }
+
+                    const log = await MessageLog.findOne({ providerMessageId: wamid });
+                    if (!log) {
+                        console.warn('WhatsApp webhook no MessageLog for wamid', { suffix: wamidSuffix(wamid), nextStatus });
+                        continue;
+                    }
+                    if (!shouldApplyWhatsAppStatus(log.status, nextStatus)) {
+                        console.log('WhatsApp webhook status ignored (not newer)', { suffix: wamidSuffix(wamid), current: log.status, nextStatus });
+                        continue;
+                    }
+
+                    const firstError = st?.errors?.[0];
+                    log.status = nextStatus;
+                    log.statusUpdatedAt = st?.timestamp
+                        ? new Date(Number(st.timestamp) * 1000)
+                        : new Date();
+                    if (nextStatus === 'failed' && firstError) {
+                        log.errorCode = firstError.code != null ? String(firstError.code) : log.errorCode;
+                        log.errorMessage = firstError.title || firstError.message || log.errorMessage;
+                    }
+                    await log.save();
+                    console.log('WhatsApp webhook status updated', { suffix: wamidSuffix(wamid), nextStatus });
+                }
+            }
+        }
+
+        return reply.status(200).send({ success: true });
+    } catch (error: any) {
+        request.log?.error?.(error);
+        console.error('WhatsApp webhook error:', error);
+        return reply.status(200).send({ success: true });
+    }
 };
 
 const verifyMetaSignature = (rawBody: string, signatureHeader?: string) => {
@@ -55,52 +132,6 @@ const verifyMetaSignature = (rawBody: string, signatureHeader?: string) => {
         return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(received, 'hex'));
     } catch {
         return false;
-    }
-};
-
-export const handleWhatsAppWebhook = async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-        const signature = request.headers['x-hub-signature-256'] as string | undefined;
-        if (process.env.WHATSAPP_APP_SECRET) {
-            const raw = typeof request.body === 'string' ? request.body : JSON.stringify(request.body ?? {});
-            if (!verifyMetaSignature(raw, signature)) {
-                return reply.status(401).send({ success: false, message: 'Invalid signature' });
-            }
-        }
-
-        const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body as any;
-        const entries = body?.entry || [];
-        for (const entry of entries) {
-            for (const change of entry?.changes || []) {
-                const statuses = change?.value?.statuses || [];
-                for (const st of statuses) {
-                    const wamid = st?.id;
-                    const nextStatus = String(st?.status || '').toLowerCase();
-                    if (!wamid || !META_STATUSES.has(nextStatus)) continue;
-
-                    const log = await MessageLog.findOne({ providerMessageId: wamid });
-                    if (!log) continue;
-                    if (!shouldApplyWhatsAppStatus(log.status, nextStatus)) continue;
-
-                    const firstError = st?.errors?.[0];
-                    log.status = nextStatus;
-                    log.statusUpdatedAt = st?.timestamp
-                        ? new Date(Number(st.timestamp) * 1000)
-                        : new Date();
-                    if (nextStatus === 'failed' && firstError) {
-                        log.errorCode = firstError.code != null ? String(firstError.code) : log.errorCode;
-                        log.errorMessage = firstError.title || firstError.message || log.errorMessage;
-                    }
-                    await log.save();
-                }
-            }
-        }
-
-        return reply.status(200).send({ success: true });
-    } catch (error: any) {
-        request.log?.error?.(error);
-        console.error('WhatsApp webhook error:', error);
-        return reply.status(200).send({ success: true });
     }
 };
 
@@ -161,8 +192,12 @@ export const getWhatsAppLogs = async (request: FastifyRequest, reply: FastifyRep
         const limitNum = Math.min(Math.max(parseInt(limit, 10) || 30, 1), 100);
 
         const filter: any = { gymId };
-        if (status) filter.status = status;
-        if (template) filter.template = template;
+        if (status && status !== 'all' && (MESSAGE_LOG_STATUSES as readonly string[]).includes(status)) {
+            filter.status = status;
+        }
+        if (template && template !== 'all' && (WHATSAPP_TEMPLATES as readonly string[]).includes(template)) {
+            filter.template = template;
+        }
 
         if (search?.trim()) {
             const regex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');

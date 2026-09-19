@@ -14,6 +14,16 @@ export const WHATSAPP_STATUS_LABELS: Record<string, string> = {
   skipped: 'Skipped',
 }
 
+export const WHATSAPP_STATUS_CHIPS = [
+  { id: 'all', label: 'All status' },
+  ...Object.entries(WHATSAPP_STATUS_LABELS).map(([id, label]) => ({ id, label })),
+]
+
+export const WHATSAPP_TEMPLATE_CHIPS = [
+  { id: 'all', label: 'All' },
+  ...Object.entries(WHATSAPP_TEMPLATE_LABELS).map(([id, label]) => ({ id, label })),
+]
+
 export const whatsappTemplateLabel = (template?: string) =>
   (template && WHATSAPP_TEMPLATE_LABELS[template]) || template || 'WhatsApp'
 

@@ -24,7 +24,8 @@ type Props = {
     form: ClientOnBoardingType,
     setForm: Dispatch<SetStateAction<ClientOnBoardingType>>,
     duplicateNo: string,
-    setDuplicateNo: (val: string) => void
+    setDuplicateNo: (val: string) => void,
+    startDateNote?: string,
 }
 
 const getDuration = (plan: any) => {
@@ -33,7 +34,7 @@ const getDuration = (plan: any) => {
 }
 
 const SelectMembership: FC<Props> = ({
-    selectedMembership, setSelectedMembership, memberships, handleDatePicker, handleForm, form, setForm, duplicateNo, setDuplicateNo
+    selectedMembership, setSelectedMembership, memberships, handleDatePicker, handleForm, form, setForm, duplicateNo, setDuplicateNo, startDateNote
 }) => {
     const { theme: { colors }, themed } = useAppTheme()
     const selected = selectedMembership?.[0]
@@ -229,6 +230,9 @@ const SelectMembership: FC<Props> = ({
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textDim} />
             </Pressable>
+            {startDateNote ? (
+                <Text size="xxs" style={{ color: colors.textDim }}>{startDateNote}</Text>
+            ) : null}
         </View>
     )
 }
@@ -305,5 +309,5 @@ const $dateCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
 })
