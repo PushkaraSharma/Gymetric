@@ -10,6 +10,7 @@ import { sendExpoPush } from "../services/pushNotificationService.js";
 import { invalidateClientCachesMany } from "../utils/cache.js";
 import User from "../models/User.js";
 import dayjs from "dayjs";
+import { syncClientDoorAccess, syncClientsDoorAccessByIds } from "../services/biometricService.js";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -39,6 +40,12 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                 client.membershipStatus = 'active';
                 client.upcomingMembership = undefined;
                 await client.save();
+
+                try {
+                    await syncClientDoorAccess(client);
+                } catch (e) {
+                    console.error('Biometric enable on promote failed', e);
+                }
 
                 await Activity.create({
                     gymId: client.gymId,
@@ -73,6 +80,12 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
                     { $set: { membershipStatus: newStatus } }
                 );
                 affectedGymIds.add(String(memb.gymId));
+
+                try {
+                    await syncClientsDoorAccessByIds(memb.memberIds, String(memb.gymId));
+                } catch (e) {
+                    console.error('Biometric disable on expiry failed', e);
+                }
 
                 const primaryMember = await Client.findById(memb.primaryMemberId).select('name phoneNumber activeMembership');
 

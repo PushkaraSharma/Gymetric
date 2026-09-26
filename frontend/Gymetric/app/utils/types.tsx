@@ -34,7 +34,7 @@ export type MembershipRenewType = {
 
 export type ClientDateType = { visible: boolean, type: 'birthday' | 'startDate' | 'anniversaryDate' };
 
-export type STEPS = "Personal Info" | "Membership" | "Payment";
+export type STEPS = "Personal Info" | "Membership" | "Payment" | "Fingerprint";
 
 export interface ApiConfig {
     url: string
@@ -49,3 +49,11 @@ export type BackendResponse<T> = {
 }
 
 export type ApiResult = { kind: "ok"; data: any } | { kind: "error"; message: string }
+
+/** Response of GET /api/biometric/live */
+export type AttendanceLive = {
+    checkInsToday: number
+    punchesToday: number
+    busyNow: number
+    deniedToday: number
+}

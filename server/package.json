@@ -26,7 +26,8 @@
   "scripts": {
     "dev": "tsx watch app.ts",
     "gcp-build": "tsc --project tsconfig.json --noEmitOnError false || true",
-    "start": "node dist/app.js"
+    "start": "node dist/app.js",
+    "sim:biometric": "tsx src/dev/biometric-simulator/index.ts"
   },
   "keywords": [],
   "author": "",

@@ -4,7 +4,7 @@ import { remove, storage } from "@/utils/LocalStorage"
 import { store } from "@/redux/Store"
 import { setAllClients, setGymInfo } from "@/redux/state/GymStates"
 import Toast from "react-native-toast-message"
-import { ApiConfig, ApiResult, BackendResponse } from "@/utils/types"
+import { ApiConfig, ApiResult, AttendanceLive, BackendResponse } from "@/utils/types"
 
 export const DEFAULT_API_CONFIG: ApiConfig = {
   url: Config.API_URL,
@@ -287,6 +287,58 @@ export class Api {
 
   seedDemoData = async (action: 'seed' | 'clear') => {
     return this.apiRequest('post', '/api/gym/seed-demo-data', { action });
+  };
+
+  // —— Biometric / attendance ——
+  getBiometricDevice = async () => {
+    return this.apiRequest('get', '/api/biometric/device');
+  };
+
+  pairBiometricDevice = async (serialNumber: string, name?: string) => {
+    return this.apiRequest('post', '/api/biometric/device/pair', { serialNumber, name });
+  };
+
+  unpairBiometricDevice = async () => {
+    return this.apiRequest('post', '/api/biometric/device/unpair', {});
+  };
+
+  setAttendanceEnabled = async (enabled: boolean) => {
+    return this.apiRequest('post', '/api/biometric/enabled', { enabled });
+  };
+
+  startFingerprintEnroll = async (clientId: string) => {
+    return this.apiRequest('post', '/api/biometric/enroll/start', { clientId });
+  };
+
+  confirmFingerprintEnroll = async (clientId: string) => {
+    return this.apiRequest('post', '/api/biometric/enroll/confirm', { clientId });
+  };
+
+  markNeedsReenroll = async (clientId: string) => {
+    return this.apiRequest('post', '/api/biometric/enroll/needs-reenroll', { clientId });
+  };
+
+  listAttendance = async (params?: { date?: string; status?: string; page?: number; limit?: number }) => {
+    const clean = Object.fromEntries(
+      Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== '')
+    );
+    return this.apiRequest('get', '/api/biometric/attendance', undefined, clean);
+  };
+
+  memberAttendanceHeatmap = async (clientId: string, month?: string) => {
+    return this.apiRequest('get', '/api/biometric/attendance/heatmap', undefined, {
+      clientId,
+      ...(month ? { month } : {}),
+    });
+  };
+
+  attendanceTrends = async () => {
+    return this.apiRequest('get', '/api/biometric/trends');
+  };
+
+  /** Lightweight, never cached server-side — safe to call on every Home focus. */
+  attendanceLive = async () => {
+    return this.apiRequest<AttendanceLive>('get', '/api/biometric/live');
   };
 
 }

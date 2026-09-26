@@ -19,6 +19,14 @@ const ClientSchema = new Schema<IClient>({
     activeMembership: { type: Schema.Types.ObjectId, ref: 'AssignedMembership' },
     upcomingMembership: { type: Schema.Types.ObjectId, ref: 'AssignedMembership' },
     membershipHistory: [{ type: Schema.Types.ObjectId, ref: 'AssignedMembership' }],
+    biometricPin: { type: String },
+    fingerprintStatus: {
+        type: String,
+        enum: ['none', 'pending', 'enrolled', 'needs_reenroll'],
+        default: 'none',
+    },
+    fingerprintEnrolledAt: Date,
+    fingerprintDeviceSn: String,
     paymentHistory: [{
         membershipId: { type: Schema.Types.ObjectId, ref: 'AssignedMembership' },
         amount: Number,
@@ -31,5 +39,6 @@ const ClientSchema = new Schema<IClient>({
 
 // Index for lookup by phone and gym (Needs to be unique per gym)
 ClientSchema.index({ gymId: 1, phoneNumber: 1 }, { unique: true });
+ClientSchema.index({ gymId: 1, biometricPin: 1 }, { unique: true, sparse: true });
 
 export default mongoose.models.Client || mongoose.model<IClient>('Client', ClientSchema);

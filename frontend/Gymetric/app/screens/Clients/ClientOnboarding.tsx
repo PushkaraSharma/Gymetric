@@ -26,6 +26,7 @@ import { trackEvent, AnalyticsEvents } from '@/services/analyticsService'
 import { spacing } from '@/theme/spacing'
 import { getAutoShareReceiptPreference } from '@/utils/receiptPreferences'
 import ShareReceiptModal from '@/components/ShareReceiptModal'
+import { FingerprintEnrollCard } from '@/components/clients/FingerprintEnrollCard'
 
 const CreateClient = () => {
     const dispatch = useAppDispatch()
@@ -33,7 +34,10 @@ const CreateClient = () => {
     const gymInfo = useAppSelector(selectGymInfo)
     const { theme: { colors } } = useAppTheme()
 
-    const Steps = ["Personal Info", "Membership", "Payment"] as STEPS[]
+    const attendanceEnabled = !!gymInfo?.attendanceEnabled
+    const Steps = (attendanceEnabled
+        ? ["Personal Info", "Membership", "Payment", "Fingerprint"]
+        : ["Personal Info", "Membership", "Payment"]) as STEPS[]
     const [currentStep, setCurrentStep] = useState<STEPS>("Personal Info")
     const [form, setForm] = useState<ClientOnBoardingType>({
         primaryDetails: { name: '', phoneNumber: '', age: null, birthday: null, gender: 'Male', anniversaryDate: null, onboardingPurpose: 'General Fitness' },
@@ -48,6 +52,7 @@ const CreateClient = () => {
     const [showReceipt, setShowReceipt] = useState(false)
     const [receiptClient, setReceiptClient] = useState<any>(null)
     const [receiptPayment, setReceiptPayment] = useState<any>(null)
+    const [createdClient, setCreatedClient] = useState<any>(null)
 
     const translateX = useSharedValue(0)
     const animatedStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }))
@@ -70,6 +75,7 @@ const CreateClient = () => {
         if (currentStep === 'Membership') {
             return !!selectedMembership?.[0] && !duplicateNo && !(form.dependents.length + 1 < selectedMembership?.[0]?.membersAllowed)
         }
+        if (currentStep === 'Fingerprint') return true
         const received = form.amountReceived ?? 0
         return received >= 0 && received <= (form.amount || 0)
     }
@@ -114,7 +120,20 @@ const CreateClient = () => {
 
     const handleStepperBack = () => {
         if (currentStep === 'Personal Info') goBack()
-        else moveStep('prev')
+        else if (currentStep === 'Fingerprint') {
+            if (getAutoShareReceiptPreference() && (form.amountReceived ?? 0) > 0 && createdClient) {
+                setReceiptClient(createdClient)
+                setReceiptPayment({
+                    amount: form.amountReceived,
+                    method: form.method,
+                    date: new Date(),
+                    remarks: (form.amountReceived ?? 0) < (form.amount || 0) ? `Partial payment (₹${form.amountReceived} of ₹${form.amount})` : 'Membership',
+                })
+                setShowReceipt(true)
+            } else {
+                goBack()
+            }
+        } else moveStep('prev')
     }
 
     const getMemberships = async () => {
@@ -130,6 +149,21 @@ const CreateClient = () => {
             handleForm('amount', firstMem?.price)
             handleForm('amountReceived', firstMem?.price)
             setMemberships(activePlans)
+        }
+    }
+
+    const finishOnboarding = (clientData: any) => {
+        if (getAutoShareReceiptPreference() && (form.amountReceived ?? 0) > 0) {
+            setReceiptClient(clientData)
+            setReceiptPayment({
+                amount: form.amountReceived,
+                method: form.method,
+                date: new Date(),
+                remarks: (form.amountReceived ?? 0) < (form.amount || 0) ? `Partial payment (₹${form.amountReceived} of ₹${form.amount})` : 'Membership',
+            })
+            setShowReceipt(true)
+        } else {
+            goBack()
         }
     }
 
@@ -155,17 +189,12 @@ const CreateClient = () => {
             Toast.show({ type: 'success', text1: 'Member onboarded successfully' })
             trackEvent(AnalyticsEvents.CLIENT_ADDED)
             incrementActionAndReview()
-            if (getAutoShareReceiptPreference() && (form.amountReceived ?? 0) > 0) {
-                setReceiptClient(response.data)
-                setReceiptPayment({
-                    amount: form.amountReceived,
-                    method: form.method,
-                    date: new Date(),
-                    remarks: (form.amountReceived ?? 0) < (form.amount || 0) ? `Partial payment (₹${form.amountReceived} of ₹${form.amount})` : 'Membership',
-                })
-                setShowReceipt(true)
+            setCreatedClient(response.data)
+            if (attendanceEnabled) {
+                animateStep('next')
+                setCurrentStep('Fingerprint')
             } else {
-                goBack()
+                finishOnboarding(response.data)
             }
         } else {
             dispatch(setLoading({ loading: false }))
@@ -235,6 +264,19 @@ const CreateClient = () => {
                             duplicateNo={duplicateNo}
                             setDuplicateNo={setDuplicateNo}
                         />
+                    ) : currentStep === 'Fingerprint' ? (
+                        createdClient?._id ? (
+                            <FingerprintEnrollCard
+                                clientId={createdClient._id}
+                                clientName={createdClient.name}
+                                biometricPin={createdClient.biometricPin}
+                                fingerprintStatus={createdClient.fingerprintStatus || 'pending'}
+                                onUpdated={async () => {
+                                    const refreshed = await api.getClient(createdClient._id)
+                                    if (refreshed.kind === 'ok') setCreatedClient(refreshed.data)
+                                }}
+                            />
+                        ) : null
                     ) : (
                         <MembershipPayment handleForm={handleForm} form={form} selectedMembership={selectedMembership?.[0]} />
                     )}
@@ -244,11 +286,33 @@ const CreateClient = () => {
             <View style={{ borderTopWidth: StyleSheet.hairlineWidth, padding: spacing.md, borderColor: colors.border, backgroundColor: colors.background }}>
                 <Button
                     disabled={!validateSteps()}
-                    title={currentStep === 'Payment' ? (loader ? 'Finishing...' : 'Complete Onboarding') : 'Continue'}
+                    title={
+                        currentStep === 'Fingerprint'
+                            ? 'Done'
+                            : currentStep === 'Payment'
+                                ? (loader ? 'Finishing...' : 'Complete Onboarding')
+                                : 'Continue'
+                    }
                     variant="primary"
-                    RightAccessory={currentStep === 'Payment' ? undefined : () => <Ionicons name="arrow-forward" size={20} color={colors.white} style={{ marginLeft: 5 }} />}
-                    onPress={async () => { currentStep === 'Payment' ? await handleCreate() : moveStep('next') }}
+                    RightAccessory={currentStep === 'Payment' || currentStep === 'Fingerprint' ? undefined : () => <Ionicons name="arrow-forward" size={20} color={colors.white} style={{ marginLeft: 5 }} />}
+                    onPress={async () => {
+                        if (currentStep === 'Fingerprint') {
+                            finishOnboarding(createdClient)
+                        } else if (currentStep === 'Payment') {
+                            await handleCreate()
+                        } else {
+                            moveStep('next')
+                        }
+                    }}
                 />
+                {currentStep === 'Fingerprint' && (
+                    <Button
+                        title="Skip for now"
+                        variant="ghost"
+                        onPress={() => finishOnboarding(createdClient)}
+                        style={{ marginTop: 8 }}
+                    />
+                )}
             </View>
 
             <CustomModal

@@ -18,6 +18,8 @@ import CollectPaymentModal from './CollectPaymentModal'
 import { ThemedStyle } from '@/theme/types'
 import { spacing } from '@/theme/spacing'
 import { ClientSectionLabel } from '@/components/clients/ClientSectionLabel'
+import { FingerprintEnrollCard } from '@/components/clients/FingerprintEnrollCard'
+import { MemberAttendanceCalendar } from '@/components/clients/MemberAttendanceCalendar'
 import {
     Wallet, Calendar, CreditCard, Clock, Pause, Play, Pencil, RefreshCw, Receipt, Activity
 } from 'lucide-react-native'
@@ -25,9 +27,12 @@ import { Header } from '@/components/Header'
 import { StatItem } from '@/components/clients/ClientStatGrid'
 import { ImagePreviewModal } from '@/components/common/ImagePreviewModal'
 import { whatsappStatusLabel } from '@/utils/whatsappLabels'
+import { useAppSelector } from '@/redux/Hooks'
+import { selectGymInfo } from '@/redux/state/GymStates'
 
 const ClientDetails = ({ route }: any) => {
     const { theme: { colors }, themed } = useAppTheme()
+    const attendanceEnabled = !!useAppSelector(selectGymInfo)?.attendanceEnabled
 
     const [client, setClient] = useState<{ [key: string]: any } | null>(null)
     const [membershipDays, setMembershipDays] = useState<{ total: number, remain: number, used: number, progress: number, endDate: string }>({ total: 0, remain: 0, used: 0, progress: 0, endDate: '-' })
@@ -419,6 +424,30 @@ const ClientDetails = ({ route }: any) => {
                         <NoDataFound title="No active membership" msg="This member has no active or upcoming plan" />
                     )}
                 </View>
+
+                {attendanceEnabled && (
+                <View style={{ paddingHorizontal: spacing.md }}>
+                    <ClientSectionLabel
+                        title="Attendance"
+                        subtitle={client?.fingerprintStatus === 'enrolled' || client?.fingerprintStatus === 'needs_reenroll'
+                            ? 'Entrance check-ins this month'
+                            : 'Register a fingerprint to track visits'}
+                    />
+                    {client?._id ? (
+                        <>
+                            <FingerprintEnrollCard
+                                clientId={client._id}
+                                biometricPin={client.biometricPin}
+                                fingerprintStatus={client.fingerprintStatus}
+                                onUpdated={clientInfo}
+                            />
+                            {(client.fingerprintStatus === 'enrolled' || client.fingerprintStatus === 'needs_reenroll') && (
+                                <MemberAttendanceCalendar clientId={client._id} />
+                            )}
+                        </>
+                    ) : null}
+                </View>
+                )}
 
                 {/* Tab selector */}
                 <View style={themed($tabContainer)}>

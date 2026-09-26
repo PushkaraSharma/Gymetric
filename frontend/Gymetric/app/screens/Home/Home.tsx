@@ -2,7 +2,7 @@ import { ScrollView, Pressable, RefreshControl, View, StyleSheet, Text } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppTheme } from '@/theme/context'
-import { Plus, Users, Activity as ActivityIconLucide, Clock, UserPlus, UserX, Wallet, IndianRupee } from 'lucide-react-native'
+import { Plus, Users, Activity as ActivityIconLucide, Clock, UserPlus, UserX, Wallet, IndianRupee, Fingerprint } from 'lucide-react-native'
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectDashboardSummary, selectGymInfo, setDashboardSummary } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
@@ -26,6 +26,7 @@ import { OTA_VERSION } from '@/utils/Constants'
 import Constants from 'expo-constants'
 import { WhatsNewModal } from '@/components/WhatsNewModal'
 import { load, save } from '@/utils/LocalStorage'
+import type { AttendanceLive } from '@/utils/types'
 
 let hasShownBannerSession = false
 
@@ -64,8 +65,12 @@ const Home = () => {
   const styles = getStyles(theme)
   const dispatch = useAppDispatch()
   const gymInfo = useAppSelector(selectGymInfo)
+  const attendanceEnabled = !!gymInfo?.attendanceEnabled
   const cachedSummary = useAppSelector(selectDashboardSummary) as DashboardSummary | null
   const [summary, setSummary] = useState<DashboardSummary | null>(cachedSummary)
+  // Live attendance counters come from a separate, uncached endpoint so door
+  // punches show up immediately even while the payment summary is cached.
+  const [attendanceLive, setAttendanceLive] = useState<AttendanceLive | null>(null)
   const [showBanner, setShowBanner] = useState(false)
   const [hasWhatsapp, setHasWhatsapp] = useState(false)
   const [whatsappSummary, setWhatsappSummary] = useState<any>(null)
@@ -93,12 +98,19 @@ const Home = () => {
     if (isRefresh) setRefreshing(true)
     else if (!summaryRef.current) setIsLoading(true)
 
-    const [dashboardRes, settingsRes, membershipsRes, waSummaryRes] = await Promise.all([
+    const [dashboardRes, settingsRes, membershipsRes, waSummaryRes, liveRes] = await Promise.all([
       api.dashboardAPI(),
       !hasShownBannerSession || isRefresh ? api.getSettings() : Promise.resolve(null),
       api.allMemberships(),
       api.getWhatsappSummary(),
+      attendanceEnabled ? api.attendanceLive() : Promise.resolve(null),
     ])
+
+    if (liveRes?.kind === 'ok') {
+      setAttendanceLive(liveRes.data as AttendanceLive)
+    } else if (!attendanceEnabled) {
+      setAttendanceLive(null)
+    }
 
     if (dashboardRes.kind === 'ok') {
       setSummary(dashboardRes.data as DashboardSummary)
@@ -135,7 +147,7 @@ const Home = () => {
 
     if (isRefresh) setRefreshing(false)
     else setIsLoading(false)
-  }, [dispatch, gymInfo?._id, hasWhatsapp, isDark])
+  }, [attendanceEnabled, dispatch, gymInfo?._id, hasWhatsapp, isDark])
 
   const onRefresh = useCallback(() => { loadData(true) }, [loadData])
 
@@ -228,6 +240,38 @@ const Home = () => {
                   onPress={() => navigate('Revenue')}
                 />
               </View>
+
+              {attendanceEnabled && <Pressable
+                onPress={() => navigate('Attendance')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: theme.colors.surface,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  padding: theme.spacing.md,
+                  marginBottom: theme.spacing.md,
+                  gap: 12,
+                }}
+              >
+                <View style={{
+                  width: 40, height: 40, borderRadius: 12,
+                  backgroundColor: theme.colors.primary + '18',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Fingerprint size={20} color={theme.colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 10, letterSpacing: 1, fontWeight: '700', color: theme.colors.textDim }}>ATTENDANCE</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text, marginTop: 2 }}>
+                    {attendanceLive?.checkInsToday ?? 0} check-ins today
+                  </Text>
+                  <Text style={{ fontSize: 12, color: theme.colors.textDim, marginTop: 2 }}>
+                    {attendanceLive?.busyNow ?? 0} unique in last 2 hours · Tap for list
+                  </Text>
+                </View>
+              </Pressable>}
 
               {(summary?.expiringIn7Days ?? 0) > 0 && (
                 <ActionAlertCard

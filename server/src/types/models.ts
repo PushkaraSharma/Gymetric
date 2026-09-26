@@ -19,6 +19,10 @@ export interface IClient {
     activeMembership?: Types.ObjectId;
     upcomingMembership?: Types.ObjectId;
     membershipHistory: Types.ObjectId[];
+    biometricPin?: string;
+    fingerprintStatus?: 'none' | 'pending' | 'enrolled' | 'needs_reenroll';
+    fingerprintEnrolledAt?: Date;
+    fingerprintDeviceSn?: string;
     paymentHistory: {
         membershipId?: Types.ObjectId;
         amount: number;

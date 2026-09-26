@@ -36,6 +36,9 @@ import EditMembershipScreen from "@/screens/Clients/EditMembershipScreen"
 import ReceiptSettingsScreen from "@/screens/Setting/ReceiptSettingsScreen"
 import PushNotificationSettings from "@/screens/Setting/PushNotificationSettings"
 import SeedDataScreen from "@/screens/Setting/SeedDataScreen"
+import AttendanceScreen from "@/screens/Attendance/AttendanceScreen"
+import AttendanceTrendsScreen from "@/screens/Attendance/AttendanceTrendsScreen"
+import EntranceDeviceScreen from "@/screens/Attendance/EntranceDeviceScreen"
 import { trackScreenView } from "@/services/analyticsService"
 import { registerPushToken } from "@/services/pushNotificationService"
 import { SessionBootstrapOverlay } from "@/components/SessionBootstrapOverlay"
@@ -103,6 +106,9 @@ const AppStack = () => {
               <Stack.Screen name="Receipt Settings" component={ReceiptSettingsScreen} />
               <Stack.Screen name="Push Notification Settings" component={PushNotificationSettings} />
               <Stack.Screen name="Seed Data" component={SeedDataScreen} />
+              <Stack.Screen name="Attendance" component={AttendanceScreen} />
+              <Stack.Screen name="Attendance Trends" component={AttendanceTrendsScreen} />
+              <Stack.Screen name="Entrance Device" component={EntranceDeviceScreen} />
             </Stack.Group>
           </>
         ) : (

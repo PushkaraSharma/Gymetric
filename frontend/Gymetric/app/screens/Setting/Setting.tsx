@@ -17,6 +17,8 @@ import {
   LogOut,
   MapPin,
   User,
+  Fingerprint,
+  ClipboardList,
 } from 'lucide-react-native'
 import { navigate } from '@/navigators/navigationUtilities'
 import { ThemedStyle } from '@/theme/types'
@@ -150,6 +152,22 @@ const Setting = () => {
             onPress={() => navigate('Receipt Settings')}
             color="#6366F1"
           />
+          <SettingItem
+            icon={Fingerprint}
+            label="Entrance Device"
+            description={gymInfo?.attendanceEnabled ? 'Fingerprint reader is on' : 'Turn attendance on when you have a reader'}
+            onPress={() => navigate('Entrance Device')}
+            color="#0EA5E9"
+          />
+          {gymInfo?.attendanceEnabled ? (
+            <SettingItem
+              icon={ClipboardList}
+              label="Attendance"
+              description="Today's check-ins and denied entries"
+              onPress={() => navigate('Attendance')}
+              color="#22C55E"
+            />
+          ) : null}
         </Section>
 
         <Section title="NOTIFICATIONS">

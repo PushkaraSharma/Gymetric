@@ -25,6 +25,7 @@ import {
 import { syncMembersForMembership, getMembershipStatusFromDates } from "../utils/membershipHelpers.js";
 import { STALE_WHATSAPP_SKIP_DAYS } from "../utils/Constants.js";
 import { cache, getCacheKey, invalidateClientCaches } from "../utils/cache.js";
+import { allocateBiometricPin, enqueueCommand, isAttendanceEnabled, syncClientDoorAccess, syncClientsDoorAccessByIds } from "../services/biometricService.js";
 
 interface OnboardingBody {
     primaryDetails: any;
@@ -147,11 +148,14 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
             membershipStatus = 'trial';
         }
 
+        const attendanceOn = await isAttendanceEnabled(String(gymId));
+        const primaryPin = attendanceOn ? await allocateBiometricPin(String(gymId), session) : undefined;
         const [primaryClient] = await Client.create([{
             ...primaryDetails,
             gymId,
             role: 'primary',
-            membershipStatus
+            membershipStatus,
+            ...(attendanceOn ? { biometricPin: primaryPin, fingerprintStatus: 'pending' } : {}),
         }], { session });
 
         const [newAssignedMembership] = await AssignedMembership.create([{
@@ -166,22 +170,32 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
             status: membershipStatus
         }], { session });
 
+        const biometricClientsToSync: any[] = [primaryClient];
+
         if (dependents.length > 0) {
             for (let dep of dependents) {
                 let depClient;
                 if (dep.clientId) {
-                    depClient = await Client.findByIdAndUpdate(dep.clientId, {
-                        role: 'dependent',
-                        membershipStatus,
-                        activeMembership: ['active', 'trial', 'expired', 'trial_expired'].includes(membershipStatus) ? newAssignedMembership._id : undefined,
-                        upcomingMembership: membershipStatus === 'future' ? newAssignedMembership._id : undefined,
-                    }, { new: true, session });
+                    depClient = await Client.findById(dep.clientId).session(session);
+                    if (depClient) {
+                        if (attendanceOn && !depClient.biometricPin) {
+                            depClient.biometricPin = await allocateBiometricPin(String(gymId), session);
+                            depClient.fingerprintStatus = depClient.fingerprintStatus === 'enrolled' ? 'enrolled' : 'pending';
+                        }
+                        depClient.role = 'dependent';
+                        depClient.membershipStatus = membershipStatus as any;
+                        depClient.activeMembership = ['active', 'trial', 'expired', 'trial_expired'].includes(membershipStatus) ? newAssignedMembership._id : undefined;
+                        depClient.upcomingMembership = membershipStatus === 'future' ? newAssignedMembership._id : undefined;
+                        await depClient.save({ session });
+                    }
                 } else {
+                    const depPin = attendanceOn ? await allocateBiometricPin(String(gymId), session) : undefined;
                     [depClient] = await Client.create([{
                         ...dep,
                         gymId,
                         role: 'dependent',
                         membershipStatus,
+                        ...(attendanceOn ? { biometricPin: depPin, fingerprintStatus: 'pending' } : {}),
                         activeMembership: ['active', 'trial', 'expired', 'trial_expired'].includes(membershipStatus) ? newAssignedMembership._id : undefined,
                         upcomingMembership: membershipStatus === 'future' ? newAssignedMembership._id : undefined,
                     }], { session });
@@ -191,6 +205,7 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
                     depClient.membershipHistory.push(newAssignedMembership._id);
                     await depClient.save({ session });
                     newAssignedMembership.memberIds.push(depClient._id);
+                    biometricClientsToSync.push(depClient);
                 }
             }
             await newAssignedMembership.save({ session });
@@ -227,6 +242,17 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
         }
 
         invalidateClientCaches(gymId);
+
+        if (attendanceOn) {
+            for (const c of biometricClientsToSync) {
+                try {
+                    await syncClientDoorAccess(c);
+                } catch (e) {
+                    request.log.error({ err: e }, 'Biometric sync after onboarding failed');
+                }
+            }
+        }
+
         return reply.status(201).send({ success: true, data: primaryClient });
     } catch (error: any) {
         await session.abortTransaction();
@@ -379,6 +405,11 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
         }
 
         invalidateClientCaches(gymId);
+        try {
+            await syncClientsDoorAccessByIds(renewedMembership.memberIds, String(gymId));
+        } catch (e) {
+            request.log.error({ err: e }, 'Biometric sync after renewal failed');
+        }
         return reply.send({ success: true, data: primaryClient });
     } catch (error: any) {
         await session.abortTransaction();
@@ -625,6 +656,11 @@ export const pauseMembership = async (request: FastifyRequest, reply: FastifyRep
 
         await session.commitTransaction();
         invalidateClientCaches(gymId);
+        try {
+            await syncClientsDoorAccessByIds(membership.memberIds, String(gymId));
+        } catch (e) {
+            request.log.error({ err: e }, 'Biometric sync after pause failed');
+        }
         return reply.send({ success: true, data: membership });
     } catch (error: any) {
         await session.abortTransaction();
@@ -692,6 +728,11 @@ export const resumeMembership = async (request: FastifyRequest, reply: FastifyRe
 
         await session.commitTransaction();
         invalidateClientCaches(gymId);
+        try {
+            await syncClientsDoorAccessByIds(membership.memberIds, String(gymId));
+        } catch (e) {
+            request.log.error({ err: e }, 'Biometric sync after resume failed');
+        }
         return reply.send({ success: true, data: membership });
     } catch (error: any) {
         await session.abortTransaction();
@@ -799,6 +840,8 @@ export const deleteClient = async (request: any, reply: any) => {
             return reply.status(404).send({ success: false, message: 'Client not found' });
         }
 
+        const pin = client.biometricPin;
+
         // Delete associated assigned memberships, activities and message logs
         await Promise.all([
             AssignedMembership.deleteMany({ primaryMemberId: id }),
@@ -806,6 +849,14 @@ export const deleteClient = async (request: any, reply: any) => {
             MessageLog.deleteMany({ clientId: id }),
             Client.findByIdAndDelete(id)
         ]);
+
+        if (pin) {
+            try {
+                await enqueueCommand(String(gymId), 'DELETE_USER', String(pin), client.name);
+            } catch (e) {
+                request.log.error({ err: e }, 'Biometric delete command failed');
+            }
+        }
 
         invalidateClientCaches(gymId);
         return reply.send({ success: true, message: 'Client deleted successfully' });

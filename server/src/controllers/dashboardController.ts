@@ -279,6 +279,9 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             topSellingPlansLast6Months,
             totalPlanSalesLast6Months,
             totalPlanRevenueLast6Months,
+            // Live attendance counters (checkInsToday / busyNow) intentionally
+            // excluded — they change too often for this cached payload.
+            // Clients read them from GET /api/biometric/live instead.
         };
 
         cache.set(cacheKey, responseData);
