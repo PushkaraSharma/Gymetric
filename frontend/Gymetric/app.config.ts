@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     name: "GymKarta",
     slug: "Gymetric",
     scheme: "gymkarta",
-    version: "2.0.0",
+    version: "2.0.1",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
     icon: "./assets/images/app-icon.png",
@@ -18,7 +18,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         package: "com.indieroots.gymetric",
         allowBackup: false,
         googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
-        versionCode: 4,
+        versionCode: 5,
     },
     ios: {
         buildNumber: '3',
