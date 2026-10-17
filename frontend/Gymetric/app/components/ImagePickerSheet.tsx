@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, StyleSheet, ViewStyle, Platform } from 'react-native';
+import { Modal, Pressable, View, ViewStyle, Platform } from 'react-native';
 import { useAppTheme } from '@/theme/context';
 import { Text } from './Text';
 import { Button } from './Button';
@@ -10,9 +10,10 @@ import { $styles } from '@/theme/styles';
 interface ImagePickerSheetProps {
     isVisible: boolean;
     onSelect: (type: 'camera' | 'gallery') => void;
+    setIsVisible: (isVisible: boolean) => void;
 }
 
-export const ImagePickerSheet = ({ isVisible, onSelect }: ImagePickerSheetProps) => {
+export const ImagePickerSheet = ({ isVisible, onSelect, setIsVisible }: ImagePickerSheetProps) => {
     const { themed, theme: { colors, spacing } } = useAppTheme();
 
     if (!isVisible) return null;
@@ -22,11 +23,10 @@ export const ImagePickerSheet = ({ isVisible, onSelect }: ImagePickerSheetProps)
             transparent
             visible={isVisible}
             animationType="slide"
-            // Non-dismissible
-            onRequestClose={() => {}} 
+            onRequestClose={() => setIsVisible(false)}
         >
-            <View style={themed($overlay)}>
-                <View style={themed($sheetContainer)}>
+            <Pressable style={themed($overlay)} onPress={() => setIsVisible(false)}>
+                <Pressable style={themed($sheetContainer)} onPress={() => {}}>
                     <View style={themed($handle)} />
                     
                     <Text preset="subheading" weight="bold" style={{ marginBottom: spacing.md, textAlign: 'center' }}>
@@ -57,8 +57,8 @@ export const ImagePickerSheet = ({ isVisible, onSelect }: ImagePickerSheetProps)
                             )}
                         />
                     </View>
-                </View>
-            </View>
+                </Pressable>
+            </Pressable>
         </Modal>
     );
 };

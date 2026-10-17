@@ -101,8 +101,9 @@ export const PasswordLoginScreen = () => {
                         label="Phone Number"
                         placeholder="9999999999"
                         keyboardType="phone-pad"
+                        placeholderTextColor={theme.colors.palette.slate400}
                         containerStyle={{ marginBottom: theme.spacing.md }}
-                        LeftAccessory={() => <Text style={{ paddingLeft: 12, color: theme.colors.textDim }}>+91</Text>}
+                        LeftAccessory={() => <Text style={{ paddingLeft: 12, color: theme.colors.palette.slate400, fontSize: theme.typography.m }}>+91</Text>}
                     />
                 </View>
 
@@ -111,6 +112,7 @@ export const PasswordLoginScreen = () => {
                     onChangeText={setPassword}
                     label="Password"
                     placeholder="Enter your password"
+                    placeholderTextColor={theme.colors.palette.slate400}
                     secureTextEntry={!isPasswordVisible}
                     containerStyle={{ marginBottom: theme.spacing.lg }}
                     RightAccessory={() => (

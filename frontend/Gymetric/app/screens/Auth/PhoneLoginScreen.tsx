@@ -89,11 +89,11 @@ export const PhoneLoginScreen = () => {
                     }}
                     label="Phone Number"
                     placeholder="9999999999"
-                    placeholderTextColor={theme.colors.palette.slate300}
+                    placeholderTextColor={theme.colors.palette.slate400}
                     keyboardType="phone-pad"
                     autoFocus
                     containerStyle={{ marginBottom: theme.spacing.lg }}
-                    LeftAccessory={() => <Text style={{ paddingLeft: 12, color: theme.colors.textDim }}>+91</Text>}
+                    LeftAccessory={() => <Text style={{ paddingLeft: 12, color: theme.colors.palette.slate400, fontSize: theme.typography.m }}>+91</Text>}
                 />
 
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}

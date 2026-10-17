@@ -36,22 +36,22 @@ a mismatch causes error 132012.
 
 TEXT headers receive the gym name. Wait for each template to be Approved.
 
-## 4. Header image (onboarding only)
+## 4. Permanent header image (onboarding only)
 
-Upload the image and keep the returned id:
+Upload the JPEG/PNG to Cloudinary (Media Library → Upload), then copy its
+public HTTPS delivery URL. It should look like:
 
-```bash
-curl -X POST "https://graph.facebook.com/v22.0/<PHONE_NUMBER_ID>/media" \
-  -H "Authorization: Bearer <TOKEN>" \
-  -F "messaging_product=whatsapp" \
-  -F "type=image/jpeg" \
-  -F "file=@header.jpg"
-# -> {"id":"893040706795031"}
+```text
+https://res.cloudinary.com/<cloud-name>/image/upload/v123/gymetric/whatsapp/onboarding.jpg
 ```
 
-WARNING: media IDs expire after 30 days. After that, onboarding sends fail
-with "Media ID ... does not exist or has expired" and the id must be
-re-uploaded. Planned fix: send a permanent Cloudinary link instead.
+Open that URL in an incognito browser window before saving it. Meta must be
+able to download it without authentication. Store it as `headerImageUrl`.
+
+Gymetric sends this URL directly in the WhatsApp image header, so it does not
+expire after 30 days. Keep the Cloudinary asset public and do not delete or
+rename it. WhatsApp stays off until this URL is saved. Stored Meta media IDs
+are not used.
 
 ## 5. Webhook
 
@@ -87,7 +87,7 @@ In the `settings` collection, for that `gymId`:
 whatsapp: {
   accessToken:  "<permanent token>",
   phoneNumberId:"<phone number id>",
-  headerImageId:"<media id from step 4>",
+  headerImageUrl:"https://res.cloudinary.com/.../onboarding.jpg",
   active: true,
   reminderDays: 1,          // always 1, forced server-side
   sendOnOnboarding: true,
@@ -113,7 +113,8 @@ Helper script: `server/src/tests/checkWhatsApp.ts`
 | -------------------------------------------- | ------------------------------------------ |
 | No POST at all, but Meta's Test button works | WABA not subscribed (step 6)               |
 | `132012` format mismatch                     | Header type differs from the template      |
-| `Media ID ... has expired`                   | Re-upload the header image (step 4)        |
+| `Media ID ... has expired`                   | Set `headerImageUrl`; old ID is being used |
+| Header image cannot be downloaded            | URL is private, moved, or not direct HTTPS |
 | Stuck on Queued                              | `messages` field not subscribed            |
 | `no MessageLog for wamid` in logs            | Status arrived for a message we didn't log |
 
@@ -121,6 +122,8 @@ Helper script: `server/src/tests/checkWhatsApp.ts`
 
 - `WHATSAPP_VERIFY_TOKEN` — must match the value entered in step 5
 - `WHATSAPP_APP_SECRET` — optional, enables X-Hub-Signature-256 checking
+- `WHATSAPP_IMAGE_URL` — permanent public onboarding image URL, used by the
+  WhatsApp settings helper script
 
 ## Code reference
 

@@ -19,11 +19,17 @@ async function main() {
         console.log('   Please uncomment WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN in .env\n');
         process.exit(1);
     }
+    if (!process.env.WHATSAPP_IMAGE_URL?.startsWith('https://')) {
+        console.log('❌ WHATSAPP_IMAGE_URL must be a public HTTPS URL.');
+        console.log('   Upload the onboarding image to Cloudinary and paste its secure URL in .env\n');
+        process.exit(1);
+    }
 
     console.log('📱 WhatsApp credentials found in .env:');
     console.log(`   Phone Number ID: ${process.env.WHATSAPP_PHONE_NUMBER_ID}`);
     console.log(`   Access Token: ${process.env.WHATSAPP_ACCESS_TOKEN.substring(0, 20)}...`);
-    console.log(`   Image ID: ${process.env.WHATSAPP_IMAGE_ID || 'Not set'}\n`);
+    console.log(`   Header Image URL: ${process.env.WHATSAPP_IMAGE_URL || 'Not set'}`);
+    console.log(`   Legacy Image ID: ${process.env.WHATSAPP_IMAGE_ID || 'Not set'}\n`);
 
     let settings = await Settings.findOne({ gymId: user.gymId });
 
@@ -36,7 +42,8 @@ async function main() {
                 active: true,
                 phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
                 accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
-                headerImageId: process.env.WHATSAPP_IMAGE_ID || '893040706795031',
+                headerImageUrl: process.env.WHATSAPP_IMAGE_URL,
+                headerImageId: process.env.WHATSAPP_IMAGE_ID,
                 sendOnOnboarding: true,
                 sendOnRenewal: true,
                 sendOnExpiry: true,
@@ -54,7 +61,8 @@ async function main() {
                 'whatsapp.active': true,
                 'whatsapp.phoneNumberId': process.env.WHATSAPP_PHONE_NUMBER_ID,
                 'whatsapp.accessToken': process.env.WHATSAPP_ACCESS_TOKEN,
-                'whatsapp.headerImageId': process.env.WHATSAPP_IMAGE_ID || '893040706795031',
+                'whatsapp.headerImageUrl': process.env.WHATSAPP_IMAGE_URL,
+                'whatsapp.headerImageId': process.env.WHATSAPP_IMAGE_ID,
                 'whatsapp.sendOnOnboarding': true,
                 'whatsapp.sendOnRenewal': true,
                 'whatsapp.sendOnExpiry': true,
@@ -70,7 +78,8 @@ async function main() {
     console.log('\n📊 Current Settings:');
     console.log(`   Active: ${settings?.whatsapp?.active}`);
     console.log(`   Phone Number ID: ${settings?.whatsapp?.phoneNumberId}`);
-    console.log(`   Header Image ID: ${settings?.whatsapp?.headerImageId}`);
+    console.log(`   Header Image URL: ${settings?.whatsapp?.headerImageUrl || 'Not set'}`);
+    console.log(`   Legacy Header Image ID: ${settings?.whatsapp?.headerImageId || 'Not set'}`);
     console.log(`   Send on Onboarding: ${settings?.whatsapp?.sendOnOnboarding}`);
     console.log(`   Send on Renewal: ${settings?.whatsapp?.sendOnRenewal}`);
     console.log(`   Send on Expiry: ${settings?.whatsapp?.sendOnExpiry}`);
