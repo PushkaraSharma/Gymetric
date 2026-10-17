@@ -84,7 +84,7 @@ export const getAllClients = async (request: FastifyRequest, reply: FastifyReply
         }
 
         const clients = await Client.find({ gymId })
-            .select('name phoneNumber gender membershipStatus activeMembership balance role profilePicture')
+            .select('name phoneNumber gender membershipStatus activeMembership balance role profilePicture createdAt')
             .populate({ path: 'activeMembership', select: 'endDate planName status pauseHistory totalPausedDays' })
             .sort({ name: 1 })
             .lean();

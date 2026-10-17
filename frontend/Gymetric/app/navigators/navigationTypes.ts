@@ -28,6 +28,7 @@ export type AppStackParamList = {
   "WhatsApp Premium": undefined
   "WhatsApp Messages": undefined
   Revenue: undefined
+  Activity: undefined
   "Change Password": undefined
   "Receipt Settings": undefined
   "Push Notification Settings": undefined

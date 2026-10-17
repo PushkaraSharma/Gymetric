@@ -81,8 +81,12 @@ export class Api {
     return this.apiRequest('get', '/api/dashboard/summary');
   }
 
-  dashboardRevenue = async () => {
-    return this.apiRequest('get', '/api/dashboard/revenue');
+  dashboardRevenue = async (from: string, to: string, page = 1) => {
+    return this.apiRequest('get', '/api/dashboard/revenue', undefined, { from, to, page, limit: 50 });
+  }
+
+  dashboardActivities = async (params: { from: string; to: string; page?: number; limit?: number }) => {
+    return this.apiRequest('get', '/api/dashboard/activities', undefined, params);
   }
 
   gymInfo = async () => {

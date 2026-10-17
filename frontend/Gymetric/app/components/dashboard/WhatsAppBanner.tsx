@@ -1,7 +1,8 @@
 import React from 'react'
 import { View, TouchableOpacity, ViewStyle, TextStyle } from 'react-native'
 import { MotiView } from 'moti'
-import { MessageCircle, X } from 'lucide-react-native'
+import { X } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { Text } from '@/components/Text'
@@ -19,7 +20,7 @@ export function WhatsAppBanner({ onDismiss }: WhatsAppBannerProps) {
     <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={themed($banner)}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <MessageCircle size={20} color="white" style={{ marginRight: 8 }} />
+          <Ionicons name="logo-whatsapp" size={20} color="white" style={{ marginRight: 8 }} />
           <Text preset="bold" style={{ color: 'white', fontSize: 16 }} text="Premium Integration" />
         </View>
         <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>

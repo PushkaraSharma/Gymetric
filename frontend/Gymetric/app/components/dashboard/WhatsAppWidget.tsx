@@ -1,6 +1,7 @@
 import React from 'react'
 import { Pressable, View, ViewStyle, TextStyle } from 'react-native'
-import { ChevronRight, MessageCircle } from 'lucide-react-native'
+import { ChevronRight } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { Text } from '@/components/Text'
@@ -33,7 +34,7 @@ export function WhatsAppWidget({ today, last7Days, onPress }: Props) {
       <View style={themed($card)}>
         <View style={$header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <MessageCircle size={18} color={colors.success} />
+            <Ionicons name="logo-whatsapp" size={18} color={colors.success} />
             <Text style={themed($label)} text="WHATSAPP TODAY" />
           </View>
           <ChevronRight size={18} color={colors.textDim} />

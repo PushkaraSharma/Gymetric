@@ -61,7 +61,16 @@ export const calculateMembershipExpiry = (startDate: Date, months: number, days:
 // Aliases for dashboard and older code compatibility
 export const utcStartOfDay = (d: Date = new Date()) => dayjs(d).tz(IST_TIMEZONE).startOf('day').toDate();
 export const utcStartOfMonth = (d: Date = new Date()) => dayjs(d).tz(IST_TIMEZONE).startOf('month').toDate();
-export const addUtcDays = (d: Date, days: number) => dayjs(d).add(days, 'day').toDate();
+export const addUtcDays = (d: Date, days: number) => dayjs(d).tz(IST_TIMEZONE).add(days, 'day').toDate();
+export const startOfPreviousMonth = (d: Date = new Date()) =>
+    dayjs(d).tz(IST_TIMEZONE).subtract(1, 'month').startOf('month').toDate();
+/** Exclusive end of last-month MTD (same calendar day last month, fully included). */
+export const lastMtdEndExclusive = (d: Date = new Date()) =>
+    dayjs(d).tz(IST_TIMEZONE).subtract(1, 'month').add(1, 'day').startOf('day').toDate();
+export const startOfMonthMonthsAgo = (monthsAgo: number, d: Date = new Date()) =>
+    dayjs(d).tz(IST_TIMEZONE).startOf('month').subtract(monthsAgo, 'month').toDate();
+export const endOfIstDayExclusive = (d: Date | string) =>
+    dayjs.tz(d, IST_TIMEZONE).add(1, 'day').startOf('day').toDate();
 export const formatDateDDMonYYY = (date: Date | string) => dayjs(date).format('DD MMM YYYY');
 export const formatDDMMYYYY = (date: Date | string) => dayjs(date).format('DD-MM-YYYY');
 export const parseDateToUTCMidnight = (dateStr: string) => parseToISTMidnight(dateStr);

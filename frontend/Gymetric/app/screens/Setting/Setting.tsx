@@ -18,6 +18,7 @@ import {
   MapPin,
   User,
 } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { navigate } from '@/navigators/navigationUtilities'
 import { ThemedStyle } from '@/theme/types'
 import { Skeleton } from '@/components/Skeleton'
@@ -67,6 +68,10 @@ const Setting = () => {
     api.setAuthToken(undefined)
     setShowLogoutModal(false)
   }
+
+  const WhatsAppIcon = ({ size, color }: { size: number; color: string }) => (
+    <Ionicons name="logo-whatsapp" size={size} color={color} />
+  )
 
   const SettingItem = ({
     icon: Icon,
@@ -167,14 +172,14 @@ const Setting = () => {
           ) : hasWhatsapp ? (
             <>
               <SettingItem
-                icon={MessageCircle}
+                icon={WhatsAppIcon}
                 label="WhatsApp Messages"
                 description="Delivery status and message history"
                 onPress={() => navigate('WhatsApp Messages')}
                 color="#10B981"
               />
               <SettingItem
-                icon={MessageCircle}
+                icon={WhatsAppIcon}
                 label="WhatsApp Settings"
                 description="WhatsApp alerts and reminders"
                 onPress={() => navigate('Notification Settings')}
@@ -183,7 +188,7 @@ const Setting = () => {
             </>
           ) : (
             <SettingItem
-              icon={MessageCircle}
+              icon={WhatsAppIcon}
               label="Connect WhatsApp"
               description="Automate reminders & messages"
               onPress={() => navigate('WhatsApp Premium')}

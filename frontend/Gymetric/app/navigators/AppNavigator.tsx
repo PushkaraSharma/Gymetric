@@ -30,6 +30,7 @@ import { selectLoading } from "@/redux/state/GymStates"
 import { ActivityIndicator, TextStyle, View } from "react-native"
 import { ThemedStyle } from "@/theme/types"
 import Revenue from "@/screens/Revenue/Revenue"
+import Activity from "@/screens/Home/Activity"
 import { WhatsAppPremium } from "@/screens/Setting/WhatsAppPremium"
 import WhatsAppMessages from "@/screens/Setting/WhatsAppMessages"
 import EditMembershipScreen from "@/screens/Clients/EditMembershipScreen"
@@ -99,6 +100,7 @@ const AppStack = () => {
               <Stack.Screen name="WhatsApp Premium" component={WhatsAppPremium} />
               <Stack.Screen name="WhatsApp Messages" component={WhatsAppMessages} />
               <Stack.Screen name="Revenue" component={Revenue} />
+              <Stack.Screen name="Activity" component={Activity} />
               <Stack.Screen name="Change Password" component={ChangePassword} />
               <Stack.Screen name="Receipt Settings" component={ReceiptSettingsScreen} />
               <Stack.Screen name="Push Notification Settings" component={PushNotificationSettings} />

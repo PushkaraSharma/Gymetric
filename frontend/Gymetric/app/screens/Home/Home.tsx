@@ -33,6 +33,7 @@ export interface DashboardSummary {
   totalClients: number
   activeMembers: { value: number; trend: number | null }
   expiredMembers: number
+  recentlyExpiredMembers?: number
   expiringIn7Days: number
   expiringToday?: number
   retentionRate: number
@@ -170,7 +171,7 @@ const Home = () => {
       trend: summary?.newlyJoinedThisMonth?.trend,
       icon: <UserPlus size={20} color={theme.colors.primary} />,
       color: theme.colors.primary,
-      filter: 'All Clients',
+      filter: 'New this month',
     },
   ], [summary, theme.colors])
 
@@ -242,13 +243,13 @@ const Home = () => {
                 />
               )}
 
-              {(summary?.expiredMembers ?? 0) > 0 && (
+              {(summary?.recentlyExpiredMembers ?? 0) > 0 && (
                 <ActionAlertCard
-                  label="EXPIRED MEMBERS"
-                  title={String(summary?.expiredMembers)}
-                  description="members with expired memberships — win them back"
-                  primaryAction="Re-engage"
-                  onPrimaryPress={() => navigateToMembers('Expired')}
+                  label="RECENTLY EXPIRED"
+                  title={String(summary?.recentlyExpiredMembers)}
+                  description="expired in the last 14 days — still worth a call."
+                  primaryAction="View Members"
+                  onPrimaryPress={() => navigateToMembers('Recently Expired')}
                   variant="danger"
                 />
               )}
@@ -295,6 +296,9 @@ const Home = () => {
 
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Recent Activity</Text>
+                <Pressable onPress={() => navigate('Activity')}>
+                  <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>View all</Text>
+                </Pressable>
               </View>
 
               <ActivityFeed activities={summary?.activities ?? []} />
