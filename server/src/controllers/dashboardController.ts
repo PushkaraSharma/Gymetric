@@ -1,21 +1,53 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import dayjs from 'dayjs';
 import Activity from "../models/Activity.js";
 import Client from "../models/Client.js";
 import AssignedMembership from "../models/AssignedMembership.js";
 import mongoose from "mongoose";
-import { addUtcDays, utcStartOfDay, utcStartOfMonth } from "../utils/timeUtils.js";
+import {
+    addUtcDays,
+    endOfIstDayExclusive,
+    lastMtdEndExclusive,
+    parseToISTMidnight,
+    startOfMonthMonthsAgo,
+    startOfPreviousMonth,
+    utcStartOfDay,
+    utcStartOfMonth,
+} from "../utils/timeUtils.js";
 import { cache, getCacheKey } from "../utils/cache.js";
+
+const IST = 'Asia/Kolkata';
+
+const uniqueMemberOids = (memberships: { primaryMemberId?: any; memberIds?: any[] }[]) => {
+    const ids = new Set<string>();
+    for (const m of memberships) {
+        if (m.primaryMemberId) ids.add(String(m.primaryMemberId));
+        for (const id of m.memberIds || []) ids.add(String(id));
+    }
+    return [...ids].map((id) => new mongoose.Types.ObjectId(id));
+};
 
 const calculateTrend = (current: number, previous: number) => {
     if (!previous || previous === 0) return null;
     return parseFloat(((current - previous) / previous * 100).toFixed(1));
 };
 
-const getSixMonthsAgoStart = (today: Date) => {
-    const sixMonthsAgo = new Date(today);
-    sixMonthsAgo.setMonth(today.getMonth() - 5);
-    sixMonthsAgo.setDate(1);
-    return sixMonthsAgo;
+const getSixMonthsAgoStart = (today: Date) => startOfMonthMonthsAgo(5, today);
+
+const resolveInclusiveRange = (fromStr?: string, toStr?: string, fallbackFrom?: Date, fallbackToExclusive?: Date) => {
+    const from = fromStr ? parseToISTMidnight(fromStr) : fallbackFrom;
+    const toExclusive = toStr ? endOfIstDayExclusive(toStr) : fallbackToExclusive;
+    if (!from || !toExclusive || Number.isNaN(from.getTime()) || Number.isNaN(toExclusive.getTime())) {
+        return { error: 'Invalid date range' as const };
+    }
+    if (from >= toExclusive) {
+        return { error: 'End date must be on or after start date' as const };
+    }
+    const maxExclusive = dayjs(from).tz(IST).add(6, 'month').add(1, 'day').startOf('day');
+    if (dayjs(toExclusive).isAfter(maxExclusive)) {
+        return { error: 'Range cannot exceed 6 months' as const };
+    }
+    return { from, toExclusive };
 };
 
 const getRevenueTrend = async (gymId: string, today: Date) => {
@@ -28,8 +60,8 @@ const getRevenueTrend = async (gymId: string, today: Date) => {
         {
             $group: {
                 _id: {
-                    month: { $month: "$paymentHistory.date" },
-                    year: { $year: "$paymentHistory.date" }
+                    month: { $month: { date: "$paymentHistory.date", timezone: IST } },
+                    year: { $year: { date: "$paymentHistory.date", timezone: IST } }
                 },
                 total: { $sum: "$paymentHistory.amount" }
             }
@@ -56,9 +88,10 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
 
         const today = utcStartOfDay();
         const startOfCurrent = utcStartOfMonth(today);
-        const startOfLast = utcStartOfMonth(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1)));
-        const endOfLastMTD = addUtcDays(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, today.getUTCDate())), 0);
+        const startOfLast = startOfPreviousMonth(today);
+        const lastMtdExclusive = lastMtdEndExclusive(today);
         const thirtyDaysAgo = addUtcDays(today, -30);
+        const fourteenDaysAgo = addUtcDays(today, -14);
         const sevenDaysFromNow = addUtcDays(today, 7);
 
         const tomorrow = addUtcDays(today, 1);
@@ -73,6 +106,9 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             expiringMembersList,
             revenueCurrent,
             revenueLastMTD,
+            payingThisMonth,
+            endedLast30,
+            endedLast14,
             newlyJoinedCurrent,
             newlyJoinedLastMTD,
             recentActivities,
@@ -146,11 +182,26 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             Client.aggregate([
                 { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
                 { $unwind: "$paymentHistory" },
-                { $match: { "paymentHistory.date": { $gte: startOfLast, $lte: endOfLastMTD } } },
+                { $match: { "paymentHistory.date": { $gte: startOfLast, $lt: lastMtdExclusive } } },
                 { $group: { _id: null, total: { $sum: "$paymentHistory.amount" } } }
             ]),
+            Client.aggregate([
+                { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
+                { $unwind: "$paymentHistory" },
+                { $match: { "paymentHistory.date": { $gte: startOfCurrent } } },
+                { $group: { _id: "$_id" } },
+                { $count: "count" }
+            ]),
+            AssignedMembership.find({
+                gymId,
+                endDate: { $gte: thirtyDaysAgo, $lt: tomorrow },
+            }).select('primaryMemberId memberIds').lean(),
+            AssignedMembership.find({
+                gymId,
+                endDate: { $gte: fourteenDaysAgo, $lt: tomorrow },
+            }).select('primaryMemberId memberIds').lean(),
             Client.countDocuments({ gymId, createdAt: { $gte: startOfCurrent } }),
-            Client.countDocuments({ gymId, createdAt: { $gte: startOfLast, $lte: endOfLastMTD } }),
+            Client.countDocuments({ gymId, createdAt: { $gte: startOfLast, $lt: lastMtdExclusive } }),
             Activity.find({ gymId }).sort({ date: -1 }).limit(10).lean(),
             getRevenueTrend(gymId, today),
             Client.aggregate([
@@ -199,11 +250,33 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
         const revCurrentVal = revenueCurrent[0]?.total || 0;
         const revLastVal = revenueLastMTD[0]?.total || 0;
         const expiringSoon = expiringSoonParams[0]?.count || 0;
-        const retentionRate = totalClients > 0
-            ? parseFloat(((activeCount / totalClients) * 100).toFixed(1))
+        const payingCount = payingThisMonth[0]?.count || 0;
+        const ended30Ids = uniqueMemberOids(endedLast30 as any[]);
+        const ended14Ids = uniqueMemberOids(endedLast14 as any[]);
+        const [renewedCount, recentlyExpiredCount] = await Promise.all([
+            ended30Ids.length
+                ? Client.countDocuments({
+                    gymId,
+                    _id: { $in: ended30Ids },
+                    $or: [
+                        { membershipStatus: { $in: ['active', 'future', 'trial', 'paused'] } },
+                        { upcomingMembership: { $ne: null } },
+                    ],
+                })
+                : 0,
+            ended14Ids.length
+                ? Client.countDocuments({
+                    gymId,
+                    _id: { $in: ended14Ids },
+                    membershipStatus: { $in: ['expired', 'trial_expired'] },
+                })
+                : 0,
+        ]);
+        const retentionRate = ended30Ids.length > 0
+            ? parseFloat(((renewedCount / ended30Ids.length) * 100).toFixed(1))
             : 0;
-        const avgRevenuePerMember = activeCount > 0
-            ? parseFloat((revCurrentVal / activeCount).toFixed(0))
+        const avgRevenuePerMember = payingCount > 0
+            ? parseFloat((revCurrentVal / payingCount).toFixed(0))
             : 0;
 
         const totalPlanSalesLast6Months = topSellingPlansRaw.reduce(
@@ -246,6 +319,7 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
                 comparisonText: "vs 30 days ago"
             },
             expiredMembers: expiredCount,
+            recentlyExpiredMembers: recentlyExpiredCount,
             expiringIn7Days: expiringSoon,
             expiringMembersList: expiringMembers,
             retentionRate,
@@ -254,12 +328,12 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             revenueThisMonth: {
                 value: revCurrentVal,
                 trend: calculateTrend(revCurrentVal, revLastVal),
-                comparisonText: "vs previous MTD"
+                comparisonText: "vs same days last month"
             },
             newlyJoinedThisMonth: {
                 value: newlyJoinedCurrent,
                 trend: calculateTrend(newlyJoinedCurrent, newlyJoinedLastMTD),
-                comparisonText: "vs previous MTD"
+                comparisonText: "vs same days last month"
             },
             activities: recentActivities,
             todayCollection: todayCollection[0]?.total || 0,
@@ -296,60 +370,30 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
 export const getRevenueStats = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const { gymId } = request.user as any;
+        const { from: fromStr, to: toStr, page: pageStr, limit: limitStr } = (request.query as { from?: string; to?: string; page?: string; limit?: string }) || {};
+        const page = Math.max(1, parseInt(pageStr || '1', 10) || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(limitStr || '50', 10) || 50));
         const today = utcStartOfDay();
-        const startOfCurrent = utcStartOfMonth(today);
+        const range = resolveInclusiveRange(
+            fromStr,
+            toStr,
+            utcStartOfMonth(today),
+            addUtcDays(today, 1),
+        );
+        if ('error' in range) {
+            return reply.status(400).send({ success: false, error: range.error });
+        }
+        const { from, toExclusive } = range;
+        const gymOid = new mongoose.Types.ObjectId(gymId);
+        const dateMatch = { "paymentHistory.date": { $gte: from, $lt: toExclusive } };
 
-        const sixMonthsAgo = new Date(today);
-        sixMonthsAgo.setMonth(today.getMonth() - 5);
-        sixMonthsAgo.setDate(1);
-
-        const monthlyRevenueRaw = await Client.aggregate([
-            { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
+        const transactionsQuery = Client.aggregate([
+            { $match: { gymId: gymOid } },
             { $unwind: "$paymentHistory" },
-            { $match: { "paymentHistory.date": { $gte: sixMonthsAgo } } },
-            {
-                $group: {
-                    _id: {
-                        month: { $month: "$paymentHistory.date" },
-                        year: { $year: "$paymentHistory.date" }
-                    },
-                    total: { $sum: "$paymentHistory.amount" }
-                }
-            },
-            { $sort: { "_id.year": 1, "_id.month": 1 } }
-        ]);
-
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-        const monthlyRevenue = monthlyRevenueRaw.map(item => ({
-            label: `${months[item._id.month - 1]}`,
-            amount: item.total
-        }));
-
-        const paymentMethodsRaw = await Client.aggregate([
-            { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
-            { $unwind: "$paymentHistory" },
-            { $match: { "paymentHistory.date": { $gte: startOfCurrent } } },
-            {
-                $group: {
-                    _id: "$paymentHistory.method",
-                    total: { $sum: "$paymentHistory.amount" },
-                    count: { $sum: 1 }
-                }
-            }
-        ]);
-
-        const paymentMethods = paymentMethodsRaw.map(p => ({
-            method: p._id,
-            amount: p.total,
-            count: p.count
-        }));
-
-        const recentTransactions = await Client.aggregate([
-            { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
-            { $unwind: "$paymentHistory" },
+            { $match: dateMatch },
             { $sort: { "paymentHistory.date": -1 } },
-            { $limit: 20 },
+            { $skip: (page - 1) * limit },
+            { $limit: limit + 1 },
             {
                 $project: {
                     clientId: "$_id",
@@ -359,19 +403,117 @@ export const getRevenueStats = async (request: FastifyRequest, reply: FastifyRep
                     method: "$paymentHistory.method",
                     remarks: "$paymentHistory.remarks",
                     type: "$paymentHistory.type",
-                }
-            }
+                },
+            },
         ]);
 
+        if (page > 1) {
+            const raw = await transactionsQuery;
+            const hasMore = raw.length > limit;
+            return reply.send({
+                success: true,
+                data: { transactions: hasMore ? raw.slice(0, limit) : raw, page, hasMore },
+            });
+        }
+
+        const [dailyRaw, paymentMethodsRaw, transactionsRaw, totalRaw] = await Promise.all([
+            Client.aggregate([
+                { $match: { gymId: gymOid } },
+                { $unwind: "$paymentHistory" },
+                { $match: dateMatch },
+                {
+                    $group: {
+                        _id: {
+                            $dateToString: { format: '%Y-%m-%d', date: '$paymentHistory.date', timezone: IST },
+                        },
+                        amount: { $sum: '$paymentHistory.amount' },
+                    },
+                },
+                { $sort: { _id: 1 } },
+            ]),
+            Client.aggregate([
+                { $match: { gymId: gymOid } },
+                { $unwind: "$paymentHistory" },
+                { $match: dateMatch },
+                {
+                    $group: {
+                        _id: "$paymentHistory.method",
+                        total: { $sum: "$paymentHistory.amount" },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+            transactionsQuery,
+            Client.aggregate([
+                { $match: { gymId: gymOid } },
+                { $unwind: "$paymentHistory" },
+                { $match: dateMatch },
+                { $group: { _id: null, total: { $sum: "$paymentHistory.amount" } } },
+            ]),
+        ]);
+
+        const amountByDate = new Map(dailyRaw.map((row) => [row._id, row.amount]));
+        const daily: { date: string; amount: number }[] = [];
+        for (let d = dayjs(from).tz(IST); d.isBefore(dayjs(toExclusive)); d = d.add(1, 'day')) {
+            const key = d.format('YYYY-MM-DD');
+            daily.push({ date: key, amount: amountByDate.get(key) || 0 });
+        }
+
+        const hasMore = transactionsRaw.length > limit;
         return reply.send({
             success: true,
             data: {
-                monthlyRevenue,
-                paymentMethods,
-                recentTransactions
-            }
+                total: totalRaw[0]?.total || 0,
+                daily,
+                paymentMethods: paymentMethodsRaw.map((p) => ({
+                    method: p._id,
+                    amount: p.total,
+                    count: p.count,
+                })),
+                transactions: hasMore ? transactionsRaw.slice(0, limit) : transactionsRaw,
+                page,
+                hasMore,
+            },
         });
+    } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};
 
+export const getActivities = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { gymId } = request.user as any;
+        const query = (request.query as { from?: string; to?: string; page?: string; limit?: string }) || {};
+        const today = utcStartOfDay();
+        const range = resolveInclusiveRange(
+            query.from,
+            query.to,
+            today,
+            addUtcDays(today, 1),
+        );
+        if ('error' in range) {
+            return reply.status(400).send({ success: false, error: range.error });
+        }
+        const page = Math.max(1, parseInt(query.page || '1', 10) || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(query.limit || '20', 10) || 20));
+        const items = await Activity.find({
+            gymId,
+            date: { $gte: range.from, $lt: range.toExclusive },
+        })
+            .sort({ date: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit + 1)
+            .lean();
+        const hasMore = items.length > limit;
+        return reply.send({
+            success: true,
+            data: {
+                items: hasMore ? items.slice(0, limit) : items,
+                page,
+                hasMore,
+            },
+        });
     } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });

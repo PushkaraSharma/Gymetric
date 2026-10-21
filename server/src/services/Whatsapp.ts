@@ -14,14 +14,25 @@ export const sendWhatsAppTemplate = async (
     logContext?: { gymId: string; clientId?: string }
 ) => {
     const summary = `${templateName}: ${bodyParams.join(', ')}`;
+    if (!whatsapp?.headerImageUrl) {
+        if (logContext?.gymId) {
+            await logSkippedWhatsApp(
+                logContext.gymId,
+                logContext.clientId || '',
+                templateName,
+                'Skipped: welcome image is not uploaded'
+            );
+        }
+        return;
+    }
     try {
         const url = `https://graph.facebook.com/v22.0/${whatsapp?.phoneNumberId}/messages`;
         const components = [];
-        if (IMAGE_HEADER_TEMPLATES.has(templateName) && whatsapp?.headerImageId) {
+        if (IMAGE_HEADER_TEMPLATES.has(templateName) && whatsapp?.headerImageUrl) {
             components.push({
                 type: "header",
                 parameters: [
-                    { type: "image", image: { id: whatsapp.headerImageId } },
+                    { type: "image", image: { link: whatsapp.headerImageUrl } },
                 ],
             });
         } else if (TEXT_HEADER_TEMPLATES.has(templateName) && headerText) {

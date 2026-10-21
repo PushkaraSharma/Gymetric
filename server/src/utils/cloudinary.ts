@@ -53,6 +53,26 @@ export const uploadToCloudinary = async (
 };
 
 /**
+ * Extract a Cloudinary public ID from a delivery URL.
+ * Cloudinary URLs look like .../upload/[v1234567/][public_id].[ext]
+ */
+export const getCloudinaryPublicId = (url: string): string | null => {
+    try {
+        const parts = url.split('/');
+        const uploadIndex = parts.indexOf('upload');
+        if (uploadIndex === -1) return null;
+
+        const versionPart = parts[uploadIndex + 1];
+        const startIdx = versionPart?.startsWith('v') ? uploadIndex + 2 : uploadIndex + 1;
+        const publicIdWithExt = parts.slice(startIdx).join('/');
+        if (!publicIdWithExt) return null;
+        return publicIdWithExt.split('.')[0];
+    } catch {
+        return null;
+    }
+};
+
+/**
  * Delete image from Cloudinary
  * @param publicId - Cloudinary public ID of the image
  */

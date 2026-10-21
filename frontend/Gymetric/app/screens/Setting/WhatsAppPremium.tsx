@@ -7,7 +7,8 @@ import { Button } from '@/components/Button'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { useNavigation } from '@react-navigation/native'
-import { MessageCircle, Bell, CheckCircle, Calendar, Zap, ArrowRight } from 'lucide-react-native'
+import { Bell, CheckCircle, Calendar, Zap, ArrowRight } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { $styles } from '@/theme/styles'
 
 const FeatureItem = ({ icon, title, description }: { icon: any, title: string, description: string }) => {
@@ -36,7 +37,7 @@ export const WhatsAppPremium = () => {
             description: "Send automated payment reminders to clients via WhatsApp."
         },
         {
-            icon: <MessageCircle size={24} color={colors.primary} />,
+            icon: <Ionicons name="logo-whatsapp" size={24} color={colors.primary} />,
             title: "Welcome Messages",
             description: "Automatically welcome new members instantly after registration."
         },
@@ -64,7 +65,7 @@ export const WhatsAppPremium = () => {
             <ScrollView contentContainerStyle={{ padding: spacing.md }}>
                 <View style={themed($heroSection)}>
                     <View style={themed($heroIconWrapper)}>
-                        <MessageCircle size={48} color="#fff" fill="#fff" />
+                        <Ionicons name="logo-whatsapp" size={48} color="#fff" />
                     </View>
                     <Text preset="heading" style={{ textAlign: 'center', marginBottom: spacing.xs }}>
                         WhatsApp Business API

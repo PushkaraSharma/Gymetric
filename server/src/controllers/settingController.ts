@@ -1,4 +1,5 @@
 import Settings from "../models/Settings.js";
+import { deleteFromCloudinary, getCloudinaryPublicId } from "../utils/cloudinary.js";
 
 export const setSettings = async (request: any, reply: any) => {
     try {
@@ -7,9 +8,11 @@ export const setSettings = async (request: any, reply: any) => {
         // Fetch existing settings to preserve secrets
         let updateData = { ...request.body, gymId };
 
+        let previousHeaderUrl: string | undefined;
         if (updateData.whatsapp) {
             updateData.whatsapp.reminderDays = 1;
             const existingSettings: any = await Settings.findOne({ gymId }).lean();
+            previousHeaderUrl = existingSettings?.whatsapp?.headerImageUrl;
             if (existingSettings && existingSettings.whatsapp) {
                 // Preserve accessToken if not provided
                 if (!updateData.whatsapp.accessToken && existingSettings.whatsapp.accessToken) {
@@ -19,10 +22,19 @@ export const setSettings = async (request: any, reply: any) => {
                 if (!updateData.whatsapp.phoneNumberId && existingSettings.whatsapp.phoneNumberId) {
                     updateData.whatsapp.phoneNumberId = existingSettings.whatsapp.phoneNumberId;
                 }
+                // Preserve the permanent onboarding header URL only when the client omits it.
+                // An explicit empty or new value is authoritative (replace / clear).
+                if (updateData.whatsapp.headerImageUrl === undefined && existingSettings.whatsapp.headerImageUrl) {
+                    updateData.whatsapp.headerImageUrl = existingSettings.whatsapp.headerImageUrl;
+                }
+
                 // Preserve headerImageId if not provided (good practice)
                 if (!updateData.whatsapp.headerImageId && existingSettings.whatsapp.headerImageId) {
                     updateData.whatsapp.headerImageId = existingSettings.whatsapp.headerImageId;
                 }
+            }
+            if (updateData.whatsapp.active && !updateData.whatsapp.headerImageUrl) {
+                return reply.status(400).send({ success: false, message: 'Welcome image required to enable WhatsApp' });
             }
         }
 
@@ -31,6 +43,17 @@ export const setSettings = async (request: any, reply: any) => {
             { $set: updateData },
             { new: true, upsert: true, setDefaultsOnInsert: true, projection: { accessToken: 0, phoneNumberId: 0 } }
         );
+
+        const nextHeaderUrl = updateData.whatsapp?.headerImageUrl;
+        if (previousHeaderUrl && nextHeaderUrl !== undefined && previousHeaderUrl !== nextHeaderUrl) {
+            const publicId = getCloudinaryPublicId(previousHeaderUrl);
+            if (publicId) {
+                deleteFromCloudinary(publicId).catch((err) => {
+                    request.log.error({ err }, 'Failed to delete previous WhatsApp header image');
+                });
+            }
+        }
+
         return reply.status(200).send({ success: true, data: settings });
     } catch (error: any) {
         request.log.error(error);

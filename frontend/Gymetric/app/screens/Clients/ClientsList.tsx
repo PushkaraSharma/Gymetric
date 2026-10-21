@@ -10,14 +10,14 @@ import { selectAllClients } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { navigate } from '@/navigators/navigationUtilities'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import { addDays, isAfter, isBefore, isSameDay, parseISO } from 'date-fns'
+import { addDays, isAfter, isBefore, isSameDay, parseISO, startOfMonth } from 'date-fns'
 import { Skeleton } from '@/components/Skeleton'
 import { ClientSearchBar } from '@/components/clients/ClientSearchBar'
 import { ClientFilterChips } from '@/components/clients/ClientFilterChips'
 import { ClientListCard } from '@/components/clients/ClientListCard'
 import { Button } from '@/components/Button'
 
-const FILTER_IDS = ['All Clients', 'Active', 'Expiring Today', 'Expiring Soon', 'Has Balance', 'Expired', 'Trial', 'Paused'] as const
+const FILTER_IDS = ['All Clients', 'Active', 'Expiring Today', 'Expiring Soon', 'Has Balance', 'Expired', 'Recently Expired', 'New this month', 'Trial', 'Paused'] as const
 
 const isExpiringToday = (c: any, now: Date) => {
   if (c.membershipStatus !== 'active' || !c.activeMembership?.endDate) return false
@@ -28,6 +28,20 @@ const isExpiringSoon = (c: any, now: Date, sevenDays: Date) => {
   if (c.membershipStatus !== 'active' || !c.activeMembership?.endDate) return false
   const end = parseISO(c.activeMembership.endDate)
   return isAfter(end, now) && isBefore(end, sevenDays)
+}
+
+const isRecentlyExpired = (c: any, now: Date) => {
+  if (c.membershipStatus !== 'expired' && c.membershipStatus !== 'trial_expired') return false
+  if (!c.activeMembership?.endDate) return false
+  const end = parseISO(c.activeMembership.endDate)
+  const cutoff = addDays(now, -14)
+  return (isAfter(end, cutoff) || isSameDay(end, cutoff)) && (isBefore(end, now) || isSameDay(end, now))
+}
+
+const isNewThisMonth = (c: any, now: Date) => {
+  if (!c.createdAt) return false
+  const created = new Date(c.createdAt)
+  return !Number.isNaN(created.getTime()) && !isBefore(created, startOfMonth(now))
 }
 
 const ClientsList = ({ route }: any) => {
@@ -79,6 +93,8 @@ const ClientsList = ({ route }: any) => {
       if (c.membershipStatus === 'paused') counts['Paused'] = (counts['Paused'] || 0) + 1
       if (isExpiringToday(c, now)) counts['Expiring Today'] = (counts['Expiring Today'] || 0) + 1
       if (isExpiringSoon(c, now, sevenDays)) counts['Expiring Soon'] = (counts['Expiring Soon'] || 0) + 1
+      if (isRecentlyExpired(c, now)) counts['Recently Expired'] = (counts['Recently Expired'] || 0) + 1
+      if (isNewThisMonth(c, now)) counts['New this month'] = (counts['New this month'] || 0) + 1
     })
     return counts
   }, [clients])
@@ -106,6 +122,8 @@ const ClientsList = ({ route }: any) => {
         case 'Paused': return c.membershipStatus === 'paused'
         case 'Expiring Today': return isExpiringToday(c, now)
         case 'Expiring Soon': return isExpiringSoon(c, now, sevenDaysFromNow)
+        case 'Recently Expired': return isRecentlyExpired(c, now)
+        case 'New this month': return isNewThisMonth(c, now)
         default: return true
       }
     })

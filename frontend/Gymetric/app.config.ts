@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     name: "GymKarta",
     slug: "Gymetric",
     scheme: "gymkarta",
-    version: "2.0.0",
+    version: "2.0.1",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
     icon: "./assets/images/app-icon.png",
@@ -12,16 +12,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         fallbackToCacheTimeout: 0,
         url: "https://u.expo.dev/2e469ab5-5d58-49e3-afe3-b245dfa7d3c7",
     },
-    newArchEnabled: true,
-    jsEngine: "hermes",
     assetBundlePatterns: ["**/*"],
     android: {
         icon: "./assets/images/app-icon.png",
         package: "com.indieroots.gymetric",
         allowBackup: false,
-        edgeToEdgeEnabled: true,
         googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
-        versionCode: 4,
+        versionCode: 5,
     },
     ios: {
         buildNumber: '3',
@@ -87,6 +84,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "@react-native-firebase/app",
         "@react-native-firebase/auth",
         "@react-native-firebase/crashlytics",
+        "./plugins/withFirebaseConfigure",
         [
             "expo-notifications",
             {

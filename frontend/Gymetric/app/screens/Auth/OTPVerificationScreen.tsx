@@ -35,7 +35,7 @@ export const OTPVerificationScreen = () => {
     const isFinalizing = useRef(false)
 
     useEffect(() => {
-        let interval: NodeJS.Timeout
+        let interval: ReturnType<typeof setInterval> | undefined
         if (timer > 0) {
             interval = setInterval(() => {
                 setTimer((prev) => prev - 1)
@@ -43,7 +43,9 @@ export const OTPVerificationScreen = () => {
         } else {
             setCanResend(true)
         }
-        return () => clearInterval(interval)
+        return () => {
+            if (interval) clearInterval(interval)
+        }
     }, [timer])
 
     useEffect(() => {

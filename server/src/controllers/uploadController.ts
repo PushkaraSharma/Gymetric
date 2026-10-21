@@ -1,28 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinary.js';
+import { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } from '../utils/cloudinary.js';
 import Client from '../models/Client.js';
 import Gym from '../models/Gym.js';
-
-/**
- * Extract Cloudinary public ID from URL
- */
-const getPublicIdFromUrl = (url: string): string | null => {
-    try {
-        const parts = url.split('/');
-        const uploadIndex = parts.indexOf('upload');
-        if (uploadIndex === -1) return null;
-
-        // Everything after /upload/v1234567/ is the public ID
-        // Cloudinary URLs: .../upload/[version]/[public_id].[ext]
-        const versionPart = parts[uploadIndex + 1];
-        const startIdx = versionPart.startsWith('v') ? uploadIndex + 2 : uploadIndex + 1;
-
-        const publicIdWithExt = parts.slice(startIdx).join('/');
-        return publicIdWithExt.split('.')[0];
-    } catch (error) {
-        return null;
-    }
-};
 
 /**
  * Upload client profile picture
@@ -50,7 +29,7 @@ export const uploadClientProfilePicture = async (request: FastifyRequest, reply:
 
         // Delete old picture if exists
         if (client.profilePicture) {
-            const publicId = getPublicIdFromUrl(client.profilePicture);
+            const publicId = getCloudinaryPublicId(client.profilePicture);
             if (publicId) await deleteFromCloudinary(publicId);
         }
 
@@ -99,7 +78,7 @@ export const uploadGymLogo = async (request: FastifyRequest, reply: FastifyReply
 
         // Delete old logo if exists
         if (gym.logo) {
-            const publicId = getPublicIdFromUrl(gym.logo);
+            const publicId = getCloudinaryPublicId(gym.logo);
             if (publicId) await deleteFromCloudinary(publicId);
         }
 
@@ -160,6 +139,38 @@ export const uploadReceiptAsset = async (request: FastifyRequest, reply: Fastify
 };
 
 /**
+ * Upload the per-gym WhatsApp onboarding header image.
+ * Does not persist the URL — the settings screen saves it.
+ */
+export const uploadWhatsappHeaderImage = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { gymId } = request.user as any;
+        const data = await (request as any).file();
+
+        if (!data) {
+            return reply.status(400).send({ success: false, message: 'No file uploaded' });
+        }
+
+        const buffer = await data.toBuffer();
+        const result = await uploadToCloudinary(
+            buffer,
+            `gymetric/whatsapp/${gymId}`,
+            `header_${Date.now()}`
+        );
+
+        return reply.send({
+            success: true,
+            data: {
+                url: result.secure_url
+            }
+        });
+    } catch (error: any) {
+        request.log.error({ err: error }, 'WhatsApp header upload error');
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};
+
+/**
  * Delete client profile picture
  */
 export const deleteClientProfilePicture = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -172,7 +183,7 @@ export const deleteClientProfilePicture = async (request: FastifyRequest, reply:
         }
 
         if (client.profilePicture) {
-            const publicId = getPublicIdFromUrl(client.profilePicture);
+            const publicId = getCloudinaryPublicId(client.profilePicture);
             if (publicId) await deleteFromCloudinary(publicId);
 
             client.profilePicture = undefined;

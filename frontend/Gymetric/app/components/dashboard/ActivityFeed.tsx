@@ -14,7 +14,7 @@ import { ThemedStyle } from '@/theme/types'
 import { Text } from '@/components/Text'
 import { navigate } from '@/navigators/navigationUtilities'
 
-interface ActivityItem {
+export interface ActivityItem {
   _id?: string
   type?: string
   title?: string
@@ -48,7 +48,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
   )
 }
 
-const ActivityCard = React.memo(({ item }: { item: ActivityItem }) => {
+export const ActivityCard = React.memo(({ item }: { item: ActivityItem }) => {
   const { themed, theme: { colors } } = useAppTheme()
 
   const ActivityIcons: { [key: string]: JSX.Element } = {

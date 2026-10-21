@@ -29,7 +29,6 @@ export function Switch({ value, onValueChange, onPress, label, helper, container
             ios_backgroundColor={theme.colors.border}
             onValueChange={handleValueChange}
             value={value}
-            style={styles.switch}
         />
     );
 

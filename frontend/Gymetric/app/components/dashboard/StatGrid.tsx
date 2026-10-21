@@ -1,6 +1,6 @@
 import React from 'react'
 import { Pressable, View, ViewStyle, TextStyle } from 'react-native'
-import { TrendingUp } from 'lucide-react-native'
+import { TrendingUp, TrendingDown } from 'lucide-react-native'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { Text } from '@/components/Text'
@@ -29,10 +29,12 @@ function StatCard({ label, value, trend, icon, color, onPress }: StatItem & { on
     >
       <View style={$statHeader}>
         <View style={[$iconContainer, { backgroundColor: color + '15' }]}>{icon}</View>
-        {trend != null && (
-          <View style={[$trendBadge, { backgroundColor: colors.successBackground }]}>
-            <TrendingUp size={12} color={colors.success} />
-            <Text size="xxs" style={{ color: colors.success, marginLeft: 4 }} text={`${trend}%`} />
+        {trend != null && trend !== 0 && (
+          <View style={[$trendBadge, { backgroundColor: trend < 0 ? colors.errorBackground : colors.successBackground }]}>
+            {trend < 0
+              ? <TrendingDown size={12} color={colors.error} />
+              : <TrendingUp size={12} color={colors.success} />}
+            <Text size="xxs" style={{ color: trend < 0 ? colors.error : colors.success, marginLeft: 4 }} text={`${trend}%`} />
           </View>
         )}
       </View>

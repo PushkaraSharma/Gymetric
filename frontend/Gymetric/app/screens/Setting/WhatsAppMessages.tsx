@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/Skeleton'
 import { spacing } from '@/theme/spacing'
 import { ThemedStyle } from '@/theme/types'
 import { formatDate } from 'date-fns'
-import { MessageCircle } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { WHATSAPP_STATUS_CHIPS, WHATSAPP_TEMPLATE_CHIPS, whatsappStatusLabel, whatsappTemplateLabel } from '@/utils/whatsappLabels'
 
 export const WhatsAppMessages = () => {
@@ -155,7 +155,7 @@ export const WhatsAppMessages = () => {
           onEndReachedThreshold={0.4}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', marginTop: 48 }}>
-              <MessageCircle size={32} color={colors.textDim} />
+              <Ionicons name="logo-whatsapp" size={32} color={colors.textDim} />
               <Text weight="semiBold" style={{ marginTop: 12 }}>
                 {hasFilters ? 'No matching messages' : 'No messages yet'}
               </Text>

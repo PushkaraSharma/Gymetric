@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Pressable, View, ViewStyle, TextStyle, Modal, TouchableWithoutFeedback } from 'react-native'
 import { MotiView } from 'moti'
-import { TrendingUp, Wallet, Info, ChevronRight } from 'lucide-react-native'
+import { TrendingUp, TrendingDown, Wallet, Info, ChevronRight } from 'lucide-react-native'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { Text } from '@/components/Text'
@@ -18,9 +18,7 @@ interface RevenueCardProps {
 export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, todayCollection, onPress }: RevenueCardProps) {
   const { themed, theme: { colors, spacing } } = useAppTheme()
   const [tooltipVisible, setTooltipVisible] = useState<'retention' | 'avgMember' | null>(null)
-  const trendText = trend !== null && trend !== undefined
-    ? `${trend >= 0 ? '+' : ''}${trend}% vs last month`
-    : 'No comparison data'
+  const trendText = `${trend != null && trend >= 0 ? '+' : ''}${trend}% vs same days last month`
 
   return (
     <>
@@ -38,10 +36,14 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
           </View>
           <Text style={themed($value)} text={`₹${value.toLocaleString('en-IN')}`} />
           <View style={$footer}>
-            <View style={$trendBadge}>
-              <TrendingUp size={14} color={colors.white} />
-              <Text style={themed($trendText)} size="xs" text={trendText} />
-            </View>
+            {trend != null && (
+              <View style={$trendBadge}>
+                {trend < 0
+                  ? <TrendingDown size={14} color={colors.white} />
+                  : <TrendingUp size={14} color={colors.white} />}
+                <Text style={themed($trendText)} size="xs" text={trendText} />
+              </View>
+            )}
             <Text style={themed($viewBreakdown)} text="View breakdown" />
           </View>
           {(todayCollection !== undefined || retentionRate !== undefined || avgRevenuePerMember !== undefined) && (
@@ -90,9 +92,9 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
         <TouchableWithoutFeedback onPress={() => setTooltipVisible(null)}>
           <View style={$tooltipOverlay}>
             <View style={themed($tooltipBox)}>
-              <Text weight="bold" style={{ color: colors.text, marginBottom: spacing.sm }}>Member Retention Rate</Text>
+              <Text weight="bold" style={{ color: colors.text, marginBottom: spacing.sm }}>30-day renewal rate</Text>
               <Text size="sm" style={{ color: colors.textDim, lineHeight: 20 }}>
-                Percentage of members who renewed or maintained active memberships during this period. A higher retention rate indicates strong member satisfaction and loyalty.
+                Of memberships that ended in the last 30 days, the share of those members who are now active, on a future plan, or already assigned a newer membership.
               </Text>
             </View>
           </View>
@@ -104,9 +106,9 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
         <TouchableWithoutFeedback onPress={() => setTooltipVisible(null)}>
           <View style={$tooltipOverlay}>
             <View style={themed($tooltipBox)}>
-              <Text weight="bold" style={{ color: colors.text, marginBottom: spacing.sm }}>Average Revenue Per Member</Text>
+              <Text weight="bold" style={{ color: colors.text, marginBottom: spacing.sm }}>Average ticket this month</Text>
               <Text size="sm" style={{ color: colors.textDim, lineHeight: 20 }}>
-                Total revenue divided by the number of active members. This metric helps you understand the average value each member generates for your gym.
+                Average collected per paying member this month.
               </Text>
             </View>
           </View>

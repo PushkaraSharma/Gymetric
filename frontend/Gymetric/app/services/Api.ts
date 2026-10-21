@@ -81,8 +81,12 @@ export class Api {
     return this.apiRequest('get', '/api/dashboard/summary');
   }
 
-  dashboardRevenue = async () => {
-    return this.apiRequest('get', '/api/dashboard/revenue');
+  dashboardRevenue = async (from: string, to: string, page = 1) => {
+    return this.apiRequest('get', '/api/dashboard/revenue', undefined, { from, to, page, limit: 50 });
+  }
+
+  dashboardActivities = async (params: { from: string; to: string; page?: number; limit?: number }) => {
+    return this.apiRequest('get', '/api/dashboard/activities', undefined, params);
   }
 
   gymInfo = async () => {
@@ -269,6 +273,36 @@ export class Api {
 
     const response: any = await this.apisauce.post(
       `/api/upload/receipt-asset?type=${type}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const message = response?.data?.message ?? "Upload failed";
+      Toast.show({ type: 'error', text1: 'Upload Error', text2: message });
+      return { kind: 'error', message };
+    }
+    return { kind: 'ok', data: response?.data?.data };
+  };
+
+  uploadWhatsappHeaderImage = async (imageUri: string) => {
+    const formData = new FormData();
+    const filename = imageUri.split('/').pop() || 'header.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+    formData.append('file', {
+      uri: imageUri,
+      name: filename,
+      type,
+    } as any);
+
+    const response: any = await this.apisauce.post(
+      '/api/upload/whatsapp-header',
       formData,
       {
         headers: {

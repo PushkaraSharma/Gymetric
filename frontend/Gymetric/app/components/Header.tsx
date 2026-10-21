@@ -111,7 +111,7 @@ const getStyles = (theme: any) => StyleSheet.create({
         justifyContent: 'center',
     },
     right: {
-        width: 44,
+        minWidth: 44,
     },
     backBtn: {
         width: 44,
@@ -132,7 +132,7 @@ const getStyles = (theme: any) => StyleSheet.create({
         marginTop: -2,
     },
     rightAction: {
-        width: 44,
+        minWidth: 44,
         height: 44,
         justifyContent: 'center',
         alignItems: 'flex-end',

@@ -68,7 +68,7 @@ const $chip: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
     flexShrink: 0,
     minWidth: 72,
     paddingVertical: 5,
-    maxWidth: 156,
+    maxWidth: 200,
     paddingHorizontal: 14,
     borderRadius: 18,
     backgroundColor: colors.surface,

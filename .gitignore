@@ -93,3 +93,6 @@ app-dependency-graph.png
 dist/
 
 serviceAccountKey.json
+
+# goldie store-asset output
+goldie/

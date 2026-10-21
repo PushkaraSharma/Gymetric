@@ -99,9 +99,10 @@ export const useImagePicker = () => {
     };
 
     const ImagePickerSheetComponent = () => (
-        <ImagePickerSheet 
-            isVisible={isVisible} 
-            onSelect={handleSelect} 
+        <ImagePickerSheet
+            isVisible={isVisible}
+            onSelect={handleSelect}
+            setIsVisible={setIsVisible}
         />
     );
 

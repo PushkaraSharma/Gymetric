@@ -6,10 +6,12 @@
     "experimentalDecorators": true,
     "jsx": "react-native",
     "customConditions": [
-      "react-native"
+      "react-native",
+      "react-native-legacy-deep-imports"
     ],
     "module": "esnext",
     "moduleResolution": "bundler",
+    "ignoreDeprecations": "6.0",
     "strict": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,

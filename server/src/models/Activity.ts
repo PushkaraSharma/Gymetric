@@ -13,5 +13,6 @@ const ActivitySchema = new Schema<IActivity>({
 }, { timestamps: true });
 
 ActivitySchema.index({ date: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 180 }); // 180 days expiry
+ActivitySchema.index({ gymId: 1, date: -1 });
 
 export default mongoose.models.Activity || mongoose.model<IActivity>('Activity', ActivitySchema);
