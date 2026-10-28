@@ -33,6 +33,7 @@ export type AppStackParamList = {
   "Receipt Settings": undefined
   "Push Notification Settings": undefined
   "Seed Data": undefined
+  Account: undefined
 }
 
 export interface NavigationProps extends Partial<
