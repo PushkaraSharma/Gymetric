@@ -1,4 +1,4 @@
-import { Platform, Pressable, ScrollView, View, Linking, ViewStyle, Alert } from 'react-native'
+import { Platform, Pressable, ScrollView, View, Linking, ViewStyle, Alert, StyleSheet } from 'react-native'
 import React, { useCallback, useMemo, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
@@ -17,17 +17,16 @@ import { CustomModal } from '@/components/CustomModal'
 import CollectPaymentModal from './CollectPaymentModal'
 import { ThemedStyle } from '@/theme/types'
 import { spacing } from '@/theme/spacing'
-import { ClientSectionLabel } from '@/components/clients/ClientSectionLabel'
 import {
-    Wallet, Calendar, CreditCard, Clock, Pause, Play, Pencil, RefreshCw, Receipt, Activity
+    Wallet, Calendar, Pause, Play, Pencil, RefreshCw, Receipt, Activity
 } from 'lucide-react-native'
 import { Header } from '@/components/Header'
-import { StatItem } from '@/components/clients/ClientStatGrid'
 import { ImagePreviewModal } from '@/components/common/ImagePreviewModal'
 import { whatsappStatusLabel } from '@/utils/whatsappLabels'
+import { LinearGradient } from 'expo-linear-gradient'
 
 const ClientDetails = ({ route }: any) => {
-    const { theme: { colors }, themed } = useAppTheme()
+    const { theme: { colors }, themed, isDark } = useAppTheme()
 
     const [client, setClient] = useState<{ [key: string]: any } | null>(null)
     const [membershipDays, setMembershipDays] = useState<{ total: number, remain: number, used: number, progress: number, endDate: string }>({ total: 0, remain: 0, used: 0, progress: 0, endDate: '-' })
@@ -136,36 +135,13 @@ const ClientDetails = ({ route }: any) => {
         return { bg: colors.errorBackground, text: colors.error }
     }, [client?.membershipStatus, colors])
 
-    const stats: StatItem[] = useMemo(() => [
-        {
-            label: 'Balance Due',
-            value: (client?.balance ?? 0) > 0 ? `₹${client?.balance}` : '₹0',
-            icon: <Wallet size={18} color={client?.balance > 0 ? colors.error : colors.primary} />,
-            color: client?.balance > 0 ? colors.error : colors.primary,
-            bg: client?.balance > 0 ? colors.errorBackground : colors.primaryBackground,
-        },
-        {
-            label: 'Days Left',
-            value: displayMembership ? `${membershipDays.remain}` : '—',
-            icon: <Calendar size={18} color={membershipDays.remain > 0 ? colors.primary : colors.error} />,
-            color: membershipDays.remain > 0 ? colors.primary : colors.error,
-            bg: membershipDays.remain > 0 ? colors.primaryBackground : colors.errorBackground,
-        },
-        {
-            label: 'Total Paid',
-            value: `₹${totalPaid}`,
-            icon: <CreditCard size={18} color={colors.primary} />,
-            color: colors.primary,
-            bg: colors.primaryBackground,
-        },
-        {
-            label: 'Member Since',
-            value: client?.createdAt ? formatDate(client.createdAt, 'MMM yy') : '—',
-            icon: <Clock size={18} color={colors.textDim} />,
-            color: colors.textDim,
-            bg: colors.surface,
-        },
-    ], [client, displayMembership, membershipDays, totalPaid, colors])
+    const membershipStatusLabel = useMemo(() => {
+        const status = client?.membershipStatus ?? ''
+        const cap = status ? status.charAt(0).toUpperCase() + status.slice(1) : '—'
+        if (membershipDays.remain > 0) return `${cap} · ${membershipDays.remain} days left`
+        if (displayMembership) return status === 'expired' ? 'Expired' : cap
+        return cap
+    }, [client?.membershipStatus, membershipDays.remain, displayMembership])
 
     const pastMemberships = useMemo(() =>
         client?.membershipHistory?.filter((m: any) =>
@@ -246,69 +222,85 @@ const ClientDetails = ({ route }: any) => {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
                 {/* Hero card with integrated stats and edit */}
                 <View style={[themed($heroCard), { margin: spacing.md }]}>
-                    <Pressable
-                        style={themed($editBtn)}
-                        onPress={() => navigate('Update Basic Information', { client })}
+                    <LinearGradient
+                        colors={[colors.palette.indigo400, colors.primary, colors.palette.indigo700]}
+                        locations={[0, 0.45, 1]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={themed($heroTopSection)}
                     >
-                        <Pencil size={18} color={colors.textDim} />
-                    </Pressable>
-
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                        <Pressable disabled={!client?.profilePicture} onPress={() => setShowImagePreview(true)}>
-                            <ProfileInitialLogo name={client?.name ?? ''} size={60} imageUrl={client?.profilePicture} sideMargin={false} />
-                        </Pressable>
-                        <View style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-                                <Text weight="bold" size="md">{client?.name}</Text>
-                                <View style={[themed($statusPill), { backgroundColor: statusColor.bg }]}>
-                                    <Text size="xxs" weight="semiBold" style={{ color: statusColor.text, textTransform: 'capitalize' }}>{client?.membershipStatus}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
+                            <Pressable disabled={!client?.profilePicture} onPress={() => setShowImagePreview(true)}>
+                                <ProfileInitialLogo name={client?.name ?? ''} size={60} imageUrl={client?.profilePicture} sideMargin={false} />
+                            </Pressable>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
+                                    <Text weight="bold" size="md" numberOfLines={1} style={{ flexShrink: 1, color: '#FFFFFF' }}>{client?.name}</Text>
+                                    {client?.role === 'dependent' && (
+                                        <View style={[themed($statusPill), { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                                            <Text size="xxs" weight="medium" style={{ color: '#FFFFFF' }}>Dependent</Text>
+                                        </View>
+                                    )}
                                 </View>
-                                {client?.role === 'dependent' && (
-                                    <View style={[themed($statusPill), { backgroundColor: colors.primaryBackground }]}>
-                                        <Text size="xxs" weight="medium" style={{ color: colors.primary }}>Dependent</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 4, flexWrap: 'wrap' }}>
+                                    <Text size="xs" style={{ color: 'rgba(255,255,255,0.8)' }} numberOfLines={1}>{client?.phoneNumber}</Text>
+                                    <View style={[themed($statusPill), { backgroundColor: statusColor.bg }]}>
+                                        <View style={[themed($statusDot), { backgroundColor: statusColor.text }]} />
+                                        <Text size="xxs" weight="semiBold" style={{ color: statusColor.text, textTransform: 'capitalize' }}>{client?.membershipStatus}</Text>
                                     </View>
-                                )}
+                                </View>
                             </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: spacing.xs }}>
-                                <Text size="xs" style={{ color: colors.textDim }}>{client?.phoneNumber}</Text>
-                                <Pressable onPress={() => callNumber(client?.phoneNumber)} style={themed($contactCircleBtn)}>
-                                    <Ionicons name="call" size={14} color={colors.primary} />
-                                    <Text size="xxs" style={{ color: colors.primary }}>Call</Text>
-                                </Pressable>
-                                <Pressable onPress={() => openWhatsAppChat(client?.phoneNumber)} style={themed($contactCircleBtn)}>
-                                    <Ionicons name="logo-whatsapp" size={14} color="#25D366" />
-                                    <Text size="xxs" style={{ color: "#25D366" }}>WhatsApp</Text>
-                                </Pressable>
+                            <Pressable
+                                style={themed($editBtn)}
+                                onPress={() => navigate('Update Basic Information', { client })}
+                                accessibilityLabel="Edit member"
+                            >
+                                <Pencil size={18} color="#FFFFFF" />
+                            </Pressable>
+                        </View>
+                    </LinearGradient>
+
+                    <View style={themed($heroBottomSection)}>
+                        <View style={themed($statsRow)}>
+                            <View style={themed($statBox)}>
+                                <Text size="xxs" style={{ color: colors.textDim }}>Balance Due</Text>
+                                <Text weight="bold" size="sm" style={{ color: (client?.balance ?? 0) > 0 ? colors.error : colors.text, marginTop: 2 }}>
+                                    ₹{client?.balance ?? 0}
+                                </Text>
+                            </View>
+                            <View style={themed($statDivider)} />
+                            <View style={themed($statBox)}>
+                                <Text size="xxs" style={{ color: colors.textDim }}>Total Paid</Text>
+                                <Text weight="bold" size="sm" style={{ marginTop: 2 }}>
+                                    ₹{totalPaid}
+                                </Text>
+                            </View>
+                            <View style={themed($statDivider)} />
+                            <View style={themed($statBox)}>
+                                <Text size="xxs" style={{ color: colors.textDim }}>Since</Text>
+                                <Text weight="bold" size="sm" style={{ marginTop: 2 }}>
+                                    {client?.createdAt ? formatDate(client.createdAt, 'MMM yy') : '—'}
+                                </Text>
                             </View>
                         </View>
-                    </View>
 
-                    <View style={themed($divider)} />
-
-                    <View style={themed($statsRow)}>
-                        <View style={themed($statBox)}>
-                            <Text size="xxs" style={{ color: colors.textDim }}>Balance Due</Text>
-                            <Text weight="bold" size="sm" style={{ color: (client?.balance ?? 0) > 0 ? colors.error : colors.text, marginTop: 2 }}>
-                                ₹{client?.balance ?? 0}
-                            </Text>
-                        </View>
-                        <View style={themed($statBox)}>
-                            <Text size="xxs" style={{ color: colors.textDim }}>Days Left</Text>
-                            <Text weight="bold" size="sm" style={{ color: membershipDays.remain > 0 ? colors.text : colors.error, marginTop: 2 }}>
-                                {displayMembership ? `${membershipDays.remain}` : '—'}
-                            </Text>
-                        </View>
-                        <View style={themed($statBox)}>
-                            <Text size="xxs" style={{ color: colors.textDim }}>Total Paid</Text>
-                            <Text weight="bold" size="sm" style={{ marginTop: 2 }}>
-                                ₹{totalPaid}
-                            </Text>
-                        </View>
-                        <View style={themed($statBox)}>
-                            <Text size="xxs" style={{ color: colors.textDim }}>Since</Text>
-                            <Text weight="bold" size="sm" style={{ marginTop: 2 }}>
-                                {client?.createdAt ? formatDate(client.createdAt, 'MMM yy') : '—'}
-                            </Text>
+                        <View style={themed($contactRow)}>
+                            <Pressable
+                                onPress={() => callNumber(client?.phoneNumber)}
+                                style={themed($contactPill)}
+                                accessibilityLabel="Call member"
+                            >
+                                <Ionicons name="call-outline" size={14} color={colors.primary} />
+                                <Text size="xxs" weight="semiBold" style={{ color: colors.primary, marginLeft: 6 }}>Call</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={() => openWhatsAppChat(client?.phoneNumber)}
+                                style={themed($contactPill)}
+                                accessibilityLabel="Message on WhatsApp"
+                            >
+                                <Ionicons name="logo-whatsapp" size={14} color="#25D366" />
+                                <Text size="xxs" weight="semiBold" style={{ color: '#25D366', marginLeft: 6 }}>WhatsApp</Text>
+                            </Pressable>
                         </View>
                     </View>
                 </View>
@@ -374,10 +366,7 @@ const ClientDetails = ({ route }: any) => {
                     </View>
                 )}
 
-                {/* Current membership */}
                 <View style={{ paddingHorizontal: spacing.md }}>
-                    <ClientSectionLabel title="Current Plan" subtitle={displayMembership ? '' : 'No active plan'} />
-
                     {client?.activeMembership && client?.upcomingMembership && (
                         <View style={[themed($infoBanner), { marginBottom: spacing.sm }]}>
                             <Text size="xs" style={{ color: colors.primary }}>
@@ -387,34 +376,40 @@ const ClientDetails = ({ route }: any) => {
                     )}
 
                     {displayMembership ? (
-                        <View style={themed($membershipCard)}>
-                            <View style={$styles.flexRow}>
-                                <View style={{ flex: 1 }}>
-                                    <Text weight="bold" size="md">{displayMembership.planName}</Text>
-                                    {isPaused && <Text size="xs" style={{ color: colors.primary, marginTop: 2 }}>Paused — expiry extended on resume</Text>}
-                                    {displayMembership?.totalAmount && (
-                                        <Text size="sm" style={{ color: colors.textDim, marginTop: 4 }}>₹{displayMembership.totalAmount}</Text>
-                                    )}
-                                </View>
-                                <View style={{ alignItems: 'flex-end' }}>
-                                    <Text size="xs" style={{ color: colors.textDim }}>{membershipDays.remain > 0 ? 'Expires' : 'Expired'}</Text>
-                                    <Text weight="semiBold" size="sm" style={{ color: membershipDays.remain > 0 ? colors.text : colors.error }}>{membershipDays.endDate}</Text>
-                                </View>
-                            </View>
-
-                            <View style={{ marginTop: spacing.md }}>
-                                <View style={$styles.flexRow}>
-                                    <Text size="xs" style={{ color: colors.textDim }}>Days used</Text>
-                                    <Text size="xs" weight="semiBold">{membershipDays.used} / {membershipDays.total}</Text>
-                                </View>
-                                <View style={themed($progressTrack)}>
-                                    <View style={[themed($progressFill), {
-                                        width: `${(membershipDays.progress || 0) * 100}%`,
-                                        backgroundColor: membershipDays.remain > 0 ? colors.primary : colors.error,
-                                    }]} />
+                        <LinearGradient
+                            colors={isDark
+                                ? ['#3730A3', '#312E81', colors.surface]
+                                : [colors.palette.indigo200, colors.palette.indigo100, colors.surface]}
+                            locations={[0, 0.55, 1]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={themed($membershipCard)}
+                        >
+                            <View style={[$styles.flexRow, { alignItems: 'center' }]}>
+                                <Text size="xxs" weight="semiBold" style={{ color: colors.textDim, letterSpacing: 0.8 }}>MEMBERSHIP</Text>
+                                <View style={[themed($statusPill), { backgroundColor: statusColor.bg, marginLeft: 'auto', borderColor: statusColor.text, borderWidth: 0.5 }]}>
+                                    <Text size="xxs" weight="semiBold" style={{ color: statusColor.text }}>{membershipStatusLabel}</Text>
                                 </View>
                             </View>
-                        </View>
+                            <Text weight="bold" size="lg" style={{ marginTop: spacing.sm }}>{displayMembership.planName}</Text>
+                            {isPaused && (
+                                <Text size="xs" style={{ color: colors.primary, marginTop: spacing.xxs }}>Paused — expiry extended on resume</Text>
+                            )}
+                            <Text size="sm" style={{ color: colors.textDim, marginTop: spacing.xs, fontSize: 14 }}>
+                                {formatDate(displayMembership.startDate, 'd MMM yyyy')} – {formatDate(displayMembership.endDate, 'd MMM yyyy')}
+                                {displayMembership.totalAmount != null ? ` · ₹${displayMembership.totalAmount}` : ''}
+                            </Text>
+                            <View style={themed($progressTrack)}>
+                                <View style={[themed($progressFill), {
+                                    width: `${(membershipDays.progress || 0) * 100}%`,
+                                    backgroundColor: membershipDays.remain > 0 ? colors.primary : colors.error,
+                                }]} />
+                            </View>
+                            <View style={[$styles.flexRow, { marginTop: spacing.xs }]}>
+                                <Text size="xxs" style={{ color: colors.textDim }}>{membershipDays.used} days used</Text>
+                                <Text size="xxs" style={{ color: colors.textDim, marginLeft: 'auto' }}>{membershipDays.remain} days left</Text>
+                            </View>
+                        </LinearGradient>
                     ) : (
                         <NoDataFound title="No active membership" msg="This member has no active or upcoming plan" />
                     )}
@@ -543,44 +538,45 @@ const $iconBtn: ThemedStyle<ViewStyle> = () => ({
     justifyContent: 'center',
 })
 
-const $heroCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $heroCard: ThemedStyle<ViewStyle> = ({ colors }) => ({
     backgroundColor: colors.surface,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
+    overflow: 'hidden',
+})
+
+const $heroTopSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
     padding: spacing.md,
-    position: 'relative',
+})
+
+const $heroBottomSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
 })
 
 const $editBtn: ThemedStyle<ViewStyle> = () => ({
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    padding: 8,
-    zIndex: 10,
-})
-
-const $contactCircleBtn: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    borderRadius: 20,
-    backgroundColor: colors.primaryBackground,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
-    gap: 2,
-    flexDirection: 'row',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs
 })
 
-const $divider: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
+const $statusDot: ThemedStyle<ViewStyle> = () => ({
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 6,
 })
 
 const $statsRow: ThemedStyle<ViewStyle> = () => ({
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
 })
 
 const $statBox: ThemedStyle<ViewStyle> = () => ({
@@ -588,10 +584,37 @@ const $statBox: ThemedStyle<ViewStyle> = () => ({
     alignItems: 'center',
 })
 
-const $statusPill: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $statDivider: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    width: 1,
+    height: 28,
+    backgroundColor: colors.border,
+})
+
+const $contactRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+})
+
+const $contactPill: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 20,
+})
+
+const $statusPill: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 12,
 })
 
 const $balanceAlert: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
@@ -631,25 +654,25 @@ const $actionChip: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 })
 
 const $membershipCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
     marginBottom: spacing.md,
+    overflow: 'hidden',
 })
 
 const $progressTrack: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-    height: 8,
+    height: 10,
     backgroundColor: colors.border,
-    borderRadius: 4,
-    marginTop: spacing.xs,
+    borderRadius: 5,
+    marginTop: spacing.md,
     overflow: 'hidden',
 })
 
 const $progressFill: ThemedStyle<ViewStyle> = () => ({
-    height: 8,
-    borderRadius: 4,
+    height: 10,
+    borderRadius: 5,
 })
 
 const $listRow: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
