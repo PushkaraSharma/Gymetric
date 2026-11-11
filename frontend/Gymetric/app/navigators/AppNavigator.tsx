@@ -37,6 +37,7 @@ import EditMembershipScreen from "@/screens/Clients/EditMembershipScreen"
 import ReceiptSettingsScreen from "@/screens/Setting/ReceiptSettingsScreen"
 import PushNotificationSettings from "@/screens/Setting/PushNotificationSettings"
 import SeedDataScreen from "@/screens/Setting/SeedDataScreen"
+import AccountScreen from "@/screens/Setting/AccountScreen"
 import { trackScreenView } from "@/services/analyticsService"
 import { registerPushToken } from "@/services/pushNotificationService"
 import { SessionBootstrapOverlay } from "@/components/SessionBootstrapOverlay"
@@ -105,6 +106,11 @@ const AppStack = () => {
               <Stack.Screen name="Receipt Settings" component={ReceiptSettingsScreen} />
               <Stack.Screen name="Push Notification Settings" component={PushNotificationSettings} />
               <Stack.Screen name="Seed Data" component={SeedDataScreen} />
+              <Stack.Screen
+                name="Account"
+                component={AccountScreen}
+                options={{ animation: 'slide_from_left' }}
+              />
             </Stack.Group>
           </>
         ) : (

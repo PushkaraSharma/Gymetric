@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Pressable, View, ViewStyle, TextStyle, Modal, TouchableWithoutFeedback } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import { MotiView } from 'moti'
 import { TrendingUp, TrendingDown, Wallet, Info, ChevronRight } from 'lucide-react-native'
 import { useAppTheme } from '@/theme/context'
@@ -17,6 +18,7 @@ interface RevenueCardProps {
 
 export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, todayCollection, onPress }: RevenueCardProps) {
   const { themed, theme: { colors, spacing } } = useAppTheme()
+  const { palette } = colors
   const [tooltipVisible, setTooltipVisible] = useState<'retention' | 'avgMember' | null>(null)
   const trendText = `${trend != null && trend >= 0 ? '+' : ''}${trend}% vs same days last month`
 
@@ -26,7 +28,14 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
         onPress={onPress}
         style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
       >
-        <MotiView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} style={themed($card)}>
+        <MotiView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} style={themed($cardOuter)}>
+          <LinearGradient
+            colors={[palette.indigo400, colors.primary, palette.indigo700]}
+            locations={[0, 0.45, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={themed($card)}
+          >
           <View style={$header}>
             <Text style={themed($label)} text="REVENUE THIS MONTH" />
             <View style={$headerIcons}>
@@ -84,6 +93,7 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
               )}
             </View>
           )}
+          </LinearGradient>
         </MotiView>
       </Pressable>
 
@@ -118,15 +128,19 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
   )
 }
 
-const $card: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.palette.indigo600,
+const $cardOuter: ThemedStyle<ViewStyle> = ({ colors }) => ({
   borderRadius: 20,
-  padding: spacing.md,
   shadowColor: colors.palette.indigo600,
   shadowOffset: { width: 0, height: 8 },
   shadowOpacity: 0.2,
   shadowRadius: 12,
   elevation: 8,
+})
+
+const $card: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  borderRadius: 20,
+  padding: spacing.md,
+  overflow: 'hidden',
 })
 
 const $header: ViewStyle = { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }

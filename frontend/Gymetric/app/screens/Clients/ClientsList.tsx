@@ -1,56 +1,47 @@
-import { FlatList, Pressable, View, ViewStyle, TextStyle, RefreshControl } from 'react-native'
-import React, { useCallback, useMemo, useState } from 'react'
+import { FlatList, Pressable, View, ViewStyle, TextStyle, RefreshControl, TouchableOpacity } from 'react-native'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Text } from '@/components/Text'
 import { ThemedStyle } from '@/theme/types'
-import { Plus, Users } from 'lucide-react-native'
+import { ArrowDownUp, Plus, SlidersHorizontal, Users } from 'lucide-react-native'
 import { useAppTheme } from '@/theme/context'
 import { useAppSelector } from '@/redux/Hooks'
 import { selectAllClients } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
 import { navigate } from '@/navigators/navigationUtilities'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import { addDays, isAfter, isBefore, isSameDay, parseISO, startOfMonth } from 'date-fns'
+import { addDays } from 'date-fns'
 import { Skeleton } from '@/components/Skeleton'
 import { ClientSearchBar } from '@/components/clients/ClientSearchBar'
 import { ClientFilterChips } from '@/components/clients/ClientFilterChips'
 import { ClientListCard } from '@/components/clients/ClientListCard'
 import { Button } from '@/components/Button'
-
-const FILTER_IDS = ['All Clients', 'Active', 'Expiring Today', 'Expiring Soon', 'Has Balance', 'Expired', 'Recently Expired', 'New this month', 'Trial', 'Paused'] as const
-
-const isExpiringToday = (c: any, now: Date) => {
-  if (c.membershipStatus !== 'active' || !c.activeMembership?.endDate) return false
-  return isSameDay(parseISO(c.activeMembership.endDate), now)
-}
-
-const isExpiringSoon = (c: any, now: Date, sevenDays: Date) => {
-  if (c.membershipStatus !== 'active' || !c.activeMembership?.endDate) return false
-  const end = parseISO(c.activeMembership.endDate)
-  return isAfter(end, now) && isBefore(end, sevenDays)
-}
-
-const isRecentlyExpired = (c: any, now: Date) => {
-  if (c.membershipStatus !== 'expired' && c.membershipStatus !== 'trial_expired') return false
-  if (!c.activeMembership?.endDate) return false
-  const end = parseISO(c.activeMembership.endDate)
-  const cutoff = addDays(now, -14)
-  return (isAfter(end, cutoff) || isSameDay(end, cutoff)) && (isBefore(end, now) || isSameDay(end, now))
-}
-
-const isNewThisMonth = (c: any, now: Date) => {
-  if (!c.createdAt) return false
-  const created = new Date(c.createdAt)
-  return !Number.isNaN(created.getTime()) && !isBefore(created, startOfMonth(now))
-}
+import {
+  STATUS_FILTER_IDS,
+  StatusFilterId,
+  SortKey,
+  GenderFilter,
+  computeFilterCounts,
+  matchesStatusFilter,
+  matchesGenderFilter,
+  matchesPlanFilter,
+  sortClients,
+} from '@/utils/clientFilters'
+import { MembersSortSheet, MembersSortSheetRef } from '@/components/clients/MembersSortSheet'
+import { MembersFilterSheet, MembersFilterSheetRef } from '@/components/clients/MembersFilterSheet'
 
 const ClientsList = ({ route }: any) => {
   const { themed, theme: { colors, spacing } } = useAppTheme()
   const navigation = useNavigation<any>()
   const clients = useAppSelector(selectAllClients)
+  const sortSheetRef = useRef<MembersSortSheetRef>(null)
+  const filterSheetRef = useRef<MembersFilterSheetRef>(null)
 
   const [searchText, setSearchText] = useState('')
-  const selectedFilter = route?.params?.filter ?? 'All Clients'
+  const selectedFilter = (route?.params?.filter ?? 'All Clients') as StatusFilterId
+  const [sortKey, setSortKey] = useState<SortKey>('name_asc')
+  const [selectedPlans, setSelectedPlans] = useState<string[]>([])
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>('All')
   const [isLoading, setIsLoading] = useState(!clients?.length)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -59,7 +50,6 @@ const ClientsList = ({ route }: any) => {
   }, [navigation])
 
   const getClients = useCallback(async (isRefresh = false) => {
-    // Stale-while-revalidate: only show skeletons when we have nothing to display
     if (isRefresh) setRefreshing(true)
     else if (!clients?.length) setIsLoading(true)
 
@@ -71,7 +61,6 @@ const ClientsList = ({ route }: any) => {
     }
   }, [clients?.length])
 
-  // Clear loading as soon as Redux has data (e.g. from warmSession) even if a fetch is in flight
   React.useEffect(() => {
     if (clients?.length) setIsLoading(false)
   }, [clients?.length])
@@ -82,64 +71,81 @@ const ClientsList = ({ route }: any) => {
 
   const filterCounts = useMemo(() => {
     if (!clients?.length) return {}
-    const now = new Date()
-    const sevenDays = addDays(now, 7)
-    const counts: Record<string, number> = { 'All Clients': clients.length }
-    clients.forEach((c: any) => {
-      if (c.membershipStatus === 'active') counts['Active'] = (counts['Active'] || 0) + 1
-      if (c.membershipStatus === 'expired' || c.membershipStatus === 'trial_expired') counts['Expired'] = (counts['Expired'] || 0) + 1
-      if (c.membershipStatus === 'trial') counts['Trial'] = (counts['Trial'] || 0) + 1
-      if ((c.balance || 0) > 0) counts['Has Balance'] = (counts['Has Balance'] || 0) + 1
-      if (c.membershipStatus === 'paused') counts['Paused'] = (counts['Paused'] || 0) + 1
-      if (isExpiringToday(c, now)) counts['Expiring Today'] = (counts['Expiring Today'] || 0) + 1
-      if (isExpiringSoon(c, now, sevenDays)) counts['Expiring Soon'] = (counts['Expiring Soon'] || 0) + 1
-      if (isRecentlyExpired(c, now)) counts['Recently Expired'] = (counts['Recently Expired'] || 0) + 1
-      if (isNewThisMonth(c, now)) counts['New this month'] = (counts['New this month'] || 0) + 1
-    })
-    return counts
+    return computeFilterCounts(clients)
   }, [clients])
 
   const filters = useMemo(() =>
-    FILTER_IDS.map(id => ({ id, label: id, count: filterCounts[id] })),
+    STATUS_FILTER_IDS.map(id => ({ id, label: id, count: filterCounts[id] })),
     [filterCounts]
   )
+
+  const planOptions = useMemo(() => {
+    if (!clients?.length) return []
+    const names = new Set<string>()
+    clients.forEach((c: any) => {
+      const plan = c.activeMembership?.planName
+      if (plan) names.add(plan)
+    })
+    return [...names].sort((a, b) => a.localeCompare(b))
+  }, [clients])
+
+  const activeFilterCount =
+    (genderFilter !== 'All' ? 1 : 0) + (selectedPlans.length > 0 ? 1 : 0)
 
   const filteredClients = useMemo(() => {
     if (!clients?.length) return []
     const now = new Date()
     const sevenDaysFromNow = addDays(now, 7)
     const search = searchText.trim().toLowerCase()
-    const searchFiltered = search
+    let list = search
       ? clients.filter((c: any) => c.name?.toLowerCase().includes(search) || c.phoneNumber?.includes(search))
       : clients
 
-    return searchFiltered.filter((c: any) => {
-      switch (selectedFilter) {
-        case 'Active': return c.membershipStatus === 'active'
-        case 'Expired': return c.membershipStatus === 'expired' || c.membershipStatus === 'trial_expired'
-        case 'Trial': return c.membershipStatus === 'trial'
-        case 'Has Balance': return (c.balance || 0) > 0
-        case 'Paused': return c.membershipStatus === 'paused'
-        case 'Expiring Today': return isExpiringToday(c, now)
-        case 'Expiring Soon': return isExpiringSoon(c, now, sevenDaysFromNow)
-        case 'Recently Expired': return isRecentlyExpired(c, now)
-        case 'New this month': return isNewThisMonth(c, now)
-        default: return true
-      }
-    })
-  }, [clients, selectedFilter, searchText])
+    list = list.filter(
+      (c: any) =>
+        matchesStatusFilter(c, selectedFilter, now, sevenDaysFromNow) &&
+        matchesGenderFilter(c, genderFilter) &&
+        matchesPlanFilter(c, selectedPlans),
+    )
 
-  const activeCount = filterCounts['Active'] || 0
-  const balanceCount = filterCounts['Has Balance'] || 0
+    return sortClients(list, sortKey)
+  }, [clients, selectedFilter, searchText, sortKey, genderFilter, selectedPlans])
+
+  const applyFilters = (plans: string[], gender: GenderFilter) => {
+    setSelectedPlans(plans)
+    setGenderFilter(gender)
+  }
 
   return (
     <SafeAreaView style={themed($container)} edges={['top']}>
       <View style={themed($header)}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={$headerRow}>
           <Text style={themed($pageTitle)}>Members</Text>
-          <Text size="xs" style={{ color: colors.textDim, marginTop: 2 }}>
-            {clients?.length || 0} total · {activeCount} active{balanceCount > 0 ? ` · ${balanceCount} with dues` : ''}
-          </Text>
+          <View style={$headerActions}>
+            <TouchableOpacity
+              onPress={() => sortSheetRef.current?.present()}
+              style={themed($iconBtn)}
+              hitSlop={8}
+              accessibilityLabel="Sort members"
+            >
+              <ArrowDownUp size={22} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => filterSheetRef.current?.present()}
+              style={themed($iconBtn)}
+              hitSlop={8}
+              accessibilityLabel="Filter members"
+            >
+              <SlidersHorizontal size={22} color={colors.text} />
+              {activeFilterCount > 0 && (
+                <View style={[$filterBadge, { backgroundColor: colors.primary }]}>
+                  <Text size="xxs" weight="bold" style={{ color: colors.white, fontSize: 10 }}>
+                    {activeFilterCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -188,9 +194,9 @@ const ClientsList = ({ route }: any) => {
                 </View>
                 <Text weight="semiBold" size="md">No members found</Text>
                 <Text size="sm" style={{ color: colors.textDim, textAlign: 'center', marginTop: 4 }}>
-                  {searchText ? 'Try a different search term' : selectedFilter !== 'All Clients' ? 'No members match this filter' : 'Add your first gym member to get started'}
+                  {searchText ? 'Try a different search term' : selectedFilter !== 'All Clients' || activeFilterCount > 0 ? 'No members match this filter' : 'Add your first gym member to get started'}
                 </Text>
-                {!searchText && selectedFilter === 'All Clients' && (
+                {!searchText && selectedFilter === 'All Clients' && activeFilterCount === 0 && (
                   <Button title="Add Member" onPress={() => navigate('Add Client')} style={{ marginTop: spacing.lg, minWidth: 160 }} />
                 )}
               </View>
@@ -202,6 +208,15 @@ const ClientsList = ({ route }: any) => {
       <Pressable style={themed($fab)} onPress={() => navigate('Add Client')}>
         <Plus size={26} color={colors.background} />
       </Pressable>
+
+      <MembersSortSheet ref={sortSheetRef} sortKey={sortKey} onSelect={setSortKey} />
+      <MembersFilterSheet
+        ref={filterSheetRef}
+        planOptions={planOptions}
+        selectedPlans={selectedPlans}
+        gender={genderFilter}
+        onApply={applyFilters}
+      />
     </SafeAreaView>
   )
 }
@@ -219,6 +234,38 @@ const $header: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingBottom: spacing.xs,
 })
 
+const $headerRow: ViewStyle = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+}
+
+const $headerActions: ViewStyle = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 4,
+}
+
+const $iconBtn: ThemedStyle<ViewStyle> = () => ({
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  alignItems: 'center',
+  justifyContent: 'center',
+})
+
+const $filterBadge: ViewStyle = {
+  position: 'absolute',
+  top: 4,
+  right: 4,
+  width: 16,
+  height: 16,
+  borderRadius: 8,
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingHorizontal: 4,
+}
+
 const $stickyHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.background,
   paddingTop: spacing.sm,
@@ -230,7 +277,7 @@ const $pageTitle: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
   fontWeight: typography.bold,
   fontSize: 32,
   color: colors.text,
-  lineHeight: 40
+  lineHeight: 40,
 })
 
 const $fab: ThemedStyle<ViewStyle> = ({ colors }) => ({

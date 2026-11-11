@@ -1,243 +1,319 @@
-import React, { useState, useRef, useCallback, memo } from "react"
-import { View, TextStyle, ImageStyle, useWindowDimensions, FlatList, TouchableOpacity, Image, ViewStyle } from "react-native"
-import { useNavigation } from "@react-navigation/native"
+import React, { useRef, useState } from "react"
+import {
+  FlatList,
+  Image,
+  ImageSourcePropType,
+  Pressable,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from "react-native"
+import Animated, {
+  Extrapolation,
+  interpolate,
+  SharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+
+import { Text } from "@/components/Text"
 import { useAppTheme } from "@/theme/context"
 import { storage } from "@/utils/LocalStorage"
-import { MotiView, MotiText } from "moti"
-import { ChevronRight } from "lucide-react-native"
-import { Text } from "@/components/Text"
-import { SafeAreaView } from "react-native-safe-area-context"
 
-const ONBOARDING_DATA = [
-    {
-        id: "1",
-        title: "Seamless Gym Management",
-        description: "Effortlessly manage your gym operations, members, and memberships in one place.",
-        image: require("../../assets/images/onboarding1.png"),
-    },
-    {
-        id: "2",
-        title: "Membership Tracking",
-        description: "Real-time updates on active, expired, and upcoming memberships at your fingertips.",
-        image: require("../../assets/images/onboarding2.png"),
-    },
-    {
-        id: "3",
-        title: "Business Growth",
-        description: "Get insights into your gym's performance and grow your fitness community.",
-        image: require("../../assets/images/onboarding3.png"),
-    },
+const ONBOARDING_BG = "#FFFFFF"
+const ONBOARDING_TITLE = "#0F172A"
+const ONBOARDING_BODY = "#4B5563"
+
+const slides: { key: string; image: ImageSourcePropType; title: string; body: string }[] = [
+  {
+    key: "management",
+    title: "Seamless Gym Management",
+    body: "Effortlessly manage your gym operations, members, and memberships in one place.",
+    image: require("../../assets/images/onboarding1.png"),
+  },
+  {
+    key: "memberships",
+    title: "Membership Tracking",
+    body: "Real-time updates on active, expired, and upcoming memberships at your fingertips.",
+    image: require("../../assets/images/onboarding2.png"),
+  },
+  {
+    key: "growth",
+    title: "Business Growth",
+    body: "Get insights into your gym's performance and grow your fitness community.",
+    image: require("../../assets/images/onboarding3.png"),
+  },
 ]
 
-const Slide = memo(({ item, width, colors, typography }: any) => {
-    return (
-        <View style={[$slide, { width }]}>
-            <MotiText
-                from={{ opacity: 0, translateY: 20 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ delay: 200, type: 'timing' }}
-                style={[$title, { color: colors.text, fontWeight: typography.bold, fontSize: 32 }]}
-            >
-                GymKarta
-            </MotiText>
-            <MotiView
-                from={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ type: "timing", duration: 600 }}
-                style={[
-                    $imageContainer,
-                    {
-                        borderColor: colors.textDim,
-                        backgroundColor: colors.surface
-                    }
-                ]}
-            >
-                <View style={$imageWrapper}>
-                    <Image source={item.image} style={$image} resizeMode="cover" />
-                </View>
-            </MotiView>
-            <MotiText
-                from={{ opacity: 0, translateY: 20 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ delay: 200, type: 'timing' }}
-                style={[$title, { color: colors.text, fontWeight: typography.bold }]}
-            >
-                {item.title}
-            </MotiText>
-            <MotiText
-                from={{ opacity: 0, translateY: 20 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ delay: 400, type: 'timing' }}
-                style={[$description, { color: colors.textDim, fontWeight: typography.normal }]}
-            >
-                {item.description}
-            </MotiText>
-        </View>
-    )
-})
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<(typeof slides)[number]>)
+
+const Slide = ({
+  item,
+  index,
+  scrollX,
+  width,
+  height,
+  imageHeight,
+  titleColor,
+  bodyColor,
+}: {
+  item: (typeof slides)[number]
+  index: number
+  scrollX: SharedValue<number>
+  width: number
+  height: number
+  imageHeight: number
+  titleColor: string
+  bodyColor: string
+}) => {
+  const imageStyle = useAnimatedStyle(() => {
+    const input = [(index - 1) * width, index * width, (index + 1) * width]
+    return {
+      opacity: interpolate(scrollX.value, input, [0.35, 1, 0.35], Extrapolation.CLAMP),
+      transform: [
+        { translateX: interpolate(scrollX.value, input, [width * 0.18, 0, -width * 0.18], Extrapolation.CLAMP) },
+      ],
+    }
+  })
+
+  const textStyle = useAnimatedStyle(() => {
+    const input = [(index - 1) * width, index * width, (index + 1) * width]
+    return {
+      opacity: interpolate(scrollX.value, input, [0, 1, 0], Extrapolation.CLAMP),
+      transform: [{ translateY: interpolate(scrollX.value, input, [14, 0, 14], Extrapolation.CLAMP) }],
+    }
+  })
+
+  return (
+    <View style={[styles.slide, { width, height }]}>
+      <View style={styles.slideContent}>
+        <Animated.View style={[styles.illustration, { height: imageHeight }, imageStyle]}>
+          <Image source={item.image} style={styles.image} resizeMode="contain" />
+        </Animated.View>
+        <Animated.View style={[styles.copy, textStyle]}>
+          <Text preset="default" style={[styles.title, { color: titleColor }]}>
+            {item.title}
+          </Text>
+          <Text preset="default" style={[styles.body, { color: bodyColor }]}>
+            {item.body}
+          </Text>
+        </Animated.View>
+      </View>
+    </View>
+  )
+}
+
+const Dot = ({
+  index,
+  scrollX,
+  width,
+  color,
+}: {
+  index: number
+  scrollX: SharedValue<number>
+  width: number
+  color: string
+}) => {
+  const style = useAnimatedStyle(() => {
+    const input = [(index - 1) * width, index * width, (index + 1) * width]
+    return {
+      width: interpolate(scrollX.value, input, [8, 22, 8], Extrapolation.CLAMP),
+      opacity: interpolate(scrollX.value, input, [0.35, 1, 0.35], Extrapolation.CLAMP),
+      backgroundColor: color,
+    }
+  })
+  return <Animated.View style={[styles.dot, style]} />
+}
 
 export const OnboardingScreen = () => {
-    const { theme: { colors, spacing, typography } } = useAppTheme()
-    const navigation = useNavigation<any>()
-    const { width } = useWindowDimensions()
-    const [currentIndex, setCurrentIndex] = useState(0)
-    const flatListRef = useRef<FlatList>(null)
+  const {
+    theme: { colors },
+  } = useAppTheme()
+  const { width, height: windowHeight } = useWindowDimensions()
+  const insets = useSafeAreaInsets()
+  const listRef = useRef<FlatList<(typeof slides)[number]>>(null)
+  const indexRef = useRef(0)
+  const leavingRef = useRef(false)
+  const scrollX = useSharedValue(0)
+  const [index, setIndex] = useState(0)
+  const [listHeight, setListHeight] = useState(0)
 
-    const handleNext = useCallback(() => {
-        if (currentIndex < ONBOARDING_DATA.length - 1) {
-            flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true })
-            setCurrentIndex(currentIndex + 1)
-        } else {
-            completeOnboarding()
-        }
-    }, [currentIndex])
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollX.value = event.contentOffset.x
+    },
+  })
 
-    const completeOnboarding = () => {
-        storage.set("isFirstLaunch", true)
-        storage.set("hasSeenOnboarding", true)
+  const settleIndex = (offsetX: number) => {
+    const next = Math.min(slides.length - 1, Math.max(0, Math.round(offsetX / width)))
+    indexRef.current = next
+    setIndex(next)
+  }
+
+  const finish = () => {
+    if (leavingRef.current) return
+    leavingRef.current = true
+    storage.set("isFirstLaunch", true)
+    storage.set("hasSeenOnboarding", true)
+  }
+
+  const goNext = () => {
+    if (indexRef.current >= slides.length - 1) {
+      finish()
+      return
     }
+    const next = indexRef.current + 1
+    listRef.current?.scrollToIndex({ index: next, animated: true })
+    indexRef.current = next
+    setIndex(next)
+  }
 
-    const renderItem = useCallback(({ item }: any) => (
-        <Slide item={item} width={width} colors={colors} typography={typography} />
-    ), [width, colors, typography])
-
-    const keyExtractor = useCallback((item: any) => item.id, [])
-
-    const getItemLayout = useCallback((_: any, index: number) => ({
-        length: width,
-        offset: width * index,
-        index,
-    }), [width])
-
-    const onMomentumScrollEnd = useCallback((e: any) => {
-        const index = Math.round(e.nativeEvent.contentOffset.x / width)
-        if (index !== currentIndex) {
-            setCurrentIndex(index)
-        }
-    }, [width, currentIndex])
-
-    return (
-        <SafeAreaView style={[$container, { backgroundColor: colors.background }]}>
-            <FlatList
-                ref={flatListRef}
-                data={ONBOARDING_DATA}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={onMomentumScrollEnd}
-                renderItem={renderItem}
-                keyExtractor={keyExtractor}
-                getItemLayout={getItemLayout}
-                removeClippedSubviews={true}
-                initialNumToRender={1}
-                maxToRenderPerBatch={1}
-                windowSize={2}
-                decelerationRate="fast"
-                scrollEventThrottle={16}
+  return (
+    <View
+      style={[
+        styles.screen,
+        {
+          backgroundColor: ONBOARDING_BG,
+          paddingTop: insets.top,
+          paddingBottom: Math.max(insets.bottom, 16),
+        },
+      ]}
+    >
+      <View style={styles.list} onLayout={(event) => setListHeight(event.nativeEvent.layout.height)}>
+        <AnimatedFlatList
+          ref={listRef}
+          data={slides}
+          horizontal
+          pagingEnabled
+          bounces={false}
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.key}
+          renderItem={({ item, index: slideIndex }) => (
+            <Slide
+              item={item}
+              index={slideIndex}
+              scrollX={scrollX}
+              width={width}
+              height={listHeight}
+              imageHeight={Math.min(
+                Math.round(windowHeight * 0.3),
+                Math.max(listHeight - 240, 160),
+              )}
+              titleColor={ONBOARDING_TITLE}
+              bodyColor={ONBOARDING_BODY}
             />
-
-            <View style={[$footer, { paddingHorizontal: spacing.md, paddingBottom: spacing.xl }]}>
-                <View style={$pagination}>
-                    {ONBOARDING_DATA.map((_, index) => (
-                        <MotiView
-                            key={index}
-                            animate={{
-                                width: index === currentIndex ? 24 : 8,
-                                backgroundColor: index === currentIndex ? colors.primary : colors.border,
-                            }}
-                            transition={{ type: 'timing', duration: 300 }}
-                            style={$dot}
-                        />
-                    ))}
-                </View>
-
-                <TouchableOpacity
-                    onPress={handleNext}
-                    style={[$button, { backgroundColor: colors.primary }]}
-                    activeOpacity={0.8}
-                >
-                    <Text style={[$buttonText, { color: colors.background, fontWeight: typography.semiBold }]}>
-                        {currentIndex === ONBOARDING_DATA.length - 1 ? "Get Started" : "Next"}
-                    </Text>
-                    <ChevronRight color={colors.background} size={20} />
-                </TouchableOpacity>
-            </View>
-        </SafeAreaView>
-    )
+          )}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          getItemLayout={(_, itemIndex) => ({ length: width, offset: width * itemIndex, index: itemIndex })}
+          onMomentumScrollEnd={(event) => settleIndex(event.nativeEvent.contentOffset.x)}
+          onScrollEndDrag={(event) => {
+            const offsetX = event.nativeEvent.contentOffset.x
+            const maxOffset = (slides.length - 1) * width
+            if (offsetX > maxOffset + 48) finish()
+            else settleIndex(offsetX)
+          }}
+        />
+      </View>
+      <View style={styles.footer}>
+        <View style={styles.dots}>
+          {slides.map((slide, dotIndex) => (
+            <Dot key={slide.key} index={dotIndex} scrollX={scrollX} width={width} color={colors.primary} />
+          ))}
+        </View>
+        <View style={styles.actions}>
+          <Text style={[styles.skip, { color: ONBOARDING_BODY }]} onPress={finish}>
+            Skip
+          </Text>
+          <Pressable style={[styles.nextButton, { backgroundColor: colors.primary }]} onPress={goNext}>
+            <Text style={styles.nextLabel}>
+              {index === slides.length - 1 ? "Get started" : "Next"}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  )
 }
 
-const $container: ViewStyle = {
+const styles = StyleSheet.create({
+  screen: {
     flex: 1,
-}
-
-const $slide: ViewStyle = {
+  },
+  list: {
     flex: 1,
+  },
+  slide: {
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "visible",
+  },
+  slideContent: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
-}
-
-const $imageContainer: ViewStyle = {
-    width: "100%",
-    aspectRatio: 1,
-    borderRadius: 24,
-    marginBottom: 40,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 12,
-}
-
-const $imageWrapper: ViewStyle = {
+  },
+  illustration: {
+    width: "72%",
+    justifyContent: "center",
+  },
+  image: {
     width: "100%",
     height: "100%",
-    borderRadius: 16,
-    overflow: "hidden",
-}
-
-const $image: ImageStyle = {
-    width: "100%",
-    height: "100%",
-}
-
-const $title: TextStyle = {
+  },
+  copy: {
+    alignSelf: "stretch",
+    paddingHorizontal: 20,
+    marginTop: 20,
+    overflow: "visible",
+  },
+  title: {
     fontSize: 28,
+    lineHeight: 36,
+    fontWeight: "700",
     textAlign: "center",
-    marginBottom: 16,
-}
-
-const $description: TextStyle = {
-    fontSize: 16,
+  },
+  body: {
+    marginTop: 12,
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: "center",
-    lineHeight: 24,
-}
-
-const $footer: ViewStyle = {
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  dots: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 20,
+  },
+  dot: {
+    height: 8,
+    borderRadius: 9999,
+  },
+  actions: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-}
-
-const $pagination: ViewStyle = {
-    flexDirection: "row",
-}
-
-const $dot: ViewStyle = {
-    height: 8,
-    borderRadius: 4,
-    marginRight: 4,
-}
-
-const $button: ViewStyle = {
-    flexDirection: "row",
-    alignItems: "center",
+  },
+  skip: {
+    fontSize: 14,
+  },
+  nextButton: {
+    borderRadius: 9999,
+    minWidth: 148,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 24,
-}
-
-const $buttonText: TextStyle = {
+    alignItems: "center",
+  },
+  nextLabel: {
     fontSize: 16,
-    marginRight: 8,
-}
+    fontWeight: "500",
+    color: "#FFFFFF",
+  },
+})

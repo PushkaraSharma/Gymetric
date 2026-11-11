@@ -191,8 +191,7 @@ const Home = () => {
       >
         <DashboardHeader
           ownerName={gymInfo?.ownerName || 'Admin'}
-          gymLogo={gymInfo?.logo}
-          isDark={isDark}
+          onAvatarPress={() => navigate('Account')}
           onNotificationsPress={() => setShowWhatsNew(true)}
         />
 
