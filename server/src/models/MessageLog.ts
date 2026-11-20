@@ -1,13 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
+import { MESSAGE_LOG_STATUSES } from '../utils/Constants.js';
 
-export const MESSAGE_LOG_STATUSES = [
-    'queued',
-    'sent',
-    'delivered',
-    'read',
-    'failed',
-    'skipped',
-] as const;
+export { MESSAGE_LOG_STATUSES };
 
 const MessageLogSchema = new Schema({
     gymId: { type: Schema.Types.ObjectId, ref: 'Gym', required: true },

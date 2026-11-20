@@ -1,9 +1,9 @@
-import mongoose from 'mongoose';
 import dayjs from 'dayjs';
-import Client from '../models/Client.js';
-import AssignedMembership from '../models/AssignedMembership.js';
-import Membership from '../models/Memberships.js';
-import Activity from '../models/Activity.js';
+import { and, count, eq, inArray } from 'drizzle-orm';
+import { db } from '../db/client.js';
+import { activities, memberships, membershipPauses, members, packages, payments } from '../db/schema.js';
+import { addMembershipMember } from '../db/queries.js';
+import type { MemberRow, PackageRow } from '../db/serializers.js';
 import { calculateMembershipExpiry, getISTMidnightToday } from '../utils/timeUtils.js';
 
 const SEED_PHONE_START = 9000000001;
@@ -26,162 +26,160 @@ const randomDateBetween = (start: Date, end: Date) => {
 const addMonths = (date: Date, months: number) => dayjs(date).add(months, 'month').toDate();
 
 interface PlanSet {
-    individual1mo: any;
-    individual3mo: any;
-    individual12mo: any;
-    trial7day: any;
-    couple1mo: any;
-    couple3mo: any;
-    group1mo: any;
-    group3mo: any;
+    individual1mo: PackageRow;
+    individual3mo: PackageRow;
+    individual12mo: PackageRow;
+    trial7day: PackageRow;
+    couple1mo: PackageRow;
+    couple3mo: PackageRow;
+    group1mo: PackageRow;
+    group3mo: PackageRow;
 }
 
-async function ensurePlans(gymId: mongoose.Types.ObjectId): Promise<PlanSet> {
-    const existing = await Membership.find({ gymId });
-    const findOrCreate = async (spec: any) => {
+async function ensurePlans(gymId: string): Promise<PlanSet> {
+    const existing = await db.select().from(packages).where(eq(packages.branchId, gymId));
+    const findOrCreate = async (spec: Partial<typeof packages.$inferInsert> & { planName: string; price: number }) => {
         const found = existing.find((p) => p.planName === spec.planName);
         if (found) return found;
-        const created = await Membership.create({ ...spec, gymId, active: true });
+        const [created] = await db.insert(packages).values({ ...spec, branchId: gymId, active: true }).returning();
         existing.push(created);
         return created;
     };
 
-    const [individual1mo, individual3mo, individual12mo, trial7day, couple1mo, couple3mo, group1mo, group3mo] = await Promise.all([
-        findOrCreate({ planName: 'Monthly Individual', durationInMonths: 1, price: 1500, planType: 'indivisual', membersAllowed: 1 }),
-        findOrCreate({ planName: 'Quarterly Individual', durationInMonths: 3, price: 4000, planType: 'indivisual', membersAllowed: 1 }),
-        findOrCreate({ planName: 'Annual Individual', durationInMonths: 12, price: 14000, planType: 'indivisual', membersAllowed: 1 }),
-        findOrCreate({ planName: '7-Day Trial', durationInDays: 7, durationInMonths: 0, price: 500, planType: 'indivisual', membersAllowed: 1, isTrial: true }),
-        findOrCreate({ planName: 'Monthly Couple', durationInMonths: 1, price: 2500, planType: 'couple', membersAllowed: 2 }),
-        findOrCreate({ planName: 'Quarterly Couple', durationInMonths: 3, price: 6500, planType: 'couple', membersAllowed: 2 }),
-        findOrCreate({ planName: 'Monthly Group (5)', durationInMonths: 1, price: 5000, planType: 'group', membersAllowed: 5 }),
-        findOrCreate({ planName: 'Quarterly Group (5)', durationInMonths: 3, price: 13000, planType: 'group', membersAllowed: 5 }),
-    ]);
+    const individual1mo = await findOrCreate({ planName: 'Monthly Individual', durationInMonths: 1, price: 1500, planType: 'indivisual', membersAllowed: 1 });
+    const individual3mo = await findOrCreate({ planName: 'Quarterly Individual', durationInMonths: 3, price: 4000, planType: 'indivisual', membersAllowed: 1 });
+    const individual12mo = await findOrCreate({ planName: 'Annual Individual', durationInMonths: 12, price: 14000, planType: 'indivisual', membersAllowed: 1 });
+    const trial7day = await findOrCreate({ planName: '7-Day Trial', durationInDays: 7, durationInMonths: 0, price: 500, planType: 'indivisual', membersAllowed: 1, isTrial: true });
+    const couple1mo = await findOrCreate({ planName: 'Monthly Couple', durationInMonths: 1, price: 2500, planType: 'couple', membersAllowed: 2 });
+    const couple3mo = await findOrCreate({ planName: 'Quarterly Couple', durationInMonths: 3, price: 6500, planType: 'couple', membersAllowed: 2 });
+    const group1mo = await findOrCreate({ planName: 'Monthly Group (5)', durationInMonths: 1, price: 5000, planType: 'group', membersAllowed: 5 });
+    const group3mo = await findOrCreate({ planName: 'Quarterly Group (5)', durationInMonths: 3, price: 13000, planType: 'group', membersAllowed: 5 });
 
     return { individual1mo, individual3mo, individual12mo, trial7day, couple1mo, couple3mo, group1mo, group3mo };
 }
 
 async function createSeededClient(
-    gymId: mongoose.Types.ObjectId,
+    gymId: string,
     phoneIndex: number,
     name: string,
     createdAt: Date,
-    extra: Record<string, any> = {}
+    extra: Partial<typeof members.$inferInsert> = {}
 ) {
-    const [client] = await Client.create([{
+    const [client] = await db.insert(members).values({
         name,
         phoneNumber: seedPhone(phoneIndex),
-        gymId,
+        branchId: gymId,
         isSeeded: true,
         gender: randomItem(GENDERS),
         age: 20 + Math.floor(Math.random() * 25),
         onboardingPurpose: 'General Fitness',
         balance: 0,
         role: 'primary',
-        membershipHistory: [],
-        paymentHistory: [],
+        createdAt,
         ...extra,
-    }]);
-    await Client.updateOne({ _id: client._id }, { $set: { createdAt } });
+    }).returning();
     return client;
 }
 
+const updateMember = async (memberId: string, update: Partial<typeof members.$inferInsert>) => {
+    const [row] = await db.update(members).set({ ...update, updatedAt: new Date() }).where(eq(members.id, memberId)).returning();
+    return row;
+};
+
 async function addMembershipHistory(
-    gymId: mongoose.Types.ObjectId,
-    primaryClient: any,
-    plan: any,
+    gymId: string,
+    primaryClient: MemberRow,
+    plan: PackageRow,
     startDate: Date,
     totalAmount: number,
     amountReceived: number,
     status: string,
-    dependents: any[] = [],
+    dependents: MemberRow[] = [],
     activityType: string = 'ONBOARDING',
     activityTitle: string = 'New member joined'
 ) {
     const endDate = calculateMembershipExpiry(startDate, plan.durationInMonths, plan.durationInDays);
-    const memberIds = [primaryClient._id];
 
-    const [membership] = await AssignedMembership.create([{
-        gymId,
-        primaryMemberId: primaryClient._id,
-        memberIds,
-        planId: plan._id,
+    const [membership] = await db.insert(memberships).values({
+        branchId: gymId,
+        primaryMemberId: primaryClient.id,
+        packageId: plan.id,
         planName: plan.planName,
         startDate,
         endDate,
         totalAmount,
         status,
-    }]);
+    }).returning();
+    await addMembershipMember(db, membership.id, primaryClient.id);
 
     for (const dep of dependents) {
-        memberIds.push(dep._id);
-        dep.role = 'dependent';
-        dep.membershipStatus = status;
+        await addMembershipMember(db, membership.id, dep.id);
+        const depUpdate: Partial<typeof members.$inferInsert> = { role: 'dependent', membershipStatus: status };
         if (['active', 'trial', 'paused'].includes(status)) {
-            dep.activeMembership = membership._id;
+            depUpdate.activeMembershipId = membership.id;
         } else if (status === 'future') {
-            dep.upcomingMembership = membership._id;
+            depUpdate.upcomingMembershipId = membership.id;
         }
-        dep.membershipHistory = [...(dep.membershipHistory || []), membership._id];
-        await dep.save();
+        await updateMember(dep.id, depUpdate);
     }
 
-    membership.memberIds = memberIds;
-    await membership.save();
-
     const paymentDate = randomDateBetween(startDate, new Date(Math.min(endDate.getTime(), Date.now())));
-    primaryClient.paymentHistory.push({
-        membershipId: membership._id,
+    await db.insert(payments).values({
+        branchId: gymId,
+        memberId: primaryClient.id,
+        membershipId: membership.id,
         amount: amountReceived,
         method: randomItem(PAYMENT_METHODS),
-        date: paymentDate,
+        paidAt: paymentDate,
         remarks: amountReceived < totalAmount ? 'Partial payment' : 'Full payment',
         type: 'membership',
     });
-    primaryClient.balance = Math.max(0, (primaryClient.balance || 0) + (totalAmount - amountReceived));
-    primaryClient.membershipHistory.push(membership._id);
 
+    const primaryUpdate: Partial<typeof members.$inferInsert> = {
+        balance: Math.max(0, (primaryClient.balance || 0) + (totalAmount - amountReceived)),
+        membershipStatus: status,
+    };
     if (['active', 'trial', 'paused'].includes(status)) {
-        primaryClient.activeMembership = membership._id;
-        primaryClient.membershipStatus = status;
+        primaryUpdate.activeMembershipId = membership.id;
     } else if (status === 'future') {
-        primaryClient.upcomingMembership = membership._id;
-        primaryClient.membershipStatus = 'future';
-    } else {
-        primaryClient.membershipStatus = status;
+        primaryUpdate.upcomingMembershipId = membership.id;
     }
+    Object.assign(primaryClient, await updateMember(primaryClient.id, primaryUpdate));
 
-    await primaryClient.save();
-
-    await Activity.create({
-        gymId,
+    await db.insert(activities).values({
+        branchId: gymId,
         type: activityType,
         title: activityTitle,
         description: `${primaryClient.name} — ${plan.planName}`,
         amount: amountReceived,
-        memberId: primaryClient._id,
+        memberId: primaryClient.id,
         date: paymentDate,
     });
 
     return membership;
 }
 
-export async function clearSeededData(gymId: mongoose.Types.ObjectId) {
-    const seededClients = await Client.find({ gymId, isSeeded: true });
-    const clientIds = seededClients.map((c) => c._id);
+export async function clearSeededData(gymId: string) {
+    const seededClients = await db.select({ id: members.id }).from(members)
+        .where(and(eq(members.branchId, gymId), eq(members.isSeeded, true)));
+    const clientIds = seededClients.map((c) => c.id);
 
     if (clientIds.length === 0) {
         return { cleared: 0, message: 'No seeded data found for this gym.' };
     }
 
-    await Activity.deleteMany({ gymId, memberId: { $in: clientIds } });
-    await AssignedMembership.deleteMany({ gymId, primaryMemberId: { $in: clientIds } });
-    await Client.deleteMany({ gymId, isSeeded: true });
+    await db.transaction(async (tx) => {
+        await tx.delete(activities).where(and(eq(activities.branchId, gymId), inArray(activities.memberId, clientIds)));
+        await tx.delete(memberships).where(and(eq(memberships.branchId, gymId), inArray(memberships.primaryMemberId, clientIds)));
+        await tx.delete(members).where(and(eq(members.branchId, gymId), eq(members.isSeeded, true)));
+    });
 
     return { cleared: clientIds.length, message: `Cleared ${clientIds.length} seeded clients.` };
 }
 
-export async function seedDemoData(gymId: mongoose.Types.ObjectId) {
-    const existing = await Client.countDocuments({ gymId, isSeeded: true });
+export async function seedDemoData(gymId: string) {
+    const [{ value: existing }] = await db.select({ value: count() }).from(members)
+        .where(and(eq(members.branchId, gymId), eq(members.isSeeded, true)));
     if (existing > 0) {
         return { success: false, message: `Already seeded (${existing} clients). Clear first before re-seeding.` };
     }
@@ -289,14 +287,13 @@ export async function seedDemoData(gymId: mongoose.Types.ObjectId) {
         const startDate = addMonths(today, -2);
         const client = await createSeededClient(gymId, phoneIndex++, nextName(), randomDateBetween(sixMonthsAgo, startDate));
         const membership = await addMembershipHistory(gymId, client, plan, startDate, plan.price, plan.price, 'active');
-        membership.status = 'paused';
-        membership.pauseHistory = [{ startedAt: dayjs(today).subtract(10, 'day').toDate(), reason: 'Travel' }];
-        await membership.save();
-        client.membershipStatus = 'paused';
-        await client.save();
-        await Activity.create({
-            gymId, type: 'PAUSE', title: 'Membership paused',
-            description: `${client.name}'s membership paused`, memberId: client._id, date: dayjs(today).subtract(10, 'day').toDate(),
+        const pausedAt = dayjs(today).subtract(10, 'day').toDate();
+        await db.update(memberships).set({ status: 'paused' }).where(eq(memberships.id, membership.id));
+        await db.insert(membershipPauses).values({ membershipId: membership.id, startedAt: pausedAt, reason: 'Travel' });
+        await updateMember(client.id, { membershipStatus: 'paused' });
+        await db.insert(activities).values({
+            branchId: gymId, type: 'PAUSE', title: 'Membership paused',
+            description: `${client.name}'s membership paused`, memberId: client.id, date: pausedAt,
         });
         clientsCreated++;
     }
@@ -321,19 +318,20 @@ export async function seedDemoData(gymId: mongoose.Types.ObjectId) {
         const collectAmount = Math.min(client.balance, Math.floor(client.balance * 0.8));
         if (collectAmount > 0) {
             const collectDate = randomDateBetween(addMonths(today, -1), today);
-            client.paymentHistory.push({
+            await db.insert(payments).values({
+                branchId: gymId,
+                memberId: client.id,
                 amount: collectAmount,
                 method: randomItem(PAYMENT_METHODS),
-                date: collectDate,
+                paidAt: collectDate,
                 remarks: 'Balance collection',
                 type: 'balance_collection',
             });
-            client.balance -= collectAmount;
-            await client.save();
-            await Activity.create({
-                gymId, type: 'PAYMENT', title: 'Balance collected',
+            await updateMember(client.id, { balance: client.balance - collectAmount });
+            await db.insert(activities).values({
+                branchId: gymId, type: 'PAYMENT', title: 'Balance collected',
                 description: `₹${collectAmount} collected from ${client.name}`, amount: collectAmount,
-                memberId: client._id, date: collectDate,
+                memberId: client.id, date: collectDate,
             });
         }
         clientsCreated++;

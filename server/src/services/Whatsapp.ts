@@ -1,9 +1,22 @@
 import axios from 'axios';
-import MessageLog from '../models/MessageLog.js';
+import { db } from '../db/client.js';
+import { messageLogs } from '../db/schema.js';
+import { validId } from '../db/queries.js';
 import { graphErrorFromAxios } from '../utils/whatsappStatus.js';
 
 const IMAGE_HEADER_TEMPLATES = new Set(['onboarding']);
 const TEXT_HEADER_TEMPLATES = new Set(['renewal', 'renewal_complete', 'expired']);
+
+const insertLog = (values: Omit<typeof messageLogs.$inferInsert, 'branchId' | 'memberId'> & { gymId: string; clientId?: string }) => {
+    const { gymId, clientId, ...rest } = values;
+    return db.insert(messageLogs).values({
+        ...rest,
+        branchId: gymId,
+        memberId: validId(clientId),
+        channel: 'whatsapp',
+        statusUpdatedAt: new Date(),
+    });
+};
 
 export const sendWhatsAppTemplate = async (
     to: string,
@@ -65,16 +78,13 @@ export const sendWhatsAppTemplate = async (
         });
 
         if (logContext?.gymId) {
-            const providerMessageId = response.data?.messages?.[0]?.id;
-            await MessageLog.create({
+            await insertLog({
                 gymId: logContext.gymId,
                 clientId: logContext.clientId,
-                channel: 'whatsapp',
                 template: templateName,
                 status: 'queued',
                 summary,
-                providerMessageId,
-                statusUpdatedAt: new Date(),
+                providerMessageId: response.data?.messages?.[0]?.id,
             });
         }
 
@@ -83,17 +93,15 @@ export const sendWhatsAppTemplate = async (
         console.error("WhatsApp Error:", error.response?.data || error.message);
         if (logContext?.gymId) {
             const { errorCode, errorMessage } = graphErrorFromAxios(error);
-            await MessageLog.create({
+            await insertLog({
                 gymId: logContext.gymId,
                 clientId: logContext.clientId,
-                channel: 'whatsapp',
                 template: templateName,
                 status: 'failed',
                 summary,
                 errorCode,
                 errorMessage,
-                statusUpdatedAt: new Date(),
-            });
+            }).catch((logError) => console.error('WhatsApp log insert failed:', logError));
         }
     }
 };
@@ -104,13 +112,11 @@ export const logSkippedWhatsApp = async (
     templateName: string,
     reason: string
 ) => {
-    await MessageLog.create({
+    await insertLog({
         gymId,
         clientId,
-        channel: 'whatsapp',
         template: templateName,
         status: 'skipped',
         summary: reason,
-        statusUpdatedAt: new Date(),
     });
 };

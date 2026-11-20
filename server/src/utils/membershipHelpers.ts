@@ -1,7 +1,8 @@
-import AssignedMembership from '../models/AssignedMembership.js';
-import Client from '../models/Client.js';
+import { eq } from 'drizzle-orm';
+import type { Executor } from '../db/client.js';
+import { members } from '../db/schema.js';
+import { findMember, memberIdsFor } from '../db/queries.js';
 import { getISTMidnightToday } from './timeUtils.js';
-import { calculateMembershipExpiry } from './timeUtils.js';
 
 export const deriveMembershipStatus = (
     startDate: Date,
@@ -16,38 +17,29 @@ export const deriveMembershipStatus = (
 };
 
 export const syncMembersForMembership = async (
-    membership: any,
+    exec: Executor,
+    membershipId: string,
     membershipStatus: string,
-    session?: any
 ) => {
     const isActive = ['active', 'trial', 'paused'].includes(membershipStatus);
     const isFuture = membershipStatus === 'future';
 
-    for (const memberId of membership.memberIds) {
-        const client = await Client.findById(memberId).session(session || null);
+    for (const memberId of await memberIdsFor(exec, membershipId)) {
+        const client = await findMember(exec, memberId);
         if (!client) continue;
 
-        client.membershipStatus = membershipStatus as any;
-        if (isActive || membershipStatus === 'paused') {
-            client.activeMembership = membership._id;
-            if (String(client.upcomingMembership) === String(membership._id)) {
-                client.upcomingMembership = undefined;
-            }
+        const update: Partial<typeof members.$inferInsert> = { membershipStatus, updatedAt: new Date() };
+        if (isActive) {
+            update.activeMembershipId = membershipId;
+            if (client.upcomingMembershipId === membershipId) update.upcomingMembershipId = null;
         } else if (isFuture) {
-            client.upcomingMembership = membership._id;
-            if (String(client.activeMembership) === String(membership._id)) {
-                client.activeMembership = undefined;
-            }
+            update.upcomingMembershipId = membershipId;
+            if (client.activeMembershipId === membershipId) update.activeMembershipId = null;
         } else {
-            if (String(client.activeMembership) === String(membership._id)) {
-                client.activeMembership = undefined;
-                client.membershipStatus = membershipStatus as any;
-            }
-            if (String(client.upcomingMembership) === String(membership._id)) {
-                client.upcomingMembership = undefined;
-            }
+            if (client.activeMembershipId === membershipId) update.activeMembershipId = null;
+            if (client.upcomingMembershipId === membershipId) update.upcomingMembershipId = null;
         }
-        await client.save({ session });
+        await exec.update(members).set(update).where(eq(members.id, client.id));
     }
 };
 

@@ -1,9 +1,6 @@
 import mongoose from "mongoose";
 
-export const connectDB = async(uri) => {
-    try {
-        await mongoose.connect(uri);
-    }catch(error){
-        console.log("DB Connection error: ", error)
-    }
+// Only the migration and compare scripts still read MongoDB; the API runs on Postgres.
+export const connectDB = async (uri: string) => {
+    await mongoose.connect(uri);
 };

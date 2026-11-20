@@ -11,6 +11,8 @@ export type PaymentMethod = typeof PAYMENT_METHODS[number];
 
 export const ACTIVITY_TYPES = ['ONBOARDING', 'RENEWAL', 'ADVANCE_RENEWAL', 'EXPIRY', 'PAYMENT', 'MEMBERSHIP_AMENDED', 'PAUSE', 'RESUME', 'WHATSAPP'] as const;
 
+export const MESSAGE_LOG_STATUSES = ['queued', 'sent', 'delivered', 'read', 'failed', 'skipped'] as const;
+
 export const PAYMENT_TYPES = ['membership', 'balance_collection'] as const;
 export type PaymentType = typeof PAYMENT_TYPES[number];
 export type ActivityType = typeof ACTIVITY_TYPES[number];

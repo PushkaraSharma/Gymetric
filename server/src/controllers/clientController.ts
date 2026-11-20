@@ -1,12 +1,20 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import mongoose from 'mongoose';
-import Activity from "../models/Activity.js";
-import AssignedMembership from "../models/AssignedMembership.js";
-import Client from "../models/Client.js";
-import Membership from "../models/Memberships.js";
-import Gym from "../models/Gym.js";
-import Settings from "../models/Settings.js";
-import MessageLog from "../models/MessageLog.js";
+import { and, count, desc, eq, gt, inArray, sql } from 'drizzle-orm';
+import { db, type Executor } from '../db/client.js';
+import { activities, memberships, membershipMembers, membershipPauses, members, messageLogs, payments } from '../db/schema.js';
+import {
+    addMembershipMember,
+    findBranch,
+    findMember,
+    findMembership,
+    findPackage,
+    findSettings,
+    memberDoc,
+    membershipDoc,
+    pausesFor,
+    paymentHistoryFor,
+} from '../db/queries.js';
+import { compact, serializeMember, serializeMembership, whatsappConfig, type MemberRow } from '../db/serializers.js';
 import { sendWhatsAppTemplate, logSkippedWhatsApp } from "../services/Whatsapp.js";
 import {
     getISTMidnightToday,
@@ -25,6 +33,7 @@ import {
 import { syncMembersForMembership, getMembershipStatusFromDates } from "../utils/membershipHelpers.js";
 import { STALE_WHATSAPP_SKIP_DAYS } from "../utils/Constants.js";
 import { cache, getCacheKey, invalidateClientCaches } from "../utils/cache.js";
+import { HttpError } from "../utils/httpError.js";
 
 interface OnboardingBody {
     primaryDetails: any;
@@ -48,29 +57,81 @@ interface RenewalBody {
     dependents: any[];
 }
 
-const applyPayment = (
-    client: any,
+type MemberInsert = typeof members.$inferInsert;
+
+const ACTIVE_LIKE = ['active', 'trial', 'expired', 'trial_expired'];
+
+const toDate = (value: unknown) => (value === undefined || value === null || value === '' ? undefined : new Date(value as any));
+const toInt = (value: unknown) => (value === undefined || value === null || value === '' ? undefined : Math.round(Number(value)));
+
+// Client fields the app may send; anything else in the body is ignored, as the Mongoose schema did.
+const memberFields = (details: any = {}): Partial<MemberInsert> => compact({
+    name: details.name,
+    phoneNumber: details.phoneNumber,
+    age: toInt(details.age),
+    birthday: toDate(details.birthday),
+    anniversaryDate: toDate(details.anniversaryDate),
+    onboardingPurpose: details.onboardingPurpose,
+    gender: details.gender,
+    profilePicture: details.profilePicture,
+}) as Partial<MemberInsert>;
+
+const insertMember = async (exec: Executor, gymId: string, details: any, extra: Partial<MemberInsert> = {}) => {
+    const [row] = await exec.insert(members).values({
+        onboardingPurpose: 'General Fitness',
+        ...memberFields(details),
+        ...extra,
+        name: details?.name,
+        phoneNumber: details?.phoneNumber,
+        branchId: gymId,
+    } as MemberInsert).returning();
+    return row;
+};
+
+const updateMember = async (exec: Executor, memberId: string, update: Partial<MemberInsert>) => {
+    const [row] = await exec.update(members).set({ ...update, updatedAt: new Date() }).where(eq(members.id, memberId)).returning();
+    return row;
+};
+
+const addActivity = (exec: Executor, values: Omit<typeof activities.$inferInsert, 'branchId'> & { gymId: string }) => {
+    const { gymId, ...rest } = values;
+    return exec.insert(activities).values({ ...rest, branchId: gymId });
+};
+
+// Adds the unpaid part of a sale to the balance and records what was received.
+const applyPayment = async (
+    exec: Executor,
+    client: MemberRow,
     totalAmount: number,
     amountReceived: number,
     method: string,
-    membershipId: mongoose.Types.ObjectId
+    membershipId: string
 ) => {
     const balanceDue = totalAmount - amountReceived;
-    client.balance = (client.balance || 0) + balanceDue;
+    const updated = await updateMember(exec, client.id, { balance: (client.balance || 0) + balanceDue });
 
     if (amountReceived > 0) {
         const remarks = balanceDue > 0
             ? `Partial payment (₹${amountReceived} of ₹${totalAmount})`
             : 'Membership';
-        client.paymentHistory.push({
-            amount: amountReceived,
-            method: method as any,
-            date: new Date(),
+        await exec.insert(payments).values({
+            branchId: client.branchId,
+            memberId: client.id,
             membershipId,
+            amount: amountReceived,
+            method,
+            paidAt: new Date(),
             type: 'membership',
             remarks,
         });
     }
+    return updated;
+};
+
+const sendError = (request: FastifyRequest, reply: FastifyReply, error: any, label?: string) => {
+    if (error instanceof HttpError) return reply.status(error.status).send(error.body);
+    request.log.error(label ? { err: error } : error, label);
+    return reply.status(500).send({ success: false, error: error.message });
 };
 
 export const getAllClients = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -83,11 +144,36 @@ export const getAllClients = async (request: FastifyRequest, reply: FastifyReply
             return reply.status(200).send({ success: true, data: cachedClients });
         }
 
-        const clients = await Client.find({ gymId })
-            .select('name phoneNumber gender membershipStatus activeMembership balance role profilePicture createdAt')
-            .populate({ path: 'activeMembership', select: 'endDate planName status pauseHistory totalPausedDays' })
-            .sort({ name: 1 })
-            .lean();
+        const rows = await db
+            .select({ member: members, membership: memberships })
+            .from(members)
+            .leftJoin(memberships, eq(memberships.id, members.activeMembershipId))
+            .where(eq(members.branchId, gymId))
+            // Mongo sorted names by raw bytes (uppercase before lowercase); "C" collation keeps that order.
+            .orderBy(sql`${members.name} collate "C"`);
+
+        const pauses = await pausesFor(db, rows.flatMap((r) => (r.membership ? [r.membership.id] : [])));
+        const clients = rows.map(({ member, membership }) => compact({
+            _id: member.id,
+            name: member.name,
+            phoneNumber: member.phoneNumber,
+            gender: member.gender,
+            membershipStatus: member.membershipStatus,
+            activeMembership: membership ? compact({
+                _id: membership.id,
+                endDate: membership.endDate,
+                planName: membership.planName,
+                status: membership.status,
+                pauseHistory: (pauses.get(membership.id) ?? []).map((p) => compact({
+                    _id: p.id, startedAt: p.startedAt, endedAt: p.endedAt, days: p.days, reason: p.reason,
+                })),
+                totalPausedDays: membership.totalPausedDays,
+            }) : undefined,
+            balance: member.balance,
+            role: member.role,
+            profilePicture: member.profilePicture,
+            createdAt: member.createdAt,
+        }));
 
         cache.set(cacheKey, clients);
 
@@ -99,154 +185,132 @@ export const getAllClients = async (request: FastifyRequest, reply: FastifyReply
 };
 
 export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody }>, reply: FastifyReply) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const gymId = (request.user as any).gymId;
         const { primaryDetails, dependents = [], planId, method, paymentReceived, amountReceived, startDate, amount } = request.body;
 
-        const plan = await Membership.findById(planId).session(session);
-        if (!plan) {
-            await session.abortTransaction();
-            return reply.status(404).send({ success: false, error: "Membership not found" });
-        }
+        const result = await db.transaction(async (tx) => {
+            const plan = await findPackage(tx, planId);
+            if (!plan) throw new HttpError(404, { success: false, error: "Membership not found" });
 
-        const paymentResult = resolveAmountReceived(amount, amountReceived, paymentReceived);
-        if (paymentResult.error) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: paymentResult.error });
-        }
+            const paymentResult = resolveAmountReceived(amount, amountReceived, paymentReceived);
+            if (paymentResult.error) throw new HttpError(400, { success: false, error: paymentResult.error });
 
-        const today = getISTMidnightToday();
-        const startDateStr = startDate || today.toISOString().split('T')[0];
-        const startValidation = validateMembershipStartDate(startDateStr);
-        if (!startValidation.valid) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: startValidation.error });
-        }
+            const today = getISTMidnightToday();
+            const startDateStr = startDate || today.toISOString().split('T')[0];
+            const startValidation = validateMembershipStartDate(startDateStr);
+            if (!startValidation.valid) throw new HttpError(400, { success: false, error: startValidation.error });
 
-        const customStartDate = startValidation.date!;
-        const expiryValidation = validateMembershipNotExpiredOnCreate(
-            customStartDate,
-            plan.durationInMonths,
-            plan.durationInDays
-        );
-        if (!expiryValidation.valid) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: expiryValidation.error });
-        }
+            const customStartDate = startValidation.date!;
+            const expiryValidation = validateMembershipNotExpiredOnCreate(customStartDate, plan.durationInMonths, plan.durationInDays);
+            if (!expiryValidation.valid) throw new HttpError(400, { success: false, error: expiryValidation.error });
 
-        const endDate = expiryValidation.endDate!;
+            const endDate = expiryValidation.endDate!;
 
-        let membershipStatus: string = 'active';
-        if (endDate < today) {
-            membershipStatus = plan.isTrial ? 'trial_expired' : 'expired';
-        } else if (customStartDate > today) {
-            membershipStatus = 'future';
-        } else if (plan.isTrial) {
-            membershipStatus = 'trial';
-        }
-
-        const [primaryClient] = await Client.create([{
-            ...primaryDetails,
-            gymId,
-            role: 'primary',
-            membershipStatus
-        }], { session });
-
-        const [newAssignedMembership] = await AssignedMembership.create([{
-            gymId,
-            primaryMemberId: primaryClient._id,
-            memberIds: [primaryClient._id],
-            planId: plan._id,
-            planName: plan.planName,
-            startDate: customStartDate,
-            endDate: endDate,
-            totalAmount: amount,
-            status: membershipStatus
-        }], { session });
-
-        if (dependents.length > 0) {
-            for (let dep of dependents) {
-                let depClient;
-                if (dep.clientId) {
-                    depClient = await Client.findByIdAndUpdate(dep.clientId, {
-                        role: 'dependent',
-                        membershipStatus,
-                        activeMembership: ['active', 'trial', 'expired', 'trial_expired'].includes(membershipStatus) ? newAssignedMembership._id : undefined,
-                        upcomingMembership: membershipStatus === 'future' ? newAssignedMembership._id : undefined,
-                    }, { new: true, session });
-                } else {
-                    [depClient] = await Client.create([{
-                        ...dep,
-                        gymId,
-                        role: 'dependent',
-                        membershipStatus,
-                        activeMembership: ['active', 'trial', 'expired', 'trial_expired'].includes(membershipStatus) ? newAssignedMembership._id : undefined,
-                        upcomingMembership: membershipStatus === 'future' ? newAssignedMembership._id : undefined,
-                    }], { session });
-                }
-
-                if (depClient) {
-                    depClient.membershipHistory.push(newAssignedMembership._id);
-                    await depClient.save({ session });
-                    newAssignedMembership.memberIds.push(depClient._id);
-                }
+            let membershipStatus: string = 'active';
+            if (endDate < today) {
+                membershipStatus = plan.isTrial ? 'trial_expired' : 'expired';
+            } else if (customStartDate > today) {
+                membershipStatus = 'future';
+            } else if (plan.isTrial) {
+                membershipStatus = 'trial';
             }
-            await newAssignedMembership.save({ session });
-        }
 
-        primaryClient.activeMembership = ['active', 'trial', 'expired', 'trial_expired'].includes(membershipStatus) ? newAssignedMembership._id : undefined;
-        primaryClient.upcomingMembership = membershipStatus === 'future' ? newAssignedMembership._id : undefined;
-        applyPayment(primaryClient, amount, paymentResult.received, method, newAssignedMembership._id);
-        primaryClient.membershipHistory.push(newAssignedMembership._id);
-        await primaryClient.save({ session });
+            const primaryClient = await insertMember(tx, gymId, primaryDetails, { role: 'primary', membershipStatus });
 
-        await Activity.create([{
-            gymId,
-            type: 'ONBOARDING',
-            title: `New member${dependents.length > 0 ? 's' : ''} joined`,
-            description: `${primaryClient.name} joined with a ${plan.planName} plan starting ${formatDisplayDate(customStartDate)}${dependents.length > 0 ? ` along with ${dependents.length} members` : ''}`,
-            amount: paymentResult.received,
-            memberId: primaryClient._id,
-            date: new Date()
-        }], { session });
+            const [newAssignedMembership] = await tx.insert(memberships).values({
+                branchId: gymId,
+                primaryMemberId: primaryClient.id,
+                packageId: plan.id,
+                planName: plan.planName,
+                startDate: customStartDate,
+                endDate,
+                totalAmount: amount,
+                status: membershipStatus,
+            }).returning();
+            await addMembershipMember(tx, newAssignedMembership.id, primaryClient.id);
 
-        await session.commitTransaction();
+            const activeRef = ACTIVE_LIKE.includes(membershipStatus) ? newAssignedMembership.id : undefined;
+            const upcomingRef = membershipStatus === 'future' ? newAssignedMembership.id : undefined;
 
-        const settings = await Settings.findOne({ gymId });
+            for (const dep of dependents) {
+                let depClient: MemberRow | null;
+                if (dep.clientId) {
+                    const existing = await findMember(tx, dep.clientId, gymId);
+                    depClient = existing
+                        ? await updateMember(tx, existing.id, compact({
+                            role: 'dependent',
+                            membershipStatus,
+                            activeMembershipId: activeRef,
+                            upcomingMembershipId: upcomingRef,
+                        }))
+                        : null;
+                } else {
+                    depClient = await insertMember(tx, gymId, dep, {
+                        role: 'dependent',
+                        membershipStatus,
+                        activeMembershipId: activeRef,
+                        upcomingMembershipId: upcomingRef,
+                    });
+                }
+                if (depClient) await addMembershipMember(tx, newAssignedMembership.id, depClient.id);
+            }
+
+            const withRefs = await updateMember(tx, primaryClient.id, {
+                activeMembershipId: activeRef ?? null,
+                upcomingMembershipId: upcomingRef ?? null,
+            });
+            const savedPrimary = await applyPayment(tx, withRefs, amount, paymentResult.received, method, newAssignedMembership.id);
+
+            await addActivity(tx, {
+                gymId,
+                type: 'ONBOARDING',
+                title: `New member${dependents.length > 0 ? 's' : ''} joined`,
+                description: `${primaryClient.name} joined with a ${plan.planName} plan starting ${formatDisplayDate(customStartDate)}${dependents.length > 0 ? ` along with ${dependents.length} members` : ''}`,
+                amount: paymentResult.received,
+                memberId: primaryClient.id,
+                date: new Date(),
+            });
+
+            return { primaryClient: savedPrimary, plan, customStartDate, endDate, today };
+        });
+
+        const { primaryClient, plan, customStartDate, endDate, today } = result;
+        const settings = await findSettings(db, gymId);
         const staleCutoff = addUtcDays(today, -STALE_WHATSAPP_SKIP_DAYS);
-        if (settings?.whatsapp?.active && settings?.whatsapp?.sendOnOnboarding !== false) {
+        if (settings?.whatsappActive && settings.whatsappSendOnOnboarding !== false) {
             if (customStartDate < staleCutoff) {
-                await logSkippedWhatsApp(gymId, String(primaryClient._id), 'onboarding', 'Skipped: membership start date is older than 7 days');
+                await logSkippedWhatsApp(gymId, primaryClient.id, 'onboarding', 'Skipped: membership start date is older than 7 days');
             } else {
-                const gymInfo = await Gym.findById(gymId);
+                const gymInfo = await findBranch(db, gymId);
                 const params = [primaryClient.name, gymInfo?.name || 'Gym', plan.planName, formatShortDate(customStartDate), formatShortDate(endDate)];
-                sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "onboarding", params, settings?.whatsapp, gymInfo?.name, { gymId, clientId: String(primaryClient._id) });
+                sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "onboarding", params, whatsappConfig(settings), gymInfo?.name, { gymId, clientId: primaryClient.id });
             }
         }
 
         invalidateClientCaches(gymId);
-        return reply.status(201).send({ success: true, data: primaryClient });
+        return reply.status(201).send({ success: true, data: await memberDoc(db, primaryClient) });
     } catch (error: any) {
-        await session.abortTransaction();
-        request.log.error({ err: error }, 'Onboarding Error');
-        return reply.status(500).send({ success: false, error: error.message });
-    } finally {
-        session.endSession();
+        return sendError(request, reply, error, 'Onboarding Error');
     }
 };
 
 export const getClientStats = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        const countWhere = async (extra?: any) => {
+            const [{ value }] = await db.select({ value: count() }).from(members).where(extra ? and(eq(members.branchId, gymId), extra) : eq(members.branchId, gymId));
+            return value;
+        };
 
-        const totalClients = await Client.countDocuments({ gymId });
-        const activeMembers = await Client.countDocuments({ gymId, membershipStatus: 'active' });
-        const expiredMembers = await Client.countDocuments({ gymId, membershipStatus: { $in: ['expired', 'trial_expired'] } });
-        const upcomingMembers = await Client.countDocuments({ gymId, membershipStatus: 'future' });
-        const pausedMembers = await Client.countDocuments({ gymId, membershipStatus: 'paused' });
-        const clientsWithBalance = await Client.countDocuments({ gymId, balance: { $gt: 0 } });
+        const [totalClients, activeMembers, expiredMembers, upcomingMembers, pausedMembers, clientsWithBalance] = await Promise.all([
+            countWhere(),
+            countWhere(eq(members.membershipStatus, 'active')),
+            countWhere(inArray(members.membershipStatus, ['expired', 'trial_expired'])),
+            countWhere(eq(members.membershipStatus, 'future')),
+            countWhere(eq(members.membershipStatus, 'paused')),
+            countWhere(gt(members.balance, 0)),
+        ]);
 
         return reply.send({
             success: true,
@@ -266,439 +330,363 @@ export const getClientStats = async (request: FastifyRequest, reply: FastifyRepl
 };
 
 export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBody }>, reply: FastifyReply) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const gymId = (request.user as any).gymId;
-        const { id, planId, startDate, amount, method, paymentReceived, amountReceived, dependents } = request.body;
+        const { id, planId, startDate, amount, method, paymentReceived, amountReceived, dependents = [] } = request.body;
 
-        const paymentResult = resolveAmountReceived(amount, amountReceived, paymentReceived);
-        if (paymentResult.error) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: paymentResult.error });
-        }
+        const result = await db.transaction(async (tx) => {
+            const paymentResult = resolveAmountReceived(amount, amountReceived, paymentReceived);
+            if (paymentResult.error) throw new HttpError(400, { success: false, error: paymentResult.error });
 
-        const primaryClient = await Client.findById(id).session(session);
-        const plan = await Membership.findById(planId).session(session);
+            const primaryClient = await findMember(tx, id, gymId);
+            const plan = await findPackage(tx, planId);
+            if (!primaryClient || !plan) {
+                throw new HttpError(404, { success: false, message: `${!primaryClient ? 'Client' : 'Plan'} not found` });
+            }
 
-        if (!primaryClient || !plan) {
-            await session.abortTransaction();
-            return reply.status(404).send({ success: false, message: `${!primaryClient ? 'Client' : 'Plan'} not found` });
-        }
+            const startValidation = validateMembershipStartDate(startDate);
+            if (!startValidation.valid) throw new HttpError(400, { success: false, error: startValidation.error });
 
-        const startValidation = validateMembershipStartDate(startDate);
-        if (!startValidation.valid) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: startValidation.error });
-        }
+            const today = getISTMidnightToday();
+            const newStartDate = startValidation.date!;
+            const expiryValidation = validateMembershipNotExpiredOnCreate(newStartDate, plan.durationInMonths, plan.durationInDays);
+            if (!expiryValidation.valid) throw new HttpError(400, { success: false, error: expiryValidation.error });
 
-        const today = getISTMidnightToday();
-        const newStartDate = startValidation.date!;
-        const expiryValidation = validateMembershipNotExpiredOnCreate(
-            newStartDate,
-            plan.durationInMonths,
-            plan.durationInDays
-        );
-        if (!expiryValidation.valid) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: expiryValidation.error });
-        }
+            const newEndDate = expiryValidation.endDate!;
+            const status = newEndDate < today
+                ? (plan.isTrial ? 'trial_expired' : 'expired')
+                : (newStartDate > today ? 'future' : (plan.isTrial ? 'trial' : 'active'));
+            const activeLike = ACTIVE_LIKE.includes(status);
 
-        const newEndDate = expiryValidation.endDate!;
-        const status = newEndDate < today
-            ? (plan.isTrial ? 'trial_expired' : 'expired')
-            : (newStartDate > today ? 'future' : (plan.isTrial ? 'trial' : 'active'));
+            const [renewedMembership] = await tx.insert(memberships).values({
+                branchId: gymId,
+                primaryMemberId: primaryClient.id,
+                packageId: plan.id,
+                planName: plan.planName,
+                startDate: newStartDate,
+                endDate: newEndDate,
+                totalAmount: amount,
+                status,
+            }).returning();
+            await addMembershipMember(tx, renewedMembership.id, primaryClient.id);
 
-        const [renewedMembership] = await AssignedMembership.create([{
-            gymId,
-            primaryMemberId: primaryClient._id,
-            memberIds: [primaryClient._id],
-            planId: plan._id,
-            planName: plan.planName,
-            startDate: newStartDate,
-            endDate: newEndDate,
-            totalAmount: amount,
-            status: status
-        }], { session });
+            for (const dep of dependents) {
+                const depClient = dep.clientId
+                    ? await findMember(tx, dep.clientId, gymId)
+                    : await insertMember(tx, gymId, dep);
+                if (!depClient) continue;
+                await updateMember(tx, depClient.id, {
+                    role: 'dependent',
+                    membershipStatus: status,
+                    ...(activeLike ? { activeMembershipId: renewedMembership.id } : { upcomingMembershipId: renewedMembership.id }),
+                });
+                await addMembershipMember(tx, renewedMembership.id, depClient.id);
+            }
 
-        for (let dep of dependents) {
-            let depClient;
-            if (dep.clientId) {
-                depClient = await Client.findById(dep.clientId).session(session);
+            let activityType: 'RENEWAL' | 'ADVANCE_RENEWAL' = 'RENEWAL';
+            let withRefs: MemberRow;
+            if (activeLike) {
+                withRefs = await updateMember(tx, primaryClient.id, { membershipStatus: status, activeMembershipId: renewedMembership.id });
             } else {
-                [depClient] = await Client.create([{ ...dep, gymId }], { session });
+                activityType = 'ADVANCE_RENEWAL';
+                withRefs = await updateMember(tx, primaryClient.id, { upcomingMembershipId: renewedMembership.id });
             }
 
-            if (depClient) {
-                depClient.role = 'dependent';
-                depClient.membershipStatus = status as any;
-                if (['active', 'trial', 'expired', 'trial_expired'].includes(status)) {
-                    depClient.activeMembership = renewedMembership._id;
-                } else {
-                    depClient.upcomingMembership = renewedMembership._id;
-                }
-                depClient.membershipHistory.push(renewedMembership._id);
-                await depClient.save({ session });
-                renewedMembership.memberIds.push(depClient._id);
-            }
-        }
-        await renewedMembership.save({ session });
+            const savedPrimary = await applyPayment(tx, withRefs, amount, paymentResult.received, method, renewedMembership.id);
 
-        let activityType: 'RENEWAL' | 'ADVANCE_RENEWAL' = 'RENEWAL';
-        if (['active', 'trial', 'expired', 'trial_expired'].includes(status)) {
-            primaryClient.membershipStatus = status as any;
-            primaryClient.activeMembership = renewedMembership._id;
-        } else {
-            activityType = 'ADVANCE_RENEWAL';
-            primaryClient.upcomingMembership = renewedMembership._id;
-        }
+            await addActivity(tx, {
+                gymId,
+                type: activityType,
+                title: activityType === 'RENEWAL' ? 'Membership Renewed' : 'Advance Renewal',
+                description: activityType === 'RENEWAL' ?
+                    `${primaryClient.name} renewed the ${plan.planName} plan` :
+                    `${primaryClient.name} pre-paid for ${plan.planName} starting on ${formatDisplayDate(newStartDate)}`,
+                amount: paymentResult.received,
+                memberId: primaryClient.id,
+                date: new Date(),
+            });
 
-        applyPayment(primaryClient, amount, paymentResult.received, method, renewedMembership._id);
-        primaryClient.membershipHistory.push(renewedMembership._id);
-        await primaryClient.save({ session });
+            return { primaryClient: savedPrimary, plan, newStartDate, newEndDate };
+        });
 
-        await Activity.create([{
-            gymId: gymId,
-            type: activityType,
-            title: activityType === 'RENEWAL' ? 'Membership Renewed' : 'Advance Renewal',
-            description: activityType === 'RENEWAL' ?
-                `${primaryClient.name} renewed the ${plan.planName} plan` :
-                `${primaryClient.name} pre-paid for ${plan.planName} starting on ${formatDisplayDate(newStartDate)}`,
-            amount: paymentResult.received,
-            memberId: primaryClient._id,
-            date: new Date()
-        }], { session });
-
-        await session.commitTransaction();
-
-        const settings = await Settings.findOne({ gymId });
-        if (settings?.whatsapp?.active && settings?.whatsapp?.sendOnRenewal !== false) {
-            const gymInfo = await Gym.findById(gymId);
-            const params = [primaryClient.name, plan?.planName, formatShortDate(newStartDate), formatShortDate(newEndDate)];
-            sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "renewal_complete", params, settings?.whatsapp, gymInfo?.name, { gymId, clientId: String(primaryClient._id) });
+        const { primaryClient, plan, newStartDate, newEndDate } = result;
+        const settings = await findSettings(db, gymId);
+        if (settings?.whatsappActive && settings.whatsappSendOnRenewal !== false) {
+            const gymInfo = await findBranch(db, gymId);
+            const params = [primaryClient.name, plan.planName, formatShortDate(newStartDate), formatShortDate(newEndDate)];
+            sendWhatsAppTemplate(`91${primaryClient.phoneNumber}`, "renewal_complete", params, whatsappConfig(settings), gymInfo?.name, { gymId, clientId: primaryClient.id });
         }
 
         invalidateClientCaches(gymId);
-        return reply.send({ success: true, data: primaryClient });
+        return reply.send({ success: true, data: await memberDoc(db, primaryClient) });
     } catch (error: any) {
-        await session.abortTransaction();
-        request.log.error({ err: error }, 'Renewal Error');
-        return reply.status(500).send({ success: false, error: error.message });
-    } finally {
-        session.endSession();
+        return sendError(request, reply, error, 'Renewal Error');
     }
 };
 
 export const collectPayment = async (request: FastifyRequest, reply: FastifyReply) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const gymId = (request.user as any).gymId;
         const { clientId, amount, method, date, remarks } = request.body as any;
 
-        if (!amount || amount <= 0) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: 'Amount must be greater than 0.' });
-        }
+        const client = await db.transaction(async (tx) => {
+            if (!amount || amount <= 0) throw new HttpError(400, { success: false, error: 'Amount must be greater than 0.' });
 
-        const client = await Client.findOne({ _id: clientId, gymId }).session(session);
-        if (!client) {
-            await session.abortTransaction();
-            return reply.status(404).send({ success: false, error: 'Client not found.' });
-        }
+            const found = await findMember(tx, clientId, gymId);
+            if (!found) throw new HttpError(404, { success: false, error: 'Client not found.' });
 
-        if (amount > client.balance) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: `Amount cannot exceed outstanding balance of ₹${client.balance}.` });
-        }
+            if (amount > found.balance) {
+                throw new HttpError(400, { success: false, error: `Amount cannot exceed outstanding balance of ₹${found.balance}.` });
+            }
 
-        const paymentDate = date ? new Date(date) : new Date();
-        client.paymentHistory.push({
-            amount,
-            method: method as any,
-            date: paymentDate,
-            remarks: remarks || 'Balance collection',
-            type: 'balance_collection',
+            const paymentDate = date ? new Date(date) : new Date();
+            await tx.insert(payments).values({
+                branchId: gymId,
+                memberId: found.id,
+                amount,
+                method,
+                paidAt: paymentDate,
+                remarks: remarks || 'Balance collection',
+                type: 'balance_collection',
+            });
+            const saved = await updateMember(tx, found.id, { balance: found.balance - amount });
+
+            await addActivity(tx, {
+                gymId,
+                type: 'PAYMENT',
+                title: 'Balance collected',
+                description: `₹${amount} collected from ${found.name}${remarks ? ` — ${remarks}` : ''}`,
+                amount,
+                memberId: found.id,
+                date: paymentDate,
+            });
+            return saved;
         });
-        client.balance -= amount;
-        await client.save({ session });
 
-        await Activity.create([{
-            gymId,
-            type: 'PAYMENT',
-            title: 'Balance collected',
-            description: `₹${amount} collected from ${client.name}${remarks ? ` — ${remarks}` : ''}`,
-            amount,
-            memberId: client._id,
-            date: paymentDate,
-        }], { session });
-
-        await session.commitTransaction();
         invalidateClientCaches(gymId);
-        return reply.send({ success: true, data: client });
+        return reply.send({ success: true, data: await memberDoc(db, client) });
     } catch (error: any) {
-        await session.abortTransaction();
-        request.log.error(error);
-        return reply.status(500).send({ success: false, error: error.message });
-    } finally {
-        session.endSession();
+        return sendError(request, reply, error);
     }
 };
 
 export const amendMembership = async (request: FastifyRequest, reply: FastifyReply) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const gymId = (request.user as any).gymId;
         const { clientId, membershipId, planId, startDate, endDate, totalAmount, reason } = request.body as any;
 
-        if (!reason?.trim()) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: 'Reason is required for membership update.' });
-        }
+        const result = await db.transaction(async (tx) => {
+            if (!reason?.trim()) throw new HttpError(400, { success: false, error: 'Reason is required for membership update.' });
 
-        const client = await Client.findOne({ _id: clientId, gymId }).session(session);
-        if (!client) {
-            await session.abortTransaction();
-            return reply.status(404).send({ success: false, error: 'Client not found.' });
-        }
+            const client = await findMember(tx, clientId, gymId);
+            if (!client) throw new HttpError(404, { success: false, error: 'Client not found.' });
 
-        const isActive = String(client.activeMembership) === String(membershipId);
-        const isUpcoming = String(client.upcomingMembership) === String(membershipId);
-        if (!isActive && !isUpcoming) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: 'Can only update active or upcoming membership.' });
-        }
-
-        const membership = await AssignedMembership.findOne({ _id: membershipId, gymId }).session(session);
-        if (!membership) {
-            await session.abortTransaction();
-            return reply.status(404).send({ success: false, error: 'Membership not found.' });
-        }
-
-        if (!['active', 'future', 'trial', 'paused'].includes(membership.status)) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: 'Cannot update expired or cancelled membership.' });
-        }
-
-        const plan = planId
-            ? await Membership.findById(planId).session(session)
-            : await Membership.findById(membership.planId).session(session);
-
-        if (!plan) {
-            await session.abortTransaction();
-            return reply.status(404).send({ success: false, error: 'Plan not found.' });
-        }
-
-        const today = getISTMidnightToday();
-        const oldAmount = membership.totalAmount;
-
-        if (planId) {
-            membership.planId = plan._id;
-            membership.planName = plan.planName;
-            if (!endDate && !startDate) {
-                const start = membership.startDate;
-                membership.endDate = calculateMembershipExpiry(start, plan.durationInMonths, plan.durationInDays);
+            const isActive = !!client.activeMembershipId && client.activeMembershipId === String(membershipId);
+            const isUpcoming = !!client.upcomingMembershipId && client.upcomingMembershipId === String(membershipId);
+            if (!isActive && !isUpcoming) {
+                throw new HttpError(400, { success: false, error: 'Can only update active or upcoming membership.' });
             }
-        }
 
-        if (startDate) {
-            const startValidation = validateMembershipStartDate(startDate);
-            if (!startValidation.valid) {
-                await session.abortTransaction();
-                return reply.status(400).send({ success: false, error: startValidation.error });
+            const membership = await findMembership(tx, membershipId, gymId);
+            if (!membership) throw new HttpError(404, { success: false, error: 'Membership not found.' });
+
+            if (!['active', 'future', 'trial', 'paused'].includes(membership.status)) {
+                throw new HttpError(400, { success: false, error: 'Cannot update expired or cancelled membership.' });
             }
-            membership.startDate = startValidation.date!;
-        }
 
-        if (endDate) {
-            const parsedEnd = parseToISTMidnight(endDate);
-            membership.endDate = new Date(parsedEnd);
-            membership.endDate.setHours(23, 59, 59, 999);
-        } else if (planId && startDate) {
-            membership.endDate = calculateMembershipExpiry(membership.startDate, plan.durationInMonths, plan.durationInDays);
-        }
+            const plan = await findPackage(tx, planId || membership.packageId);
+            if (!plan) throw new HttpError(404, { success: false, error: 'Plan not found.' });
 
-        if (isActive && client.upcomingMembership) {
-            const upcoming = await AssignedMembership.findById(client.upcomingMembership).session(session);
-            if (upcoming && membership.endDate >= upcoming.startDate) {
-                await session.abortTransaction();
-                return reply.status(400).send({ success: false, error: 'End date cannot overlap with upcoming membership.' });
+            const oldAmount = membership.totalAmount;
+            const next = { ...membership };
+
+            if (planId) {
+                next.packageId = plan.id;
+                next.planName = plan.planName;
+                if (!endDate && !startDate) {
+                    next.endDate = calculateMembershipExpiry(next.startDate, plan.durationInMonths, plan.durationInDays);
+                }
             }
-        }
 
-        if (totalAmount !== undefined) {
-            const delta = totalAmount - oldAmount;
-            if (delta > 0) {
-                client.balance = (client.balance || 0) + delta;
-            } else if (delta < 0) {
-                const reduction = Math.min(client.balance || 0, Math.abs(delta));
-                client.balance = (client.balance || 0) - reduction;
+            if (startDate) {
+                const startValidation = validateMembershipStartDate(startDate);
+                if (!startValidation.valid) throw new HttpError(400, { success: false, error: startValidation.error });
+                next.startDate = startValidation.date!;
             }
-            membership.totalAmount = totalAmount;
-        }
 
-        const newStatus = membership.status === 'paused'
-            ? 'paused'
-            : getMembershipStatusFromDates(membership.startDate, membership.endDate, plan.isTrial);
-
-        membership.status = newStatus as any;
-        await membership.save({ session });
-
-        if (newStatus === 'future') {
-            client.upcomingMembership = membership._id;
-            client.activeMembership = isActive ? undefined : client.activeMembership;
-        } else if (['active', 'trial', 'paused'].includes(newStatus)) {
-            client.activeMembership = membership._id;
-            if (isUpcoming) client.upcomingMembership = undefined;
-        } else {
-            if (String(client.activeMembership) === String(membership._id)) {
-                client.activeMembership = undefined;
+            if (endDate) {
+                const parsedEnd = new Date(parseToISTMidnight(endDate));
+                parsedEnd.setHours(23, 59, 59, 999);
+                next.endDate = parsedEnd;
+            } else if (planId && startDate) {
+                next.endDate = calculateMembershipExpiry(next.startDate, plan.durationInMonths, plan.durationInDays);
             }
-            if (String(client.upcomingMembership) === String(membership._id)) {
-                client.upcomingMembership = undefined;
+
+            if (isActive && client.upcomingMembershipId) {
+                const upcoming = await findMembership(tx, client.upcomingMembershipId);
+                if (upcoming && next.endDate >= upcoming.startDate) {
+                    throw new HttpError(400, { success: false, error: 'End date cannot overlap with upcoming membership.' });
+                }
             }
-        }
-        client.membershipStatus = newStatus as any;
-        await client.save({ session });
 
-        await syncMembersForMembership(membership, newStatus, session);
+            let balance = client.balance || 0;
+            if (totalAmount !== undefined) {
+                const delta = totalAmount - oldAmount;
+                if (delta > 0) {
+                    balance = balance + delta;
+                } else if (delta < 0) {
+                    balance = balance - Math.min(balance, Math.abs(delta));
+                }
+                next.totalAmount = totalAmount;
+            }
 
-        await Activity.create([{
-            gymId,
-            type: 'MEMBERSHIP_AMENDED',
-            title: 'Membership updated',
-            description: `${client.name}'s ${membership.planName} updated: ${reason}`,
-            memberId: client._id,
-            date: new Date(),
-        }], { session });
+            const newStatus = membership.status === 'paused'
+                ? 'paused'
+                : getMembershipStatusFromDates(next.startDate, next.endDate, plan.isTrial);
 
-        await session.commitTransaction();
+            const [savedMembership] = await tx.update(memberships).set({
+                packageId: next.packageId,
+                planName: next.planName,
+                startDate: next.startDate,
+                endDate: next.endDate,
+                totalAmount: next.totalAmount,
+                status: newStatus,
+                updatedAt: new Date(),
+            }).where(eq(memberships.id, membership.id)).returning();
+
+            let activeMembershipId = client.activeMembershipId;
+            let upcomingMembershipId = client.upcomingMembershipId;
+            if (newStatus === 'future') {
+                upcomingMembershipId = membership.id;
+                activeMembershipId = isActive ? null : activeMembershipId;
+            } else if (['active', 'trial', 'paused'].includes(newStatus)) {
+                activeMembershipId = membership.id;
+                if (isUpcoming) upcomingMembershipId = null;
+            } else {
+                if (activeMembershipId === membership.id) activeMembershipId = null;
+                if (upcomingMembershipId === membership.id) upcomingMembershipId = null;
+            }
+            await updateMember(tx, client.id, { balance, activeMembershipId, upcomingMembershipId, membershipStatus: newStatus });
+
+            await syncMembersForMembership(tx, membership.id, newStatus);
+
+            await addActivity(tx, {
+                gymId,
+                type: 'MEMBERSHIP_AMENDED',
+                title: 'Membership updated',
+                description: `${client.name}'s ${savedMembership.planName} updated: ${reason}`,
+                memberId: client.id,
+                date: new Date(),
+            });
+
+            return { clientId: client.id, membership: savedMembership };
+        });
+
         invalidateClientCaches(gymId);
-        return reply.send({ success: true, data: { client, membership } });
+        const client = await findMember(db, result.clientId);
+        return reply.send({
+            success: true,
+            data: {
+                client: client ? await memberDoc(db, client) : null,
+                membership: await membershipDoc(db, result.membership),
+            },
+        });
     } catch (error: any) {
-        await session.abortTransaction();
-        request.log.error(error);
-        return reply.status(500).send({ success: false, error: error.message });
-    } finally {
-        session.endSession();
+        return sendError(request, reply, error);
     }
 };
 
 export const pauseMembership = async (request: FastifyRequest, reply: FastifyReply) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const gymId = (request.user as any).gymId;
         const { membershipId, reason } = request.body as any;
 
-        const membership = await AssignedMembership.findOne({ _id: membershipId, gymId }).session(session);
-        if (!membership) {
-            await session.abortTransaction();
-            return reply.status(404).send({ success: false, error: 'Membership not found.' });
-        }
+        const membership = await db.transaction(async (tx) => {
+            const found = await findMembership(tx, membershipId, gymId);
+            if (!found) throw new HttpError(404, { success: false, error: 'Membership not found.' });
 
-        if (!['active', 'trial'].includes(membership.status)) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: 'Only active or trial memberships can be paused.' });
-        }
+            if (!['active', 'trial'].includes(found.status)) {
+                throw new HttpError(400, { success: false, error: 'Only active or trial memberships can be paused.' });
+            }
 
-        membership.status = 'paused';
-        membership.pauseHistory = membership.pauseHistory || [];
-        membership.pauseHistory.push({
-            startedAt: new Date(),
-            reason: reason || undefined,
+            const [saved] = await tx.update(memberships)
+                .set({ status: 'paused', updatedAt: new Date() })
+                .where(eq(memberships.id, found.id))
+                .returning();
+            await tx.insert(membershipPauses).values({ membershipId: found.id, startedAt: new Date(), reason: reason || undefined });
+
+            await syncMembersForMembership(tx, found.id, 'paused');
+
+            const primaryClient = await findMember(tx, found.primaryMemberId);
+            await addActivity(tx, {
+                gymId,
+                type: 'PAUSE',
+                title: 'Membership paused',
+                description: `${primaryClient?.name}'s ${found.planName} membership paused${reason ? `: ${reason}` : ''}`,
+                memberId: found.primaryMemberId,
+                date: new Date(),
+            });
+            return saved;
         });
-        await membership.save({ session });
 
-        await syncMembersForMembership(membership, 'paused', session);
-
-        const primaryClient = await Client.findById(membership.primaryMemberId).session(session);
-        await Activity.create([{
-            gymId,
-            type: 'PAUSE',
-            title: 'Membership paused',
-            description: `${primaryClient?.name}'s ${membership.planName} membership paused${reason ? `: ${reason}` : ''}`,
-            memberId: membership.primaryMemberId,
-            date: new Date(),
-        }], { session });
-
-        await session.commitTransaction();
         invalidateClientCaches(gymId);
-        return reply.send({ success: true, data: membership });
+        return reply.send({ success: true, data: await membershipDoc(db, membership) });
     } catch (error: any) {
-        await session.abortTransaction();
-        request.log.error(error);
-        return reply.status(500).send({ success: false, error: error.message });
-    } finally {
-        session.endSession();
+        return sendError(request, reply, error);
     }
 };
 
 export const resumeMembership = async (request: FastifyRequest, reply: FastifyReply) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const gymId = (request.user as any).gymId;
         const { membershipId } = request.body as any;
 
-        const membership = await AssignedMembership.findOne({ _id: membershipId, gymId }).session(session);
-        if (!membership) {
-            await session.abortTransaction();
-            return reply.status(404).send({ success: false, error: 'Membership not found.' });
-        }
+        const membership = await db.transaction(async (tx) => {
+            const found = await findMembership(tx, membershipId, gymId);
+            if (!found) throw new HttpError(404, { success: false, error: 'Membership not found.' });
 
-        if (membership.status !== 'paused') {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: 'Membership is not paused.' });
-        }
+            if (found.status !== 'paused') throw new HttpError(400, { success: false, error: 'Membership is not paused.' });
 
-        const pauseHistory = membership.pauseHistory || [];
-        const currentPause = pauseHistory[pauseHistory.length - 1];
-        if (!currentPause || currentPause.endedAt) {
-            await session.abortTransaction();
-            return reply.status(400).send({ success: false, error: 'No active pause record found.' });
-        }
+            const pauseHistory = (await pausesFor(tx, [found.id])).get(found.id) ?? [];
+            const currentPause = pauseHistory[pauseHistory.length - 1];
+            if (!currentPause || currentPause.endedAt) {
+                throw new HttpError(400, { success: false, error: 'No active pause record found.' });
+            }
 
-        const now = new Date();
-        const pauseStart = getNowIST(currentPause.startedAt).startOf('day');
-        const resumeDay = getNowIST().startOf('day');
-        const pauseDays = resumeDay.diff(pauseStart, 'day');
-        currentPause.endedAt = now;
-        currentPause.days = pauseDays;
-        membership.totalPausedDays = (membership.totalPausedDays || 0) + pauseDays;
-        membership.endDate = addUtcDays(membership.endDate, pauseDays);
+            const now = new Date();
+            const pauseStart = getNowIST(currentPause.startedAt).startOf('day');
+            const resumeDay = getNowIST().startOf('day');
+            const pauseDays = resumeDay.diff(pauseStart, 'day');
+            await tx.update(membershipPauses).set({ endedAt: now, days: pauseDays }).where(eq(membershipPauses.id, currentPause.id));
 
-        const plan = await Membership.findById(membership.planId).session(session);
-        const newStatus = getMembershipStatusFromDates(
-            membership.startDate,
-            membership.endDate,
-            plan?.isTrial || false
-        );
-        membership.status = newStatus as any;
-        await membership.save({ session });
+            const newEndDate = addUtcDays(found.endDate, pauseDays);
+            const plan = await findPackage(tx, found.packageId);
+            const newStatus = getMembershipStatusFromDates(found.startDate, newEndDate, plan?.isTrial || false);
+            const [saved] = await tx.update(memberships).set({
+                totalPausedDays: (found.totalPausedDays || 0) + pauseDays,
+                endDate: newEndDate,
+                status: newStatus,
+                updatedAt: new Date(),
+            }).where(eq(memberships.id, found.id)).returning();
 
-        await syncMembersForMembership(membership, newStatus, session);
+            await syncMembersForMembership(tx, found.id, newStatus);
 
-        const primaryClient = await Client.findById(membership.primaryMemberId).session(session);
-        await Activity.create([{
-            gymId,
-            type: 'RESUME',
-            title: 'Membership resumed',
-            description: `${primaryClient?.name}'s ${membership.planName} resumed after ${pauseDays} day(s). New expiry: ${formatDisplayDate(membership.endDate)}`,
-            memberId: membership.primaryMemberId,
-            date: new Date(),
-        }], { session });
+            const primaryClient = await findMember(tx, found.primaryMemberId);
+            await addActivity(tx, {
+                gymId,
+                type: 'RESUME',
+                title: 'Membership resumed',
+                description: `${primaryClient?.name}'s ${found.planName} resumed after ${pauseDays} day(s). New expiry: ${formatDisplayDate(newEndDate)}`,
+                memberId: found.primaryMemberId,
+                date: new Date(),
+            });
+            return saved;
+        });
 
-        await session.commitTransaction();
         invalidateClientCaches(gymId);
-        return reply.send({ success: true, data: membership });
+        return reply.send({ success: true, data: await membershipDoc(db, membership) });
     } catch (error: any) {
-        await session.abortTransaction();
-        request.log.error(error);
-        return reply.status(500).send({ success: false, error: error.message });
-    } finally {
-        session.endSession();
+        return sendError(request, reply, error);
     }
 };
 
@@ -706,14 +694,20 @@ export const getClientActivity = async (request: FastifyRequest, reply: FastifyR
     try {
         const gymId = (request.user as any).gymId;
         const { id } = request.query as any;
+        const member = await findMember(db, id, gymId);
+        if (!member) return reply.send({ success: true, data: [] });
 
-        const [activities, messages] = await Promise.all([
-            Activity.find({ gymId, memberId: id }).sort({ date: -1 }).limit(50).lean(),
-            MessageLog.find({ gymId, clientId: id }).sort({ sentAt: -1 }).limit(50).lean(),
+        const [activityRows, messages] = await Promise.all([
+            db.select().from(activities)
+                .where(and(eq(activities.branchId, gymId), eq(activities.memberId, member.id)))
+                .orderBy(desc(activities.date)).limit(50),
+            db.select().from(messageLogs)
+                .where(and(eq(messageLogs.branchId, gymId), eq(messageLogs.memberId, member.id)))
+                .orderBy(desc(messageLogs.sentAt)).limit(50),
         ]);
 
         const timeline = [
-            ...activities.map((a: any) => ({
+            ...activityRows.map((a) => compact({
                 type: 'activity',
                 activityType: a.type,
                 title: a.title,
@@ -721,7 +715,7 @@ export const getClientActivity = async (request: FastifyRequest, reply: FastifyR
                 amount: a.amount,
                 date: a.createdAt || a.date,
             })),
-            ...messages.map((m: any) => ({
+            ...messages.map((m) => compact({
                 type: 'message',
                 activityType: 'WHATSAPP',
                 title: `WhatsApp: ${m.template}`,
@@ -730,7 +724,7 @@ export const getClientActivity = async (request: FastifyRequest, reply: FastifyR
                 status: m.status,
                 errorMessage: m.errorMessage,
             })),
-        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        ].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         return reply.send({ success: true, data: timeline });
     } catch (error: any) {
@@ -743,45 +737,75 @@ export const updateClient = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
         const { id, name, phoneNumber, age, birthday, gender } = request.body;
-        const client = await Client.findOneAndUpdate(
-            { _id: id, gymId },
-            { name, phoneNumber, age, gender, birthday },
-            { new: true, runValidators: true }
-        );
-        if (!client) {
+        const existing = await findMember(db, id, gymId);
+        if (!existing) {
             return reply.status(404).send({ success: false, message: 'Client not found' });
         }
+        const client = await updateMember(db, existing.id, memberFields({ name, phoneNumber, age, birthday, gender }));
 
         invalidateClientCaches(gymId);
-        return reply.send({ success: true, data: client });
+        return reply.send({ success: true, data: await memberDoc(db, client) });
     } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
 };
 
+const populatedMembership = async (membershipId: string | null, withPauses: boolean) => {
+    if (!membershipId) return undefined;
+    const membership = await findMembership(db, membershipId);
+    if (!membership) return null;
+    const payer = await findMember(db, membership.primaryMemberId);
+    const pauses = withPauses ? (await pausesFor(db, [membership.id])).get(membership.id) ?? [] : undefined;
+    const doc = serializeMembership(membership, { pauses });
+    return compact({
+        _id: doc._id,
+        startDate: doc.startDate,
+        endDate: doc.endDate,
+        status: doc.status,
+        planName: doc.planName,
+        primaryMemberId: payer ? { _id: payer.id, name: payer.name, balance: payer.balance } : null,
+        totalAmount: doc.totalAmount,
+        pauseHistory: withPauses ? doc.pauseHistory ?? [] : undefined,
+        totalPausedDays: withPauses ? doc.totalPausedDays : undefined,
+        planId: doc.planId,
+    });
+};
+
 export const getClientById = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
         const { id } = request.query;
-        const client = await Client.findOne({ _id: id, gymId }).populate({
-            path: 'activeMembership',
-            select: 'startDate endDate status planName primaryMemberId totalAmount pauseHistory totalPausedDays planId',
-            populate: { path: 'primaryMemberId', select: 'name balance' }
-        }).populate({
-            path: 'upcomingMembership',
-            select: 'startDate endDate status planName primaryMemberId totalAmount planId',
-            populate: { path: 'primaryMemberId', select: 'name balance' }
-        }).populate({
-            path: 'membershipHistory',
-            select: 'startDate endDate status planName totalAmount',
-            options: { sort: { startDate: -1 } }
-        }).lean();
+        const client = await findMember(db, id, gymId);
 
         if (!client) {
             return reply.status(404).send({ success: false, error: "Client not found" });
         }
-        return reply.send({ success: true, data: client });
+
+        const [activeMembership, upcomingMembership, history, paymentHistory] = await Promise.all([
+            populatedMembership(client.activeMembershipId, true),
+            populatedMembership(client.upcomingMembershipId, false),
+            db.select({ membership: memberships })
+                .from(membershipMembers)
+                .innerJoin(memberships, eq(memberships.id, membershipMembers.membershipId))
+                .where(eq(membershipMembers.memberId, client.id))
+                .orderBy(desc(memberships.startDate)),
+            paymentHistoryFor(db, client.id),
+        ]);
+
+        const membershipHistory = history.map(({ membership: m }) => compact({
+            _id: m.id,
+            startDate: m.startDate,
+            endDate: m.endDate,
+            status: m.status,
+            planName: m.planName,
+            totalAmount: m.totalAmount,
+        }));
+
+        return reply.send({
+            success: true,
+            data: serializeMember(client, { activeMembership, upcomingMembership, membershipHistory, paymentHistory }),
+        });
     } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
@@ -793,19 +817,19 @@ export const deleteClient = async (request: any, reply: any) => {
         const gymId = request.user.gymId;
         const { id } = request.query;
 
-        const client = await Client.findOne({ _id: id, gymId });
+        const client = await findMember(db, id, gymId);
 
         if (!client) {
             return reply.status(404).send({ success: false, message: 'Client not found' });
         }
 
         // Delete associated assigned memberships, activities and message logs
-        await Promise.all([
-            AssignedMembership.deleteMany({ primaryMemberId: id }),
-            Activity.deleteMany({ memberId: id }),
-            MessageLog.deleteMany({ clientId: id }),
-            Client.findByIdAndDelete(id)
-        ]);
+        await db.transaction(async (tx) => {
+            await tx.delete(memberships).where(eq(memberships.primaryMemberId, client.id));
+            await tx.delete(activities).where(eq(activities.memberId, client.id));
+            await tx.delete(messageLogs).where(eq(messageLogs.memberId, client.id));
+            await tx.delete(members).where(eq(members.id, client.id));
+        });
 
         invalidateClientCaches(gymId);
         return reply.send({ success: true, message: 'Client deleted successfully' });

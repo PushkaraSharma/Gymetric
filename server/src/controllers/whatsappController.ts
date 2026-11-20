@@ -1,8 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import mongoose from 'mongoose';
 import crypto from 'crypto';
-import MessageLog, { MESSAGE_LOG_STATUSES } from '../models/MessageLog.js';
-import Client from '../models/Client.js';
+import { and, count, desc, eq, gte, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
+import { db } from '../db/client.js';
+import { members, messageLogs } from '../db/schema.js';
+import { MESSAGE_LOG_STATUSES } from '../utils/Constants.js';
 import { getISTMidnightToday, addUtcDays } from '../utils/timeUtils.js';
 import { shouldApplyWhatsAppStatus } from '../utils/whatsappStatus.js';
 
@@ -19,10 +20,10 @@ const emptyCounts = () => ({
     total: 0,
 });
 
-const toCountMap = (groups: { _id: string; count: number }[]) => {
+const toCountMap = (groups: { status: string; count: number }[]) => {
     const counts = emptyCounts();
     groups.forEach((g) => {
-        if (g._id in counts) (counts as any)[g._id] = g.count;
+        if (g.status in counts) (counts as any)[g.status] = g.count;
         counts.total += g.count;
     });
     return counts;
@@ -89,7 +90,7 @@ export const handleWhatsAppWebhook = async (request: FastifyRequest, reply: Fast
                         continue;
                     }
 
-                    const log = await MessageLog.findOne({ providerMessageId: wamid });
+                    const [log] = await db.select().from(messageLogs).where(eq(messageLogs.providerMessageId, wamid)).limit(1);
                     if (!log) {
                         console.warn('WhatsApp webhook no MessageLog for wamid', { suffix: wamidSuffix(wamid), nextStatus });
                         continue;
@@ -100,15 +101,16 @@ export const handleWhatsAppWebhook = async (request: FastifyRequest, reply: Fast
                     }
 
                     const firstError = st?.errors?.[0];
-                    log.status = nextStatus;
-                    log.statusUpdatedAt = st?.timestamp
-                        ? new Date(Number(st.timestamp) * 1000)
-                        : new Date();
+                    const update: Partial<typeof messageLogs.$inferInsert> = {
+                        status: nextStatus,
+                        statusUpdatedAt: st?.timestamp ? new Date(Number(st.timestamp) * 1000) : new Date(),
+                        updatedAt: new Date(),
+                    };
                     if (nextStatus === 'failed' && firstError) {
-                        log.errorCode = firstError.code != null ? String(firstError.code) : log.errorCode;
-                        log.errorMessage = firstError.title || firstError.message || log.errorMessage;
+                        update.errorCode = firstError.code != null ? String(firstError.code) : log.errorCode;
+                        update.errorMessage = firstError.title || firstError.message || log.errorMessage;
                     }
-                    await log.save();
+                    await db.update(messageLogs).set(update).where(eq(messageLogs.id, log.id));
                     console.log('WhatsApp webhook status updated', { suffix: wamidSuffix(wamid), nextStatus });
                 }
             }
@@ -135,37 +137,36 @@ const verifyMetaSignature = (rawBody: string, signatureHeader?: string) => {
     }
 };
 
+const statusCounts = (gymId: string, since: Date) => db
+    .select({ status: messageLogs.status, count: count() })
+    .from(messageLogs)
+    .where(and(eq(messageLogs.branchId, gymId), gte(messageLogs.sentAt, since)))
+    .groupBy(messageLogs.status);
+
 export const getWhatsAppSummary = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const gymId = new mongoose.Types.ObjectId((request.user as any).gymId);
+        const gymId = (request.user as any).gymId;
         const todayStart = getISTMidnightToday();
         const sevenDaysStart = addUtcDays(todayStart, -6);
 
         const [todayGroups, weekGroups, templateGroups] = await Promise.all([
-            MessageLog.aggregate([
-                { $match: { gymId, sentAt: { $gte: todayStart } } },
-                { $group: { _id: '$status', count: { $sum: 1 } } },
-            ]),
-            MessageLog.aggregate([
-                { $match: { gymId, sentAt: { $gte: sevenDaysStart } } },
-                { $group: { _id: '$status', count: { $sum: 1 } } },
-            ]),
-            MessageLog.aggregate([
-                { $match: { gymId, sentAt: { $gte: sevenDaysStart } } },
-                { $group: { _id: { template: '$template', status: '$status' }, count: { $sum: 1 } } },
-            ]),
+            statusCounts(gymId, todayStart),
+            statusCounts(gymId, sevenDaysStart),
+            db.select({ template: messageLogs.template, status: messageLogs.status, count: count() })
+                .from(messageLogs)
+                .where(and(eq(messageLogs.branchId, gymId), gte(messageLogs.sentAt, sevenDaysStart)))
+                .groupBy(messageLogs.template, messageLogs.status),
         ]);
 
         const today = toCountMap(todayGroups);
         const last7Days = toCountMap(weekGroups);
 
         const byTemplate: Record<string, ReturnType<typeof emptyCounts>> = {};
-        templateGroups.forEach((g: any) => {
-            const template = g._id?.template || 'unknown';
+        templateGroups.forEach((g) => {
+            const template = g.template || 'unknown';
             if (!byTemplate[template]) byTemplate[template] = emptyCounts();
-            const status = g._id?.status;
-            if (status && status in byTemplate[template]) {
-                (byTemplate[template] as any)[status] += g.count;
+            if (g.status && g.status in byTemplate[template]) {
+                (byTemplate[template] as any)[g.status] += g.count;
             }
             byTemplate[template].total += g.count;
         });
@@ -184,6 +185,8 @@ export const getWhatsAppSummary = async (request: FastifyRequest, reply: Fastify
     }
 };
 
+const escapeLike = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
+
 export const getWhatsAppLogs = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
@@ -191,48 +194,45 @@ export const getWhatsAppLogs = async (request: FastifyRequest, reply: FastifyRep
         const pageNum = Math.max(parseInt(page, 10) || 1, 1);
         const limitNum = Math.min(Math.max(parseInt(limit, 10) || 30, 1), 100);
 
-        const filter: any = { gymId };
+        const filters: SQL[] = [eq(messageLogs.branchId, gymId)];
         if (status && status !== 'all' && (MESSAGE_LOG_STATUSES as readonly string[]).includes(status)) {
-            filter.status = status;
+            filters.push(eq(messageLogs.status, status));
         }
         if (template && template !== 'all' && (WHATSAPP_TEMPLATES as readonly string[]).includes(template)) {
-            filter.template = template;
+            filters.push(eq(messageLogs.template, template));
         }
 
         if (search?.trim()) {
-            const regex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-            const clients = await Client.find({
-                gymId,
-                $or: [{ name: regex }, { phoneNumber: regex }],
-            }).select('_id').lean();
-            filter.clientId = { $in: clients.map((c: any) => c._id) };
+            const pattern = `%${escapeLike(search.trim())}%`;
+            const matches = await db.select({ id: members.id }).from(members)
+                .where(and(eq(members.branchId, gymId), or(ilike(members.name, pattern), ilike(members.phoneNumber, pattern))));
+            const ids = matches.map((m) => m.id);
+            filters.push(ids.length ? inArray(messageLogs.memberId, ids) : sql`false`);
         }
 
-        const [items, total] = await Promise.all([
-            MessageLog.find(filter)
-                .sort({ sentAt: -1 })
-                .skip((pageNum - 1) * limitNum)
-                .limit(limitNum)
-                .populate('clientId', 'name phoneNumber')
-                .lean(),
-            MessageLog.countDocuments(filter),
+        const where = and(...filters);
+        const [items, [{ total }]] = await Promise.all([
+            db.select({ log: messageLogs, client: { _id: members.id, name: members.name, phoneNumber: members.phoneNumber } })
+                .from(messageLogs)
+                .leftJoin(members, eq(members.id, messageLogs.memberId))
+                .where(where)
+                .orderBy(desc(messageLogs.sentAt))
+                .offset((pageNum - 1) * limitNum)
+                .limit(limitNum),
+            db.select({ total: count() }).from(messageLogs).where(where),
         ]);
 
         return reply.send({
             success: true,
             data: {
-                items: items.map((m: any) => ({
-                    _id: m._id,
-                    template: m.template,
-                    status: m.status,
-                    summary: m.summary,
-                    errorMessage: m.errorMessage,
-                    sentAt: m.sentAt,
-                    client: m.clientId ? {
-                        _id: m.clientId._id,
-                        name: m.clientId.name,
-                        phoneNumber: m.clientId.phoneNumber,
-                    } : null,
+                items: items.map(({ log, client }) => ({
+                    _id: log.id,
+                    template: log.template ?? undefined,
+                    status: log.status,
+                    summary: log.summary ?? undefined,
+                    errorMessage: log.errorMessage ?? undefined,
+                    sentAt: log.sentAt,
+                    client: client?._id ? client : null,
                 })),
                 page: pageNum,
                 limit: limitNum,

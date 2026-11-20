@@ -1,17 +1,19 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import Client from '../models/Client.js';
-import Activity from '../models/Activity.js';
-import AssignedMembership from "../models/AssignedMembership.js";
-import Settings from "../models/Settings.js";
-import Gym from "../models/Gym.js";
+import dayjs from "dayjs";
+import { and, count, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, sql } from 'drizzle-orm';
+import { db } from '../db/client.js';
+import { activities, branchSettings, memberships, membershipMembers, members, users } from '../db/schema.js';
+import { findBranch, findMember, findPackage, findSettings } from '../db/queries.js';
+import { whatsappConfig } from '../db/serializers.js';
 import { getISTMidnightToday, formatShortDate } from "../utils/timeUtils.js";
 import { sendWhatsAppTemplate } from "../services/Whatsapp.js";
 import { sendExpoPush } from "../services/pushNotificationService.js";
 import { invalidateClientCachesMany } from "../utils/cache.js";
-import User from "../models/User.js";
-import dayjs from "dayjs";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Replaces the 180-day TTL index the Mongo Activity collection had.
+const ACTIVITY_RETENTION_DAYS = 180;
 
 export const performExpiryChecks = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -25,115 +27,110 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
         const affectedGymIds = new Set<string>();
 
         // STEP 1: PROMOTE UPCOMING MEMBERSHIPS STARTING TODAY
-        const clientsReadyForPromotion = await Client.find({
-            upcomingMembership: { $ne: null }
-        }).populate('upcomingMembership');
+        const readyForPromotion = await db
+            .select({ client: members, upcoming: memberships })
+            .from(members)
+            .innerJoin(memberships, eq(memberships.id, members.upcomingMembershipId))
+            .where(lte(memberships.startDate, today));
 
-        for (const client of clientsReadyForPromotion) {
-            const upcomingMemb: any = client.upcomingMembership;
-            if (upcomingMemb && new Date(upcomingMemb.startDate) <= today) {
-                upcomingMemb.status = 'active';
-                await upcomingMemb.save();
-
-                client.activeMembership = upcomingMemb._id;
-                client.membershipStatus = 'active';
-                client.upcomingMembership = undefined;
-                await client.save();
-
-                await Activity.create({
-                    gymId: client.gymId,
+        for (const { client, upcoming } of readyForPromotion) {
+            await db.transaction(async (tx) => {
+                await tx.update(memberships).set({ status: 'active', updatedAt: new Date() }).where(eq(memberships.id, upcoming.id));
+                await tx.update(members).set({
+                    activeMembershipId: upcoming.id,
+                    membershipStatus: 'active',
+                    upcomingMembershipId: null,
+                    updatedAt: new Date(),
+                }).where(eq(members.id, client.id));
+                await tx.insert(activities).values({
+                    branchId: client.branchId,
                     type: 'RENEWAL',
                     title: 'Membership Activated',
-                    description: `${client.name}'s plan ${upcomingMemb.planName} is now active.`,
-                    memberId: client._id,
+                    description: `${client.name}'s plan ${upcoming.planName} is now active.`,
+                    memberId: client.id,
                     date: new Date(),
                 });
-                affectedGymIds.add(String(client.gymId));
-            }
+            });
+            affectedGymIds.add(client.branchId);
         }
 
         // STEP 2: HANDLE EXPIRIES
-        const membershipsToExpire = await AssignedMembership.find({
-            endDate: { $lt: today },
-            status: { $in: ['active', 'trial'] }
-        });
+        const membershipsToExpire = await db.select().from(memberships)
+            .where(and(lt(memberships.endDate, today), inArray(memberships.status, ['active', 'trial'])));
 
-        if (membershipsToExpire.length > 0) {
-            for (const memb of membershipsToExpire) {
-                const newStatus = memb.status === 'trial' ? 'trial_expired' : 'expired';
+        for (const memb of membershipsToExpire) {
+            const newStatus = memb.status === 'trial' ? 'trial_expired' : 'expired';
 
-                memb.status = newStatus;
-                await memb.save();
+            await db.update(memberships).set({ status: newStatus, updatedAt: new Date() }).where(eq(memberships.id, memb.id));
 
-                await Client.updateMany(
-                    {
-                        _id: { $in: memb.memberIds },
-                        activeMembership: memb._id
-                    },
-                    { $set: { membershipStatus: newStatus } }
-                );
-                affectedGymIds.add(String(memb.gymId));
+            const onPlan = db.select({ id: membershipMembers.memberId }).from(membershipMembers)
+                .where(eq(membershipMembers.membershipId, memb.id));
+            await db.update(members)
+                .set({ membershipStatus: newStatus, updatedAt: new Date() })
+                .where(and(inArray(members.id, onPlan), eq(members.activeMembershipId, memb.id)));
+            affectedGymIds.add(memb.branchId);
 
-                const primaryMember = await Client.findById(memb.primaryMemberId).select('name phoneNumber activeMembership');
+            const primaryMember = await findMember(db, memb.primaryMemberId);
 
-                if (primaryMember && String(primaryMember.activeMembership) !== String(memb._id)) {
-                    continue;
-                }
+            if (primaryMember && primaryMember.activeMembershipId !== memb.id) {
+                continue;
+            }
 
-                await Activity.create({
-                    gymId: memb.gymId,
-                    type: 'EXPIRY',
-                    title: newStatus === 'trial_expired' ? 'Trial Ended' : 'Membership Expired',
-                    description: `Membership for ${primaryMember?.name || 'Member'} has ended.`,
-                    memberId: memb.primaryMemberId,
-                    date: new Date(),
-                });
+            await db.insert(activities).values({
+                branchId: memb.branchId,
+                type: 'EXPIRY',
+                title: newStatus === 'trial_expired' ? 'Trial Ended' : 'Membership Expired',
+                description: `Membership for ${primaryMember?.name || 'Member'} has ended.`,
+                memberId: memb.primaryMemberId,
+                date: new Date(),
+            });
 
-                if (primaryMember?.phoneNumber) {
-                    const settings = await Settings.findOne({ gymId: memb.gymId });
-                    if (settings?.whatsapp?.active && settings?.whatsapp?.sendOnExpiry !== false) {
-                        const gym = await Gym.findById(memb.gymId);
-                        const templateName = "expired";
-                        const params = [primaryMember.name, gym?.name, formatShortDate(memb.endDate)];
-                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, settings.whatsapp, gym?.name, { gymId: String(memb.gymId), clientId: String(primaryMember._id) });
-                    }
+            if (primaryMember?.phoneNumber) {
+                const settings = await findSettings(db, memb.branchId);
+                if (settings?.whatsappActive && settings.whatsappSendOnExpiry !== false) {
+                    const gym = await findBranch(db, memb.branchId);
+                    const params = [primaryMember.name, gym?.name, formatShortDate(memb.endDate)];
+                    await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, "expired", params, whatsappConfig(settings), gym?.name, { gymId: memb.branchId, clientId: primaryMember.id });
                 }
             }
         }
 
         // STEP 3: SEND REMINDERS (Upcoming Expiries)
-        const allSettings = await Settings.find({
-            'whatsapp.active': true,
-            'whatsapp.sendOnReminder': { $ne: false }
-        });
+        const allSettings = await db.select().from(branchSettings)
+            .where(and(eq(branchSettings.whatsappActive, true), eq(branchSettings.whatsappSendOnReminder, true)));
         for (const setting of allSettings) {
             const reminderDays = 1;
             const targetDateStart = dayjs(today).add(reminderDays, 'day').startOf('day').toDate();
             const targetDateEnd = dayjs(today).add(reminderDays, 'day').endOf('day').toDate();
-            const expiringMemberships = await AssignedMembership.find({
-                gymId: setting.gymId,
-                status: { $in: ['active', 'trial'] },
-                endDate: { $gte: targetDateStart, $lte: targetDateEnd }
-            }).populate('primaryMemberId').populate('planId');
+            const expiringMemberships = await db.select().from(memberships).where(and(
+                eq(memberships.branchId, setting.branchId),
+                inArray(memberships.status, ['active', 'trial']),
+                gte(memberships.endDate, targetDateStart),
+                lte(memberships.endDate, targetDateEnd),
+            ));
 
             if (expiringMemberships.length > 0) {
-                const gym = await Gym.findById(setting.gymId);
+                const gym = await findBranch(db, setting.branchId);
                 for (const memb of expiringMemberships) {
-                    const primaryMember: any = memb.primaryMemberId;
-                    const plan: any = memb.planId;
+                    const [primaryMember, plan] = await Promise.all([
+                        findMember(db, memb.primaryMemberId),
+                        findPackage(db, memb.packageId),
+                    ]);
 
-                    if (plan?.durationInMonths <= 0) continue;
-                    if (primaryMember?.upcomingMembership) continue;
+                    if (plan && plan.durationInMonths <= 0) continue;
+                    if (primaryMember?.upcomingMembershipId) continue;
 
                     if (primaryMember?.phoneNumber) {
                         const remainingDays = dayjs(memb.endDate).diff(today, 'day');
-                        const templateName = "renewal";
                         const params = [primaryMember.name, gym?.name, remainingDays, formatShortDate(memb.endDate)];
-                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, templateName, params, setting.whatsapp, gym?.name, { gymId: String(setting.gymId), clientId: String(primaryMember._id) });
+                        await sendWhatsAppTemplate(`91${primaryMember.phoneNumber}`, "renewal", params, whatsappConfig(setting), gym?.name, { gymId: setting.branchId, clientId: primaryMember.id });
                     }
                 }
             }
         }
+
+        // STEP 4: PRUNE OLD ACTIVITY
+        await db.delete(activities).where(lt(activities.date, dayjs().subtract(ACTIVITY_RETENTION_DAYS, 'day').toDate()));
 
         if (affectedGymIds.size > 0) {
             invalidateClientCachesMany(affectedGymIds);
@@ -157,45 +154,43 @@ export const performPushSummary = async (request: FastifyRequest, reply: Fastify
         const today = getISTMidnightToday();
         console.log('Running Daily Push Summary...', today);
 
-        const gymIds = await Client.distinct('gymId');
+        const gymIds = (await db.selectDistinct({ id: members.branchId }).from(members)).map((r) => r.id);
         let notificationsSent = 0;
 
         for (const gymId of gymIds) {
-            const owners = await User.find({
-                gymId,
-                expoPushToken: { $exists: true, $ne: null },
-                pushNotificationsEnabled: { $ne: false },
-            });
+            const owners = await db.select().from(users).where(and(
+                eq(users.branchId, gymId),
+                isNotNull(users.expoPushToken),
+                eq(users.pushNotificationsEnabled, true),
+            ));
 
             if (owners.length === 0) continue;
 
-            const [expiringTodayCount, outstandingAgg, expiringSoonCount] = await Promise.all([
-                Client.aggregate([
-                    { $match: { gymId, membershipStatus: 'active' } },
-                    { $lookup: { from: 'assignedmemberships', localField: 'activeMembership', foreignField: '_id', as: 'plan' } },
-                    { $unwind: '$plan' },
-                    { $match: { 'plan.endDate': { $gte: today, $lt: dayjs(today).add(1, 'day').toDate() } } },
-                    { $count: 'count' },
-                ]),
-                Client.aggregate([
-                    { $match: { gymId, balance: { $gt: 0 } } },
-                    { $group: { _id: null, total: { $sum: '$balance' }, count: { $sum: 1 } } },
-                ]),
-                Client.aggregate([
-                    { $match: { gymId, membershipStatus: 'active', upcomingMembership: null } },
-                    { $lookup: { from: 'assignedmemberships', localField: 'activeMembership', foreignField: '_id', as: 'plan' } },
-                    { $unwind: '$plan' },
-                    { $match: { 'plan.endDate': { $gte: today, $lte: dayjs(today).add(7, 'day').endOf('day').toDate() } } },
-                    { $count: 'count' },
-                ]),
+            const activeEnding = (to: ReturnType<typeof lt>) => and(
+                eq(members.branchId, gymId),
+                eq(members.membershipStatus, 'active'),
+                gte(memberships.endDate, today),
+                to,
+            );
+            const [[{ value: expToday }], [outstandingAgg], [{ value: expSoon }]] = await Promise.all([
+                db.select({ value: count() }).from(members)
+                    .innerJoin(memberships, eq(memberships.id, members.activeMembershipId))
+                    .where(activeEnding(lt(memberships.endDate, dayjs(today).add(1, 'day').toDate()))),
+                db.select({ total: sql<number>`coalesce(sum(${members.balance}), 0)`.mapWith(Number), count: count() })
+                    .from(members)
+                    .where(and(eq(members.branchId, gymId), gt(members.balance, 0))),
+                db.select({ value: count() }).from(members)
+                    .innerJoin(memberships, eq(memberships.id, members.activeMembershipId))
+                    .where(and(
+                        activeEnding(lte(memberships.endDate, dayjs(today).add(7, 'day').endOf('day').toDate())),
+                        isNull(members.upcomingMembershipId),
+                    )),
             ]);
 
-            const expToday = expiringTodayCount[0]?.count || 0;
-            const outstanding = outstandingAgg[0]?.total || 0;
-            const balanceClients = outstandingAgg[0]?.count || 0;
-            const expSoon = expiringSoonCount[0]?.count || 0;
+            const outstanding = outstandingAgg?.total || 0;
+            const balanceClients = outstandingAgg?.count || 0;
 
-            const alerts: { prefKey: string; title: string; body: string }[] = [];
+            const alerts: { prefKey: 'expiringToday' | 'expiringSoon' | 'outstandingBalance'; title: string; body: string }[] = [];
             if (expToday > 0) {
                 alerts.push({
                     prefKey: 'expiringToday',
@@ -222,11 +217,16 @@ export const performPushSummary = async (request: FastifyRequest, reply: Fastify
 
             for (const owner of owners) {
                 if (!owner.expoPushToken) continue;
-                const prefs = owner.pushPrefs || {};
+                const prefs = {
+                    expiringToday: owner.pushExpiringToday,
+                    expiringSoon: owner.pushExpiringSoon,
+                    outstandingBalance: owner.pushOutstandingBalance,
+                    dailySummary: owner.pushDailySummary,
+                };
 
                 for (const alert of alerts) {
                     if (prefs.dailySummary === false) continue;
-                    if (prefs[alert.prefKey as keyof typeof prefs] === false) continue;
+                    if (prefs[alert.prefKey] === false) continue;
 
                     await sendExpoPush(owner.expoPushToken, alert.title, alert.body, { screen: 'Home' });
                     notificationsSent++;

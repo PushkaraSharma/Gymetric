@@ -1,50 +1,72 @@
-import Settings from "../models/Settings.js";
+import { eq } from 'drizzle-orm';
+import { db } from '../db/client.js';
+import { branchSettings } from '../db/schema.js';
+import { serializeSettings } from '../db/serializers.js';
+import { findSettings } from '../db/queries.js';
 import { deleteFromCloudinary, getCloudinaryPublicId } from "../utils/cloudinary.js";
+
+type SettingsInsert = typeof branchSettings.$inferInsert;
+
+// Saving `whatsapp` replaces the whole subdocument, as Mongo `$set` did: omitted keys go back to defaults.
+const whatsappColumns = (w: any): Partial<SettingsInsert> => ({
+    whatsappAccessToken: w.accessToken ?? null,
+    whatsappPhoneNumberId: w.phoneNumberId ?? null,
+    whatsappActive: w.active === undefined ? false : !!w.active,
+    whatsappHeaderImageUrl: w.headerImageUrl ?? null,
+    whatsappHeaderImageId: w.headerImageId ?? null,
+    whatsappReminderDays: 1,
+    whatsappSendOnOnboarding: w.sendOnOnboarding === undefined ? true : !!w.sendOnOnboarding,
+    whatsappSendOnRenewal: w.sendOnRenewal === undefined ? true : !!w.sendOnRenewal,
+    whatsappSendOnExpiry: w.sendOnExpiry === undefined ? true : !!w.sendOnExpiry,
+    whatsappSendOnReminder: w.sendOnReminder === undefined ? true : !!w.sendOnReminder,
+});
+
+const receiptColumns = (r: any): Partial<SettingsInsert> => {
+    const out: Partial<SettingsInsert> = {};
+    if (r.logo !== undefined) out.receiptLogo = r.logo ?? null;
+    if (r.signature !== undefined) out.receiptSignature = r.signature ?? null;
+    if (r.footerNote !== undefined) out.receiptFooterNote = r.footerNote ?? '';
+    if (r.showGymAddress !== undefined) out.receiptShowGymAddress = !!r.showGymAddress;
+    return out;
+};
+
+const upsertSettings = async (gymId: string, values: Partial<SettingsInsert>) => {
+    const [row] = await db.insert(branchSettings)
+        .values({ ...values, branchId: gymId })
+        .onConflictDoUpdate({ target: branchSettings.branchId, set: { ...values, updatedAt: new Date() } })
+        .returning();
+    return row;
+};
 
 export const setSettings = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
-
-        // Fetch existing settings to preserve secrets
-        let updateData = { ...request.body, gymId };
+        const body = request.body || {};
+        const values: Partial<SettingsInsert> = {};
 
         let previousHeaderUrl: string | undefined;
-        if (updateData.whatsapp) {
-            updateData.whatsapp.reminderDays = 1;
-            const existingSettings: any = await Settings.findOne({ gymId }).lean();
-            previousHeaderUrl = existingSettings?.whatsapp?.headerImageUrl;
-            if (existingSettings && existingSettings.whatsapp) {
-                // Preserve accessToken if not provided
-                if (!updateData.whatsapp.accessToken && existingSettings.whatsapp.accessToken) {
-                    updateData.whatsapp.accessToken = existingSettings.whatsapp.accessToken;
-                }
-                // Preserve phoneNumberId if not provided
-                if (!updateData.whatsapp.phoneNumberId && existingSettings.whatsapp.phoneNumberId) {
-                    updateData.whatsapp.phoneNumberId = existingSettings.whatsapp.phoneNumberId;
-                }
-                // Preserve the permanent onboarding header URL only when the client omits it.
-                // An explicit empty or new value is authoritative (replace / clear).
-                if (updateData.whatsapp.headerImageUrl === undefined && existingSettings.whatsapp.headerImageUrl) {
-                    updateData.whatsapp.headerImageUrl = existingSettings.whatsapp.headerImageUrl;
-                }
-
-                // Preserve headerImageId if not provided (good practice)
-                if (!updateData.whatsapp.headerImageId && existingSettings.whatsapp.headerImageId) {
-                    updateData.whatsapp.headerImageId = existingSettings.whatsapp.headerImageId;
-                }
+        let nextHeaderUrl: string | undefined;
+        if (body.whatsapp) {
+            const whatsapp = { ...body.whatsapp };
+            const existing = await findSettings(db, gymId);
+            previousHeaderUrl = existing?.whatsappHeaderImageUrl ?? undefined;
+            if (existing) {
+                // Preserve secrets and images the client omits. An explicit empty header URL clears it.
+                if (!whatsapp.accessToken && existing.whatsappAccessToken) whatsapp.accessToken = existing.whatsappAccessToken;
+                if (!whatsapp.phoneNumberId && existing.whatsappPhoneNumberId) whatsapp.phoneNumberId = existing.whatsappPhoneNumberId;
+                if (whatsapp.headerImageUrl === undefined && existing.whatsappHeaderImageUrl) whatsapp.headerImageUrl = existing.whatsappHeaderImageUrl;
+                if (!whatsapp.headerImageId && existing.whatsappHeaderImageId) whatsapp.headerImageId = existing.whatsappHeaderImageId;
             }
-            if (updateData.whatsapp.active && !updateData.whatsapp.headerImageUrl) {
+            if (whatsapp.active && !whatsapp.headerImageUrl) {
                 return reply.status(400).send({ success: false, message: 'Welcome image required to enable WhatsApp' });
             }
+            nextHeaderUrl = whatsapp.headerImageUrl;
+            Object.assign(values, whatsappColumns(whatsapp));
         }
+        if (body.receipt) Object.assign(values, receiptColumns(body.receipt));
 
-        const settings = await Settings.findOneAndUpdate(
-            { gymId },
-            { $set: updateData },
-            { new: true, upsert: true, setDefaultsOnInsert: true, projection: { accessToken: 0, phoneNumberId: 0 } }
-        );
+        const settings = await upsertSettings(gymId, values);
 
-        const nextHeaderUrl = updateData.whatsapp?.headerImageUrl;
         if (previousHeaderUrl && nextHeaderUrl !== undefined && previousHeaderUrl !== nextHeaderUrl) {
             const publicId = getCloudinaryPublicId(previousHeaderUrl);
             if (publicId) {
@@ -54,7 +76,7 @@ export const setSettings = async (request: any, reply: any) => {
             }
         }
 
-        return reply.status(200).send({ success: true, data: settings });
+        return reply.status(200).send({ success: true, data: serializeSettings(settings) });
     } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
@@ -64,20 +86,9 @@ export const setSettings = async (request: any, reply: any) => {
 export const setReceiptSettings = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
-        const { receipt } = request.body;
-        const existingSettings: any = await Settings.findOne({ gymId }).lean();
-        const nextReceipt = {
-            ...(existingSettings?.receipt || {}),
-            ...(receipt || {}),
-        };
-
-        const settings = await Settings.findOneAndUpdate(
-            { gymId },
-            { $set: { receipt: nextReceipt, gymId } },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
-        );
-
-        return reply.status(200).send({ success: true, data: settings?.receipt });
+        const { receipt } = request.body || {};
+        const settings = await upsertSettings(gymId, receiptColumns(receipt || {}));
+        return reply.status(200).send({ success: true, data: serializeSettings(settings).receipt });
     } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
@@ -87,21 +98,16 @@ export const setReceiptSettings = async (request: any, reply: any) => {
 export const getSettings = async (request: any, reply: any) => {
     try {
         const gymId = request.user.gymId;
-        const rawSettings: any = await Settings.findOne({ gymId }).lean();
-        if (!rawSettings) {
+        const settings = await findSettings(db, gymId);
+        if (!settings) {
             return reply.status(200).send({
                 success: true,
-                data: { ...rawSettings, hasWhatsappConfigured: false }
+                data: { hasWhatsappConfigured: false }
             });
-        }
-        const hasWhatsappConfigured = !!(rawSettings.whatsapp && rawSettings.whatsapp.phoneNumberId);
-        if (rawSettings.whatsapp) {
-            delete rawSettings.whatsapp.accessToken;
-            delete rawSettings.whatsapp.phoneNumberId;
         }
         return reply.status(200).send({
             success: true,
-            data: { ...rawSettings, hasWhatsappConfigured }
+            data: { ...serializeSettings(settings), hasWhatsappConfigured: !!settings.whatsappPhoneNumberId }
         });
     } catch (error: any) {
         request.log.error(error);

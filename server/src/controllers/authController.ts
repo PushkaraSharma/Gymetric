@@ -1,9 +1,48 @@
 import bcrypt from 'bcrypt';
-import Gym from '../models/Gym.js'
-import User from '../models/User.js'
 import jwt from 'jsonwebtoken';
+import { eq } from 'drizzle-orm';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { verifyFirebaseToken } from '../utils/firebaseAdmin.js';
+import { db } from '../db/client.js';
+import { branches, organizations, users } from '../db/schema.js';
+import type { BranchRow, UserRow } from '../db/serializers.js';
+
+const signToken = (user: UserRow) => jwt.sign(
+    { userId: user.id, gymId: user.branchId, role: user.role },
+    process.env.JWT_SECRET || 'secret',
+    { expiresIn: '90d' }
+);
+
+const findUserWithGym = async (where: ReturnType<typeof eq>) => {
+    const [row] = await db
+        .select({ user: users, gym: branches })
+        .from(users)
+        .innerJoin(branches, eq(branches.id, users.branchId))
+        .where(where)
+        .limit(1);
+    return row ?? null;
+};
+
+const createGymWithAdmin = async (
+    gym: { name: string; address?: string; ownerName?: string; contactNumber: string },
+    user: { phoneNumber?: string; firebaseUid?: string; username?: string; passwordHash: string },
+): Promise<{ gym: BranchRow; user: UserRow }> => db.transaction(async (tx) => {
+    const [org] = await tx.insert(organizations).values({ name: gym.name }).returning();
+    const [branch] = await tx.insert(branches).values({
+        organizationId: org.id,
+        name: gym.name,
+        address: gym.address,
+        ownerName: gym.ownerName,
+        contactNumber: gym.contactNumber,
+    }).returning();
+    const [admin] = await tx.insert(users).values({
+        ...user,
+        role: 'admin',
+        branchId: branch.id,
+        isActive: true,
+    }).returning();
+    return { gym: branch, user: admin };
+});
 
 // --- NEW AUTH FLOWS ---
 
@@ -26,24 +65,19 @@ export const verifyOtp = async (request: FastifyRequest, reply: FastifyReply) =>
         }
 
         // 2. Check if user exists
-        const user = await User.findOne({ phoneNumber }).populate('gymId');
+        const found = await findUserWithGym(eq(users.phoneNumber, phoneNumber));
 
-        if (user) {
-            // Existing User -> Return Token
-            const token = jwt.sign(
-                { userId: user._id, gymId: user.gymId._id, role: user.role },
-                process.env.JWT_SECRET || 'secret',
-                { expiresIn: '90d' }
-            );
+        if (found) {
+            const { user, gym } = found;
             return reply.status(200).send({
                 success: true,
                 data: {
                     isNewUser: false,
-                    token,
-                    username: (user.gymId as any).ownerName || user.username,
+                    token: signToken(user),
+                    username: gym.ownerName || user.username,
                     role: user.role,
-                    gymName: (user.gymId as any).name,
-                    address: (user.gymId as any).address,
+                    gymName: gym.name,
+                    address: gym.address,
                     phoneNumber: user.phoneNumber
                 }
             });
@@ -81,48 +115,26 @@ export const onboard = async (request: FastifyRequest, reply: FastifyReply) => {
         const firebaseUid = decodedToken.uid;
 
         // 2. Check if user already exists (idempotency)
-        const existingUser = await User.findOne({ phoneNumber });
+        const [existingUser] = await db.select({ id: users.id }).from(users).where(eq(users.phoneNumber, phoneNumber!)).limit(1);
         if (existingUser) {
             return reply.status(400).send({ success: false, message: 'User already exists' });
         }
 
-        // 3. Create Gym
-        const newGym = new Gym({
-            name: gymName,
-            address: gymAddress,
-            ownerName: ownerName,
-            contactNumber: phoneNumber // Use authenticated phone as contact
-        });
-        await newGym.save();
-
-        // 4. Create User (Admin)
+        // 3. Create Gym + Admin user
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newUser = new User({
-            phoneNumber,
-            firebaseUid,
-            passwordHash: hashedPassword,
-            role: 'admin',
-            gymId: newGym._id,
-            isActive: true
-        });
-        await newUser.save();
-
-        // 5. Issue Token
-        const token = jwt.sign(
-            { userId: newUser._id, gymId: newGym._id, role: newUser.role },
-            process.env.JWT_SECRET || 'secret',
-            { expiresIn: '90d' }
+        const { gym, user } = await createGymWithAdmin(
+            { name: gymName, address: gymAddress, ownerName, contactNumber: phoneNumber! },
+            { phoneNumber, firebaseUid, passwordHash: hashedPassword },
         );
 
         return reply.status(201).send({
             success: true,
             data: {
-                token,
-                phoneNumber: newUser.phoneNumber,
-                role: newUser.role,
-                gymName: newGym.name,
-                address: newGym.address,
+                token: signToken(user),
+                phoneNumber: user.phoneNumber,
+                role: user.role,
+                gymName: gym.name,
+                address: gym.address,
                 username: ownerName
             }
         });
@@ -137,10 +149,11 @@ export const passwordLogin = async (request: FastifyRequest, reply: FastifyReply
     try {
         const { phoneNumber, password } = request.body as any;
 
-        const user = await User.findOne({ phoneNumber }).populate('gymId');
-        if (!user) {
+        const found = phoneNumber ? await findUserWithGym(eq(users.phoneNumber, phoneNumber)) : null;
+        if (!found) {
             return reply.status(404).send({ success: false, message: 'User not found' });
         }
+        const { user, gym } = found;
 
         if (!user.passwordHash) {
             return reply.status(400).send({ success: false, message: 'Password login not set up for this user. Please use OTP.' });
@@ -151,21 +164,15 @@ export const passwordLogin = async (request: FastifyRequest, reply: FastifyReply
             return reply.status(401).send({ success: false, message: 'Invalid Password' });
         }
 
-        const token = jwt.sign(
-            { userId: user._id, gymId: user.gymId._id, role: user.role },
-            process.env.JWT_SECRET || 'secret',
-            { expiresIn: '90d' }
-        );
-
         return reply.status(200).send({
             success: true,
             data: {
                 phoneNumber: user.phoneNumber,
                 role: user.role,
-                gymName: (user.gymId as any).name,
-                address: (user.gymId as any).address,
-                username: (user.gymId as any).ownerName || user.username,
-                token
+                gymName: gym.name,
+                address: gym.address,
+                username: gym.ownerName || user.username,
+                token: signToken(user)
             }
         });
 
@@ -180,21 +187,11 @@ export const passwordLogin = async (request: FastifyRequest, reply: FastifyReply
 export const setupGymAndAdmin = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const { gymName, contactNumber, adminName, username, password, gymAddress }: any = request.body;
-        const newGym = new Gym({
-            name: gymName,
-            address: gymAddress,
-            ownerName: adminName,
-            contactNumber: contactNumber
-        });
-        await newGym.save();
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({
-            username,
-            passwordHash: hashedPassword,
-            role: 'admin',
-            gymId: newGym._id
-        });
-        await user.save();
+        await createGymWithAdmin(
+            { name: gymName, address: gymAddress, ownerName: adminName, contactNumber },
+            { username, passwordHash: hashedPassword },
+        );
         return reply.status(201).send({
             success: true,
             message: "Gym and Admin created successfully"
@@ -208,23 +205,23 @@ export const setupGymAndAdmin = async (request: FastifyRequest, reply: FastifyRe
 export const loginAdmin = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const { username, password }: any = request.body;
-        const user = await User.findOne({ username }).populate('gymId');
-        if (!user) {
+        const found = username ? await findUserWithGym(eq(users.username, username)) : null;
+        if (!found || !found.user.passwordHash) {
             return reply.status(401).send({ success: false, message: 'Invalid username or password' });
         }
-        const isCorrect = await bcrypt.compare(password, user.passwordHash);
+        const { user, gym } = found;
+        const isCorrect = await bcrypt.compare(password, user.passwordHash!);
         if (!isCorrect) {
             return reply.status(401).send({ success: false, message: 'Invalid username or password' });
         }
-        const token = jwt.sign({ userId: user._id, gymId: user.gymId._id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '90d' });
         return reply.status(200).send({
             success: true,
             data: {
                 username: user.username,
                 role: user.role,
-                gymName: (user.gymId).name,
-                address: (user.gymId).address,
-                token
+                gymName: gym.name,
+                address: gym.address,
+                token: signToken(user)
             }
         })
     } catch (error: any) {
@@ -239,7 +236,7 @@ export const resetPassword = async (request: FastifyRequest, reply: FastifyReply
         const { oldPassword, newPassword }: any = request.body;
         const userId = (request as any).user.userId;
 
-        const user = await User.findById(userId);
+        const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
         if (!user) {
             return reply.status(404).send({ success: false, message: 'User not found' });
         }
@@ -252,8 +249,7 @@ export const resetPassword = async (request: FastifyRequest, reply: FastifyReply
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        user.passwordHash = hashedPassword;
-        await user.save();
+        await db.update(users).set({ passwordHash: hashedPassword, updatedAt: new Date() }).where(eq(users.id, user.id));
 
         return reply.status(200).send({
             success: true,
@@ -268,14 +264,14 @@ export const resetPassword = async (request: FastifyRequest, reply: FastifyReply
 export const checkUser = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const { phoneNumber } = request.body as any;
-        const user = await User.findOne({ phoneNumber }).populate('gymId');
-        if (user) {
-            const name = (user.gymId as any)?.ownerName || user.username || '';
+        const found = phoneNumber ? await findUserWithGym(eq(users.phoneNumber, phoneNumber)) : null;
+        if (found) {
+            const name = found.gym.ownerName || found.user.username || '';
             return reply.status(200).send({
                 success: true,
                 data: {
                     exists: true,
-                    hasPassword: !!user.passwordHash,
+                    hasPassword: !!found.user.passwordHash,
                     username: name
                 }
             });

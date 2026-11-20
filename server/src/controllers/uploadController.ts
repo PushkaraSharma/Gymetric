@@ -1,7 +1,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { eq } from 'drizzle-orm';
 import { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } from '../utils/cloudinary.js';
-import Client from '../models/Client.js';
-import Gym from '../models/Gym.js';
+import { db } from '../db/client.js';
+import { branches, members } from '../db/schema.js';
+import { findBranch, findMember } from '../db/queries.js';
+import { invalidateClientCaches } from '../utils/cache.js';
 
 /**
  * Upload client profile picture
@@ -22,7 +25,7 @@ export const uploadClientProfilePicture = async (request: FastifyRequest, reply:
             return reply.status(400).send({ success: false, message: 'Client ID is required' });
         }
 
-        const client = await Client.findById(clientId);
+        const client = await findMember(db, clientId, gymId);
         if (!client) {
             return reply.status(404).send({ success: false, message: 'Client not found' });
         }
@@ -40,9 +43,10 @@ export const uploadClientProfilePicture = async (request: FastifyRequest, reply:
             `client_${clientId}`
         );
 
-        // Update client record
-        client.profilePicture = result.secure_url;
-        await client.save();
+        await db.update(members)
+            .set({ profilePicture: result.secure_url, updatedAt: new Date() })
+            .where(eq(members.id, client.id));
+        invalidateClientCaches(gymId);
 
         return reply.send({
             success: true,
@@ -71,7 +75,7 @@ export const uploadGymLogo = async (request: FastifyRequest, reply: FastifyReply
         const buffer = await data.toBuffer();
 
         // Get existing gym to check for old logo
-        const gym = await Gym.findById(gymId);
+        const gym = await findBranch(db, gymId);
         if (!gym) {
             return reply.status(404).send({ success: false, message: 'Gym not found' });
         }
@@ -89,9 +93,9 @@ export const uploadGymLogo = async (request: FastifyRequest, reply: FastifyReply
             `gym_${gymId}`
         );
 
-        // Update gym record
-        gym.logo = result.secure_url;
-        await gym.save();
+        await db.update(branches)
+            .set({ logo: result.secure_url, updatedAt: new Date() })
+            .where(eq(branches.id, gym.id));
 
         return reply.send({
             success: true,
@@ -175,9 +179,10 @@ export const uploadWhatsappHeaderImage = async (request: FastifyRequest, reply: 
  */
 export const deleteClientProfilePicture = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
+        const { gymId } = request.user as any;
         const clientId = (request.params as any).clientId;
 
-        const client = await Client.findById(clientId);
+        const client = await findMember(db, clientId, gymId);
         if (!client) {
             return reply.status(404).send({ success: false, message: 'Client not found' });
         }
@@ -186,8 +191,10 @@ export const deleteClientProfilePicture = async (request: FastifyRequest, reply:
             const publicId = getCloudinaryPublicId(client.profilePicture);
             if (publicId) await deleteFromCloudinary(publicId);
 
-            client.profilePicture = undefined;
-            await client.save();
+            await db.update(members)
+                .set({ profilePicture: null, updatedAt: new Date() })
+                .where(eq(members.id, client.id));
+            invalidateClientCaches(gymId);
         }
 
         return reply.send({ success: true, message: 'Profile picture deleted' });

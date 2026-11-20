@@ -1,9 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import dayjs from 'dayjs';
-import Activity from "../models/Activity.js";
-import Client from "../models/Client.js";
-import AssignedMembership from "../models/AssignedMembership.js";
-import mongoose from "mongoose";
+import { and, count, countDistinct, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
+import { db } from '../db/client.js';
+import { activities, memberships, membershipMembers, members, payments } from '../db/schema.js';
+import { compact, serializeActivity } from '../db/serializers.js';
 import {
     addUtcDays,
     endOfIstDayExclusive,
@@ -17,15 +17,11 @@ import {
 import { cache, getCacheKey } from "../utils/cache.js";
 
 const IST = 'Asia/Kolkata';
+// Inlined rather than bound: GROUP BY only matches the SELECT expression when both use the same literal.
+const IST_SQL = sql.raw(`'${IST}'`);
 
-const uniqueMemberOids = (memberships: { primaryMemberId?: any; memberIds?: any[] }[]) => {
-    const ids = new Set<string>();
-    for (const m of memberships) {
-        if (m.primaryMemberId) ids.add(String(m.primaryMemberId));
-        for (const id of m.memberIds || []) ids.add(String(id));
-    }
-    return [...ids].map((id) => new mongoose.Types.ObjectId(id));
-};
+const sumOf = (column: SQL | typeof payments.amount | typeof members.balance) =>
+    sql<number>`coalesce(sum(${column}), 0)`.mapWith(Number);
 
 const calculateTrend = (current: number, previous: number) => {
     if (!previous || previous === 0) return null;
@@ -50,28 +46,52 @@ const resolveInclusiveRange = (fromStr?: string, toStr?: string, fallbackFrom?: 
     return { from, toExclusive };
 };
 
+const countMembers = async (gymId: string, extra?: SQL) => {
+    const [{ value }] = await db.select({ value: count() }).from(members)
+        .where(extra ? and(eq(members.branchId, gymId), extra) : eq(members.branchId, gymId));
+    return value;
+};
+
+const paymentTotal = async (gymId: string, from: Date, toExclusive?: Date) => {
+    const [{ total }] = await db.select({ total: sumOf(payments.amount) }).from(payments)
+        .where(and(eq(payments.branchId, gymId), gte(payments.paidAt, from), toExclusive ? lt(payments.paidAt, toExclusive) : undefined));
+    return total;
+};
+
+// Members whose current (active) plan ends inside [from, to].
+const activeEndingWhere = (gymId: string, from: Date, to: SQL) => and(
+    eq(members.branchId, gymId),
+    eq(members.membershipStatus, 'active'),
+    gte(memberships.endDate, from),
+    to,
+);
+
+// Distinct members (payer + everyone on the plan) of memberships ending in [from, toExclusive).
+const membersOfMembershipsEnding = async (gymId: string, from: Date, toExclusive: Date) => {
+    const ending = and(eq(memberships.branchId, gymId), gte(memberships.endDate, from), lt(memberships.endDate, toExclusive));
+    const [payers, onPlan] = await Promise.all([
+        db.select({ id: memberships.primaryMemberId }).from(memberships).where(ending),
+        db.select({ id: membershipMembers.memberId }).from(membershipMembers)
+            .innerJoin(memberships, eq(memberships.id, membershipMembers.membershipId))
+            .where(ending),
+    ]);
+    return [...new Set([...payers, ...onPlan].map((r) => r.id))];
+};
+
 const getRevenueTrend = async (gymId: string, today: Date) => {
     const sixMonthsAgo = getSixMonthsAgoStart(today);
+    const year = sql<number>`extract(year from ${payments.paidAt} at time zone ${IST_SQL})`.mapWith(Number);
+    const month = sql<number>`extract(month from ${payments.paidAt} at time zone ${IST_SQL})`.mapWith(Number);
 
-    const monthlyRevenueRaw = await Client.aggregate([
-        { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
-        { $unwind: "$paymentHistory" },
-        { $match: { "paymentHistory.date": { $gte: sixMonthsAgo } } },
-        {
-            $group: {
-                _id: {
-                    month: { $month: { date: "$paymentHistory.date", timezone: IST } },
-                    year: { $year: { date: "$paymentHistory.date", timezone: IST } }
-                },
-                total: { $sum: "$paymentHistory.amount" }
-            }
-        },
-        { $sort: { "_id.year": 1, "_id.month": 1 } }
-    ]);
+    const rows = await db.select({ year, month, total: sumOf(payments.amount) })
+        .from(payments)
+        .where(and(eq(payments.branchId, gymId), gte(payments.paidAt, sixMonthsAgo)))
+        .groupBy(year, month)
+        .orderBy(year, month);
 
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return monthlyRevenueRaw.map(item => ({
-        label: months[item._id.month - 1],
+    return rows.map(item => ({
+        label: months[item.month - 1],
         amount: item.total
     }));
 };
@@ -97,179 +117,95 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
         const tomorrow = addUtcDays(today, 1);
         const sixMonthsAgo = getSixMonthsAgoStart(today);
 
+        const expiringSoonWhere = and(
+            activeEndingWhere(gymId, today, lte(memberships.endDate, sevenDaysFromNow)),
+            isNull(members.upcomingMembershipId),
+        );
+        const todayPayments = and(eq(payments.branchId, gymId), gte(payments.paidAt, today), lt(payments.paidAt, tomorrow));
+
         const [
             totalClients,
             activeCount,
             expiredCount,
             activeCount30DaysAgo,
-            expiringSoonParams,
+            [{ value: expiringSoon }],
             expiringMembersList,
-            revenueCurrent,
-            revenueLastMTD,
-            payingThisMonth,
-            endedLast30,
-            endedLast14,
+            revCurrentVal,
+            revLastVal,
+            [{ value: payingCount }],
+            ended30Ids,
+            ended14Ids,
             newlyJoinedCurrent,
             newlyJoinedLastMTD,
             recentActivities,
             revenueTrend,
             todayCollection,
-            totalOutstanding,
+            [totalOutstanding],
             clientsWithBalance,
-            expiringToday,
+            [{ value: expiringToday }],
             paymentMethodsToday,
             topBalanceClients,
             topSellingPlansRaw,
         ] = await Promise.all([
-            Client.countDocuments({ gymId }),
-            Client.countDocuments({ gymId, membershipStatus: 'active' }),
-            Client.countDocuments({ gymId, membershipStatus: { $in: ['expired', 'trial_expired'] } }),
-            Client.countDocuments({
-                gymId,
-                membershipStatus: 'active',
-                createdAt: { $lte: thirtyDaysAgo }
-            }),
-            Client.aggregate([
-                { $match: { gymId: new mongoose.Types.ObjectId(gymId), membershipStatus: 'active', upcomingMembership: null } },
-                {
-                    $lookup: {
-                        from: 'assignedmemberships',
-                        localField: 'activeMembership',
-                        foreignField: '_id',
-                        as: 'activePlan'
-                    }
-                },
-                { $unwind: '$activePlan' },
-                {
-                    $match: {
-                        'activePlan.endDate': { $gte: today, $lte: sevenDaysFromNow }
-                    }
-                },
-                { $count: 'count' }
-            ]),
-            Client.aggregate([
-                { $match: { gymId: new mongoose.Types.ObjectId(gymId), membershipStatus: 'active', upcomingMembership: null } },
-                {
-                    $lookup: {
-                        from: 'assignedmemberships',
-                        localField: 'activeMembership',
-                        foreignField: '_id',
-                        as: 'activePlan'
-                    }
-                },
-                { $unwind: '$activePlan' },
-                {
-                    $match: {
-                        'activePlan.endDate': { $gte: today, $lte: sevenDaysFromNow }
-                    }
-                },
-                { $sort: { 'activePlan.endDate': 1 } },
-                { $limit: 5 },
-                {
-                    $project: {
-                        _id: 1,
-                        name: 1,
-                        endDate: '$activePlan.endDate'
-                    }
-                }
-            ]),
-            Client.aggregate([
-                { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
-                { $unwind: "$paymentHistory" },
-                { $match: { "paymentHistory.date": { $gte: startOfCurrent } } },
-                { $group: { _id: null, total: { $sum: "$paymentHistory.amount" } } }
-            ]),
-            Client.aggregate([
-                { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
-                { $unwind: "$paymentHistory" },
-                { $match: { "paymentHistory.date": { $gte: startOfLast, $lt: lastMtdExclusive } } },
-                { $group: { _id: null, total: { $sum: "$paymentHistory.amount" } } }
-            ]),
-            Client.aggregate([
-                { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
-                { $unwind: "$paymentHistory" },
-                { $match: { "paymentHistory.date": { $gte: startOfCurrent } } },
-                { $group: { _id: "$_id" } },
-                { $count: "count" }
-            ]),
-            AssignedMembership.find({
-                gymId,
-                endDate: { $gte: thirtyDaysAgo, $lt: tomorrow },
-            }).select('primaryMemberId memberIds').lean(),
-            AssignedMembership.find({
-                gymId,
-                endDate: { $gte: fourteenDaysAgo, $lt: tomorrow },
-            }).select('primaryMemberId memberIds').lean(),
-            Client.countDocuments({ gymId, createdAt: { $gte: startOfCurrent } }),
-            Client.countDocuments({ gymId, createdAt: { $gte: startOfLast, $lt: lastMtdExclusive } }),
-            Activity.find({ gymId }).sort({ date: -1 }).limit(10).lean(),
+            countMembers(gymId),
+            countMembers(gymId, eq(members.membershipStatus, 'active')),
+            countMembers(gymId, inArray(members.membershipStatus, ['expired', 'trial_expired'])),
+            countMembers(gymId, and(eq(members.membershipStatus, 'active'), lte(members.createdAt, thirtyDaysAgo))),
+            db.select({ value: count() }).from(members)
+                .innerJoin(memberships, eq(memberships.id, members.activeMembershipId))
+                .where(expiringSoonWhere),
+            db.select({ _id: members.id, name: members.name, endDate: memberships.endDate }).from(members)
+                .innerJoin(memberships, eq(memberships.id, members.activeMembershipId))
+                .where(expiringSoonWhere)
+                .orderBy(memberships.endDate)
+                .limit(5),
+            paymentTotal(gymId, startOfCurrent),
+            paymentTotal(gymId, startOfLast, lastMtdExclusive),
+            db.select({ value: countDistinct(payments.memberId) }).from(payments)
+                .where(and(eq(payments.branchId, gymId), gte(payments.paidAt, startOfCurrent))),
+            membersOfMembershipsEnding(gymId, thirtyDaysAgo, tomorrow),
+            membersOfMembershipsEnding(gymId, fourteenDaysAgo, tomorrow),
+            countMembers(gymId, gte(members.createdAt, startOfCurrent)),
+            countMembers(gymId, and(gte(members.createdAt, startOfLast), lt(members.createdAt, lastMtdExclusive))),
+            db.select().from(activities).where(eq(activities.branchId, gymId)).orderBy(desc(activities.date)).limit(10),
             getRevenueTrend(gymId, today),
-            Client.aggregate([
-                { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
-                { $unwind: "$paymentHistory" },
-                { $match: { "paymentHistory.date": { $gte: today, $lt: tomorrow } } },
-                { $group: { _id: null, total: { $sum: "$paymentHistory.amount" } } }
-            ]),
-            Client.aggregate([
-                { $match: { gymId: new mongoose.Types.ObjectId(gymId), balance: { $gt: 0 } } },
-                { $group: { _id: null, total: { $sum: "$balance" }, count: { $sum: 1 } } }
-            ]),
-            Client.countDocuments({ gymId, balance: { $gt: 0 } }),
-            Client.aggregate([
-                { $match: { gymId: new mongoose.Types.ObjectId(gymId), membershipStatus: 'active' } },
-                { $lookup: { from: 'assignedmemberships', localField: 'activeMembership', foreignField: '_id', as: 'activePlan' } },
-                { $unwind: '$activePlan' },
-                { $match: { 'activePlan.endDate': { $gte: today, $lt: tomorrow } } },
-                { $count: 'count' }
-            ]),
-            Client.aggregate([
-                { $match: { gymId: new mongoose.Types.ObjectId(gymId) } },
-                { $unwind: "$paymentHistory" },
-                { $match: { "paymentHistory.date": { $gte: today, $lt: tomorrow } } },
-                { $group: { _id: "$paymentHistory.method", total: { $sum: "$paymentHistory.amount" }, count: { $sum: 1 } } }
-            ]),
-            Client.find({ gymId, balance: { $gt: 0 } })
-                .select('name balance')
-                .sort({ balance: -1 })
-                .limit(3)
-                .lean(),
-            AssignedMembership.aggregate([
-                { $match: { gymId: new mongoose.Types.ObjectId(gymId), createdAt: { $gte: sixMonthsAgo } } },
-                {
-                    $group: {
-                        _id: '$planId',
-                        planName: { $first: '$planName' },
-                        count: { $sum: 1 },
-                        revenue: { $sum: '$totalAmount' },
-                    },
-                },
-                { $sort: { count: -1 } },
-            ]),
+            paymentTotal(gymId, today, tomorrow),
+            db.select({ total: sumOf(members.balance), count: count() }).from(members)
+                .where(and(eq(members.branchId, gymId), gt(members.balance, 0))),
+            countMembers(gymId, gt(members.balance, 0)),
+            db.select({ value: count() }).from(members)
+                .innerJoin(memberships, eq(memberships.id, members.activeMembershipId))
+                .where(activeEndingWhere(gymId, today, lt(memberships.endDate, tomorrow))),
+            db.select({ method: payments.method, total: sumOf(payments.amount), count: count() }).from(payments)
+                .where(todayPayments)
+                .groupBy(payments.method),
+            db.select({ _id: members.id, name: members.name, balance: members.balance }).from(members)
+                .where(and(eq(members.branchId, gymId), gt(members.balance, 0)))
+                .orderBy(desc(members.balance))
+                .limit(3),
+            db.select({
+                planId: memberships.packageId,
+                planName: sql<string | null>`(array_agg(${memberships.planName} order by ${memberships.createdAt}))[1]`,
+                count: count(),
+                revenue: sql<number>`coalesce(sum(${memberships.totalAmount}), 0)`.mapWith(Number),
+            }).from(memberships)
+                .where(and(eq(memberships.branchId, gymId), gte(memberships.createdAt, sixMonthsAgo)))
+                .groupBy(memberships.packageId)
+                .orderBy(desc(count()), desc(sql`coalesce(sum(${memberships.totalAmount}), 0)`)),
         ]);
 
-        const revCurrentVal = revenueCurrent[0]?.total || 0;
-        const revLastVal = revenueLastMTD[0]?.total || 0;
-        const expiringSoon = expiringSoonParams[0]?.count || 0;
-        const payingCount = payingThisMonth[0]?.count || 0;
-        const ended30Ids = uniqueMemberOids(endedLast30 as any[]);
-        const ended14Ids = uniqueMemberOids(endedLast14 as any[]);
         const [renewedCount, recentlyExpiredCount] = await Promise.all([
             ended30Ids.length
-                ? Client.countDocuments({
-                    gymId,
-                    _id: { $in: ended30Ids },
-                    $or: [
-                        { membershipStatus: { $in: ['active', 'future', 'trial', 'paused'] } },
-                        { upcomingMembership: { $ne: null } },
-                    ],
-                })
+                ? countMembers(gymId, and(
+                    inArray(members.id, ended30Ids),
+                    or(
+                        inArray(members.membershipStatus, ['active', 'future', 'trial', 'paused']),
+                        isNotNull(members.upcomingMembershipId),
+                    ),
+                ))
                 : 0,
             ended14Ids.length
-                ? Client.countDocuments({
-                    gymId,
-                    _id: { $in: ended14Ids },
-                    membershipStatus: { $in: ['expired', 'trial_expired'] },
-                })
+                ? countMembers(gymId, and(inArray(members.id, ended14Ids), inArray(members.membershipStatus, ['expired', 'trial_expired'])))
                 : 0,
         ]);
         const retentionRate = ended30Ids.length > 0
@@ -279,18 +215,12 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             ? parseFloat((revCurrentVal / payingCount).toFixed(0))
             : 0;
 
-        const totalPlanSalesLast6Months = topSellingPlansRaw.reduce(
-            (sum: number, p: { count: number }) => sum + p.count,
-            0
-        );
-        const totalPlanRevenueLast6Months = topSellingPlansRaw.reduce(
-            (sum: number, p: { revenue?: number }) => sum + (p.revenue || 0),
-            0
-        );
-        const topSellingPlansLast6Months = topSellingPlansRaw.map((p: any) => {
+        const totalPlanSalesLast6Months = topSellingPlansRaw.reduce((sum, p) => sum + p.count, 0);
+        const totalPlanRevenueLast6Months = topSellingPlansRaw.reduce((sum, p) => sum + (p.revenue || 0), 0);
+        const topSellingPlansLast6Months = topSellingPlansRaw.map((p) => {
             const revenue = p.revenue || 0;
             return {
-                planId: String(p._id),
+                planId: String(p.planId),
                 planName: p.planName || 'Unknown plan',
                 count: p.count,
                 sharePercent: totalPlanSalesLast6Months > 0
@@ -301,7 +231,7 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
             };
         });
 
-        const expiringMembers = expiringMembersList.map((member: any) => {
+        const expiringMembers = expiringMembersList.map((member) => {
             const endDate = new Date(member.endDate);
             const daysLeft = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
             return {
@@ -335,21 +265,17 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
                 trend: calculateTrend(newlyJoinedCurrent, newlyJoinedLastMTD),
                 comparisonText: "vs same days last month"
             },
-            activities: recentActivities,
-            todayCollection: todayCollection[0]?.total || 0,
-            totalOutstanding: totalOutstanding[0]?.total || 0,
-            clientsWithBalance: clientsWithBalance || totalOutstanding[0]?.count || 0,
-            expiringToday: expiringToday[0]?.count || 0,
-            paymentMethodsToday: paymentMethodsToday.map((p: any) => ({
-                method: p._id,
+            activities: recentActivities.map(serializeActivity),
+            todayCollection,
+            totalOutstanding: totalOutstanding?.total || 0,
+            clientsWithBalance: clientsWithBalance || totalOutstanding?.count || 0,
+            expiringToday,
+            paymentMethodsToday: paymentMethodsToday.map((p) => ({
+                method: p.method,
                 amount: p.total,
                 count: p.count,
             })),
-            topBalanceClients: topBalanceClients.map((c: any) => ({
-                _id: c._id,
-                name: c.name,
-                balance: c.balance,
-            })),
+            topBalanceClients,
             topSellingPlansLast6Months,
             totalPlanSalesLast6Months,
             totalPlanRevenueLast6Months,
@@ -384,28 +310,24 @@ export const getRevenueStats = async (request: FastifyRequest, reply: FastifyRep
             return reply.status(400).send({ success: false, error: range.error });
         }
         const { from, toExclusive } = range;
-        const gymOid = new mongoose.Types.ObjectId(gymId);
-        const dateMatch = { "paymentHistory.date": { $gte: from, $lt: toExclusive } };
+        const inRange = and(eq(payments.branchId, gymId), gte(payments.paidAt, from), lt(payments.paidAt, toExclusive));
 
-        const transactionsQuery = Client.aggregate([
-            { $match: { gymId: gymOid } },
-            { $unwind: "$paymentHistory" },
-            { $match: dateMatch },
-            { $sort: { "paymentHistory.date": -1 } },
-            { $skip: (page - 1) * limit },
-            { $limit: limit + 1 },
-            {
-                $project: {
-                    clientId: "$_id",
-                    clientName: "$name",
-                    amount: "$paymentHistory.amount",
-                    date: "$paymentHistory.date",
-                    method: "$paymentHistory.method",
-                    remarks: "$paymentHistory.remarks",
-                    type: "$paymentHistory.type",
-                },
-            },
-        ]);
+        const transactionsQuery = db.select({
+            _id: members.id,
+            clientId: members.id,
+            clientName: members.name,
+            amount: payments.amount,
+            date: payments.paidAt,
+            method: payments.method,
+            remarks: payments.remarks,
+            type: payments.type,
+        }).from(payments)
+            .innerJoin(members, eq(members.id, payments.memberId))
+            .where(inRange)
+            .orderBy(desc(payments.paidAt), desc(payments.createdAt))
+            .offset((page - 1) * limit)
+            .limit(limit + 1)
+            .then((rows) => rows.map((row) => compact(row)));
 
         if (page > 1) {
             const raw = await transactionsQuery;
@@ -416,43 +338,17 @@ export const getRevenueStats = async (request: FastifyRequest, reply: FastifyRep
             });
         }
 
-        const [dailyRaw, paymentMethodsRaw, transactionsRaw, totalRaw] = await Promise.all([
-            Client.aggregate([
-                { $match: { gymId: gymOid } },
-                { $unwind: "$paymentHistory" },
-                { $match: dateMatch },
-                {
-                    $group: {
-                        _id: {
-                            $dateToString: { format: '%Y-%m-%d', date: '$paymentHistory.date', timezone: IST },
-                        },
-                        amount: { $sum: '$paymentHistory.amount' },
-                    },
-                },
-                { $sort: { _id: 1 } },
-            ]),
-            Client.aggregate([
-                { $match: { gymId: gymOid } },
-                { $unwind: "$paymentHistory" },
-                { $match: dateMatch },
-                {
-                    $group: {
-                        _id: "$paymentHistory.method",
-                        total: { $sum: "$paymentHistory.amount" },
-                        count: { $sum: 1 },
-                    },
-                },
-            ]),
+        const day = sql<string>`to_char(${payments.paidAt} at time zone ${IST_SQL}, 'YYYY-MM-DD')`;
+        const [dailyRaw, paymentMethodsRaw, transactionsRaw, [{ total }]] = await Promise.all([
+            db.select({ day, amount: sumOf(payments.amount) }).from(payments).where(inRange).groupBy(day).orderBy(day),
+            db.select({ method: payments.method, total: sumOf(payments.amount), count: count() }).from(payments)
+                .where(inRange)
+                .groupBy(payments.method),
             transactionsQuery,
-            Client.aggregate([
-                { $match: { gymId: gymOid } },
-                { $unwind: "$paymentHistory" },
-                { $match: dateMatch },
-                { $group: { _id: null, total: { $sum: "$paymentHistory.amount" } } },
-            ]),
+            db.select({ total: sumOf(payments.amount) }).from(payments).where(inRange),
         ]);
 
-        const amountByDate = new Map(dailyRaw.map((row) => [row._id, row.amount]));
+        const amountByDate = new Map(dailyRaw.map((row) => [row.day, row.amount]));
         const daily: { date: string; amount: number }[] = [];
         for (let d = dayjs(from).tz(IST); d.isBefore(dayjs(toExclusive)); d = d.add(1, 'day')) {
             const key = d.format('YYYY-MM-DD');
@@ -463,10 +359,10 @@ export const getRevenueStats = async (request: FastifyRequest, reply: FastifyRep
         return reply.send({
             success: true,
             data: {
-                total: totalRaw[0]?.total || 0,
+                total,
                 daily,
                 paymentMethods: paymentMethodsRaw.map((p) => ({
-                    method: p._id,
+                    method: p.method,
                     amount: p.total,
                     count: p.count,
                 })),
@@ -497,19 +393,16 @@ export const getActivities = async (request: FastifyRequest, reply: FastifyReply
         }
         const page = Math.max(1, parseInt(query.page || '1', 10) || 1);
         const limit = Math.min(50, Math.max(1, parseInt(query.limit || '20', 10) || 20));
-        const items = await Activity.find({
-            gymId,
-            date: { $gte: range.from, $lt: range.toExclusive },
-        })
-            .sort({ date: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit + 1)
-            .lean();
+        const items = await db.select().from(activities)
+            .where(and(eq(activities.branchId, gymId), gte(activities.date, range.from), lt(activities.date, range.toExclusive)))
+            .orderBy(desc(activities.date))
+            .offset((page - 1) * limit)
+            .limit(limit + 1);
         const hasMore = items.length > limit;
         return reply.send({
             success: true,
             data: {
-                items: hasMore ? items.slice(0, limit) : items,
+                items: (hasMore ? items.slice(0, limit) : items).map(serializeActivity),
                 page,
                 hasMore,
             },

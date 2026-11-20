@@ -28,7 +28,7 @@ GymKarta is a **gym membership management app for gym owners/admins** in India. 
 ```
 Gymetric/
 ├── frontend/Gymetric/     # Expo/React Native mobile app (primary UI)
-├── server/                # Fastify + MongoDB API
+├── server/                # Fastify + Postgres (Drizzle) API
 ├── .github/workflows/     # CI + daily membership expiry cron
 ├── .agent/plans/          # Internal planning docs
 ├── .cursor/plans/         # Cursor implementation plans
@@ -63,7 +63,7 @@ Gymetric/
 | Layer | Technology |
 |-------|------------|
 | Server | Fastify 5 |
-| Database | MongoDB + Mongoose |
+| Database | Postgres + Drizzle ORM (`DATABASE_URL`; embedded PGlite in `server/.data/pglite` when unset). Schema in `src/db/schema.ts`, migrations in `server/drizzle/` run on start |
 | Auth | JWT + bcrypt |
 | Uploads | Cloudinary |
 | Cache | `node-cache` (dashboard summary, client lists) |
@@ -73,17 +73,21 @@ Gymetric/
 
 **API prefixes:** `/api/auth`, `/api/client`, `/api/membership`, `/api/dashboard`, `/api/gym`, `/api/settings`, `/api/upload`, `/api/system`
 
-### Data Models (MongoDB)
+### Data Model (Postgres, `server/src/db/schema.ts`)
 
-| Model | Purpose |
+| Table | Purpose |
 |-------|---------|
-| `Gym` | Gym business profile (name, address, logo, owner) |
-| `User` | Admin user account |
-| `Client` | Gym member with membership status, payment history |
-| `Memberships` | Plan templates (name, price, duration) |
-| `AssignedMembership` | Active/upcoming membership instance for a client |
-| `Activity` | Audit log (onboarding, renewal, expiry, payment) — 90-day TTL |
-| `Settings` | WhatsApp notification toggles per gym |
+| `organizations`, `branches` | Gym business profile. The JWT `gymId` is a branch id |
+| `users` | Admin user account, push preferences |
+| `branch_settings` | WhatsApp config and toggles, receipt settings |
+| `packages` | Plan templates (name, price, duration) |
+| `members` | Gym member with status, balance, active/upcoming membership |
+| `memberships`, `membership_members`, `membership_pauses` | Membership instances, who shares them, pause history |
+| `payments` | Payment history (formerly embedded in the Mongo client) |
+| `activities` | Audit log; daily expiry job prunes rows older than 180 days |
+| `message_logs` | WhatsApp send log and delivery status |
+
+API responses keep the old Mongoose JSON shape (`_id`, populated refs) via `src/db/serializers.ts`, so the app did not change. Every table has `legacy_mongo_id` from the one-time Mongo import (`src/scripts/migrateMongoToPostgres.ts`, runbook in `server/notes/postgres-cutover.md`); old tokens carrying ObjectIds are mapped in `middleware/authenticate.ts`.
 
 **Client membership statuses:** `active`, `expired`, `trial_expired`, `future`, `trial`, `inactive`
 
@@ -360,7 +364,8 @@ Extended `getDashboardSummary` with: `expiredMembers`, `retentionRate`, `avgReve
 
 ### Backend
 
-- Env vars in `server/.env` (MongoDB URI, JWT secret, Cloudinary, Firebase admin, WhatsApp, Sentry)
+- Env vars in `server/.env` (`DATABASE_URL`, JWT secret, Cloudinary, Firebase admin, WhatsApp, Sentry). `MONGO_URI` is only used by the migration script
+- `npm run smoke:writes` runs every write flow in-process against a throwaway embedded database
 - Start: from `server/` directory
 
 ---
@@ -398,7 +403,7 @@ Priority recommendations from product analysis (Phase 7 of overhaul plan):
 | Item | Location | Notes |
 |------|----------|-------|
 | `Helper.js.bak`, `Constants.js.bak` | `server/src/utils/` | Backup files, can delete |
-| Manual test scripts | `server/src/tests/` | Not in CI |
+| Mongoose models and Mongo dev scripts | `server/src/models/`, `server/src/scripts/seed*.ts`, `migrateClientIndexes.ts` | Kept only for the Mongo import; remove after the two-week rollback window |
 | `expo-localization` plugin | `app.config.ts` | Still in plugins; i18n removed — can remove plugin if unused |
 | Ignite README references | `frontend/Gymetric/README.md` | Still mentions deleted Ignite components |
 | Maestro flows | `.maestro/` | May need update after i18n/login removal |
