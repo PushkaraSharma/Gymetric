@@ -29,10 +29,10 @@ const PLANS: { plan: SubscriptionPlan; pitch: string; lead?: string; points: str
   },
   {
     plan: 'pro',
-    pitch: 'Stop chasing renewals and dues by hand.',
+    pitch: 'Stop chasing renewals by hand.',
     lead: 'Everything in Free, plus',
     points: [
-      'Automatic WhatsApp welcome, renewal, expiry and due reminders',
+      'Automatic WhatsApp welcome, renewal and expiry messages, plus a reminder before each membership ends',
       'WhatsApp chat with clients and a full message log',
       'Logins for trainers and front desk, with roles',
       'Reports for any dates, as PDF or Excel',

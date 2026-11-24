@@ -12,6 +12,7 @@ import { selectGymInfo } from '@/redux/state/GymStates'
 import { useFeatures, usePermissions, useViewer, type Feature } from '@/utils/permissions'
 import { PlanChip } from '@/components/premium/PlanChip'
 import { showPremium } from '@/utils/premium'
+import { UpsellCard } from '@/components/premium/UpsellCard'
 import { OTA_VERSION } from '@/utils/Constants'
 
 type Tile = {
@@ -68,6 +69,16 @@ const MoreScreen = () => {
           </View>
           {canEditGym ? <ChevronRight size={20} color={colors.textDim} /> : null}
         </Pressable>
+
+        <UpsellCard
+          place="more_plans"
+          feature="whatsapp"
+          title="Get more with GymKarta Pro"
+          body="Automatic WhatsApp messages, logins for your staff and reports for any dates."
+          action="Compare plans"
+          onOpen={() => navigate('Plans')}
+          style={{ marginBottom: spacing.md }}
+        />
 
         <View style={$grid}>
           {tiles.filter((tile) => tile.visible && (isOwner || !tile.feature || has(tile.feature))).map((tile) => {

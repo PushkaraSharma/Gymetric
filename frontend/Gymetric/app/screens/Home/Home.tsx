@@ -28,6 +28,7 @@ import { WhatsNewModal } from '@/components/WhatsNewModal'
 import { load, save } from '@/utils/LocalStorage'
 import { useFeature, usePermissions, useViewer } from '@/utils/permissions'
 import { QuickActionFab, type QuickAction } from '@/components/dashboard/QuickActionFab'
+import { UpsellCard } from '@/components/premium/UpsellCard'
 
 let hasShownBannerSession = false
 
@@ -274,6 +275,16 @@ const Home = () => {
                   variant="warning"
                 />
               )}
+
+              {/* One sales message at a time: the WhatsApp banner wins while it shows. */}
+              {(summary?.expiringIn7Days ?? 0) > 0 && !showBanner ? (
+                <UpsellCard
+                  place="home_expiring"
+                  feature="whatsapp"
+                  title={`${summary?.expiringIn7Days} membership${summary?.expiringIn7Days === 1 ? '' : 's'} end this week`}
+                  body="With Pro, each client gets a WhatsApp reminder before it ends, without anyone typing it."
+                />
+              ) : null}
 
               {canClients && (summary?.recentlyExpiredMembers ?? 0) > 0 && (
                 <ActionAlertCard

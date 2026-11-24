@@ -146,12 +146,14 @@ I'll go through it on the simulator and propose small layout changes one at a ti
 Each step is a self-contained chunk. After each one: both typechecks, then a simulator walk-through as **owner** and as a **staff role** (and as a Free gym once plans exist).
 
 1. ✅ **Foundations** (branch `gymkarta-phase-3`, 24 Nov): CoreWave permission keys (`clients.archive`, `settings.branch`, `data.delete`) + migration 0004; `branches.plan` / `plan_expires_at` with grandfathering; `requireFeature` on WhatsApp, staff, roles, reader and older reports; staff logins off on Free; `subscription` in gym info; `useFeature`, `PlanChip`, `PremiumSheet`; `npm run plan`; `server/notes/api-parity.md`. CoreWave's `bill.joining_date` / `bill.billing_date` / `bill.adjust_trial` are **not** added yet: each is added together with the screen that enforces it, so Access control never shows a tick that does nothing.
-2. **My Profile rewrite** + moving items between Profile, More and Settings.
-3. **Dashboard** permission gating + "My collections" variant + add button.
-4. **Settings parity:** Automatic messages, data export, receipts moved.
-5. **Client profile** additions.
-6. **WhatsApp** chat polish + report.
-7. **Upsell placements** + Plans screen + analytics events.
+2. ✅ **My Profile** (`e2a5192`): gradient header, Account / Preferences / Your plan / Help / Log out; Plans screen; Home avatar fixed.
+3. ✅ **Home by access** (`72c8b96`): "My collections" card for staff without revenue access; cards gated by permission; + expands to Add client / Renew; "Member" → "Client".
+4. ✅ **Settings** (`0801af5`): reminder 1–7 days before the end (server + app); Export clients (Pro); Receipts moved into Settings.
+5. ✅ **Client profile** (`273ec78`): payment edit/delete with reason and balance correction (CoreWave paths); Upgrade screen; Collect prefilled; in-app WhatsApp on Pro; activity chips; fingerprint card on Max.
+6. ✅ **WhatsApp** (`21ac6c6`): older messages on scroll (50 per page, `before` cursor); WhatsApp colours; "Report" tab.
+7. ✅ **Upsell**: owner-only nudges with a weekly cap and a 3-day quiet start (Home "N memberships end this week", More Pro banner); WhatsApp settings row locked on Free; plan state refreshes on `upgrade_required`, background reads stay quiet; sales copy matches what Pro actually sends (no dues reminders).
+
+**Left out on purpose:** sending the invoice with WhatsApp messages (needs two Meta-approved templates per gym and a server PDF; skipped 24 Nov); broadcast (later); visits calendar on Max.
 
 ## 6. Decisions (answered 24 Nov 2026)
 1. **Removed Phase 2 UI was intentional.** Start from the current client profile and Home. Upgrade gets a new screen in the current style.

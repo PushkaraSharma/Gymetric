@@ -22,6 +22,7 @@ export const AnalyticsEvents = {
   SCREEN_VIEWED: 'screen_view',
   PREMIUM_SHEET_SHOWN: 'premium_sheet_shown',
   PREMIUM_CONTACT: 'premium_contact',
+  NUDGE_SHOWN: 'nudge_shown',
 } as const
 
 export const trackEvent = async (

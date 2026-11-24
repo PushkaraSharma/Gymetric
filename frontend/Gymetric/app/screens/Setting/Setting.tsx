@@ -22,6 +22,7 @@ const Setting = () => {
   const viewer = useViewer()
   const hasStaff = useFeature('staff')
   const hasReports = useFeature('reports')
+  const planHasWhatsapp = useFeature('whatsapp')
   const clients = useAppSelector(selectAllClients)
   const gym = useAppSelector(selectGymInfo)
   const canWhatsapp = can('whatsapp.settings')
@@ -59,13 +60,22 @@ const Setting = () => {
               <View style={{ padding: spacing.md }}>
                 <Skeleton width="100%" height={40} borderRadius={12} />
               </View>
-            ) : (
+            ) : planHasWhatsapp ? (
               <MenuRow
                 icon={MessageCircle}
                 label={hasWhatsapp ? 'WhatsApp settings' : 'Connect WhatsApp'}
                 description={hasWhatsapp ? 'Automatic reminders and templates' : 'Send reminders and receipts on WhatsApp'}
                 color={colors.success}
                 onPress={() => navigate(hasWhatsapp ? 'Notification Settings' : 'WhatsApp Premium')}
+              />
+            ) : (
+              <MenuRow
+                icon={MessageCircle}
+                label="WhatsApp automation"
+                description="Welcome, renewal and expiry messages"
+                color={colors.success}
+                onPress={() => showPremium('whatsapp', 'settings_whatsapp')}
+                right={<PlanChip feature="whatsapp" />}
               />
             )}
           </MenuSection>
@@ -87,7 +97,7 @@ const Setting = () => {
             <MenuRow
               icon={Download}
               label="Export clients"
-              description="Every client with plan, end date and balance"
+              description="Plan, end date and balance per client"
               onPress={exportClients}
               right={hasReports ? undefined : <PlanChip feature="reports" />}
             />

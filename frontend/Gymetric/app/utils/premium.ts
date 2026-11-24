@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Linking } from 'react-native'
-import type { Feature, SubscriptionPlan } from '@/utils/permissions'
+import { useFeature, useViewer, type Feature, type SubscriptionPlan } from '@/utils/permissions'
+import { useAppSelector } from '@/redux/Hooks'
+import { selectGymInfo } from '@/redux/state/GymStates'
+import { load, save } from '@/utils/LocalStorage'
 import { SUPPORT_PHONE } from '@/utils/Constants'
 import { AnalyticsEvents, trackEvent } from '@/services/analyticsService'
 
@@ -52,10 +55,10 @@ export const openSupportChat = () => whatsappTeam('Hi GymKarta team, I need help
 export const FEATURE_COPY: Record<Feature, { title: string; pitch: string; points: string[] }> = {
   whatsapp: {
     title: 'WhatsApp automation',
-    pitch: 'Reminders, receipts and replies go out on WhatsApp without anyone typing them.',
+    pitch: 'Welcome, renewal and expiry messages go out on WhatsApp without anyone typing them.',
     points: [
       'Welcome, renewal and expiry messages sent automatically',
-      'Due and expiry reminders days before the end date',
+      'A reminder a few days before each membership ends',
       'Chat with clients from the app, with a full message log',
     ],
   },
@@ -86,4 +89,35 @@ export const FEATURE_COPY: Record<Feature, { title: string; pitch: string; point
       'Staff attendance with late and absent marked for you',
     ],
   },
+}
+
+const NUDGE_SNOOZE_MS = 7 * 86_400_000
+const NEW_GYM_QUIET_MS = 3 * 86_400_000
+const nudgeKey = (gymId: string | undefined, place: string) => `nudge:${gymId ?? 'gym'}:${place}`
+
+// Whether an in-app Pro nudge may show at `place`: owners only, only while the plan lacks the feature,
+// never in a gym's first 3 days, and at most once a week per place after it is dismissed.
+export function useNudge(place: string, feature: Feature) {
+  const gym = useAppSelector(selectGymInfo)
+  const isOwner = useViewer().roleKey === 'owner'
+  const hasFeature = useFeature(feature)
+  const [dismissedAt, setDismissedAt] = useState<number | null>(() => load<number>(nudgeKey(gym?._id, place)))
+  const createdAt = gym?.createdAt ? new Date(gym.createdAt).getTime() : 0
+  const visible =
+    isOwner &&
+    !hasFeature &&
+    Date.now() - createdAt > NEW_GYM_QUIET_MS &&
+    (!dismissedAt || Date.now() - dismissedAt > NUDGE_SNOOZE_MS)
+
+  useEffect(() => {
+    if (visible) trackEvent(AnalyticsEvents.NUDGE_SHOWN, { place, feature })
+  }, [visible, place, feature])
+
+  const dismiss = () => {
+    const now = Date.now()
+    save(nudgeKey(gym?._id, place), now)
+    setDismissedAt(now)
+  }
+  const open = () => showPremium(feature, `nudge_${place}`)
+  return { visible, dismiss, open }
 }

@@ -52,9 +52,12 @@ export class Api {
         return this.apiRequest(method, url, body, params, retries + 1);
       }
       const message = response?.data?.message ?? response?.data?.error ?? "Network error";
-      // A feature the gym's plan doesn't include: a gentle toast that opens the plans sheet, never an error.
+      // A feature the gym's plan doesn't include. The app's plan state was stale (or the plan just changed), so refresh
+      // it; actions the user took get a gentle toast that opens the plans sheet, background reads stay quiet.
       if (response.status === 403 && (response.data as any)?.code === 'upgrade_required') {
         const feature = (response.data as any).feature as Feature
+        if (url !== '/api/gym/info') this.gymInfo()
+        if (method === 'get') return { kind: 'error', message, status: response.status }
         Toast.show({
           type: 'info',
           text1: `Part of GymKarta ${FEATURE_PLAN[feature] === 'max' ? 'Max' : 'Pro'}`,

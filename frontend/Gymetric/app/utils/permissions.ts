@@ -39,12 +39,15 @@ export const FEATURE_PLAN: Record<Feature, Exclude<SubscriptionPlan, "free">> = 
   biometric: "max",
 }
 
-// A server from before plans sends no `subscription` and gates nothing, so nothing is locked.
+// A server from before plans sends gym info without `subscription` and gates nothing, so nothing is locked.
 const UNGATED: Subscription = { plan: "max", expiresAt: null, features: ["whatsapp", "staff", "reports", "biometric"] }
+// Until gym info has loaded, nothing paid is assumed, so background calls (the unread badge) don't hit locked endpoints.
+const LOADING: Subscription = { plan: "free", expiresAt: null, features: [] }
 
 export function useSubscription(): Subscription {
   const gymInfo = useAppSelector(selectGymInfo)
-  return (gymInfo?.subscription as Subscription) ?? UNGATED
+  if (!gymInfo) return LOADING
+  return (gymInfo.subscription as Subscription) ?? UNGATED
 }
 
 export function useFeatures() {
