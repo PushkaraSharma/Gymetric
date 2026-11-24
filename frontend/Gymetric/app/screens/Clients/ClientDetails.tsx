@@ -1,5 +1,5 @@
 import { Platform, Pressable, ScrollView, View, Linking, ViewStyle, Alert, StyleSheet } from 'react-native'
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Screen } from '@/components/Screen'
 import { $styles } from '@/theme/styles'
 import { useAppTheme } from '@/theme/context'
@@ -22,11 +22,17 @@ import {
 } from 'lucide-react-native'
 import { Header } from '@/components/Header'
 import { ImagePreviewModal } from '@/components/common/ImagePreviewModal'
-import { whatsappStatusLabel } from '@/utils/whatsappLabels'
+import { whatsappStatusLabel, whatsappTemplateLabel } from '@/utils/whatsappLabels'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useFeatures, usePermissions } from '@/utils/permissions'
 import EditPaymentModal from './EditPaymentModal'
 import { FingerprintCard } from '@/components/biometric/FingerprintCard'
+
+const whatsappActivityTitle = (item: any) => {
+    if (item.direction === 'in' || item.template === 'inbound') return 'WhatsApp reply from client'
+    if (!item.template || item.template === 'chat') return 'WhatsApp message'
+    return `WhatsApp: ${whatsappTemplateLabel(item.template)}`
+}
 
 const ACTIVITY_GROUPS = ['Membership', 'Payment', 'Freeze', 'Edits', 'WhatsApp'] as const
 type ActivityGroup = 'All' | (typeof ACTIVITY_GROUPS)[number]
@@ -152,7 +158,14 @@ const ClientDetails = ({ route }: any) => {
     const isPaused = client?.membershipStatus === 'paused'
     const canEdit = displayMembership && ['active', 'future', 'trial', 'paused'].includes(displayMembership?.status)
     // Same conditions the server checks: an active plan paid for by this client, nothing queued after it.
-    const canUpgrade = can('clients.upgrade') && client?.activeMembership?.status === 'active' && client?.role === 'primary' && !client?.upcomingMembership
+    const mayUpgrade = can('clients.upgrade') && client?.activeMembership?.status === 'active' && client?.role === 'primary' && !client?.upcomingMembership
+    // Only offer Upgrade when the gym has a pricier plan of the same type to move to.
+    const [upgradeOptions, setUpgradeOptions] = useState(0)
+    useEffect(() => {
+        if (!mayUpgrade || !client?._id) return setUpgradeOptions(0)
+        api.upgradeOptions(client._id).then((response) => setUpgradeOptions(response.kind === 'ok' ? response.data?.options?.length ?? 0 : 0))
+    }, [mayUpgrade, client?._id, client?.activeMembership?._id])
+    const canUpgrade = mayUpgrade && upgradeOptions > 0
 
     const totalPaid = useMemo(() => {
         if (!client?.paymentHistory?.length) return 0
@@ -572,7 +585,7 @@ const ClientDetails = ({ route }: any) => {
                                             : <Activity size={16} color={colors.textDim} />}
                                     </View>
                                     <View style={{ flex: 1, marginLeft: spacing.sm }}>
-                                        <Text weight="medium" size="xs">{item.title}</Text>
+                                        <Text weight="medium" size="xs">{isWhatsApp ? whatsappActivityTitle(item) : item.title}</Text>
                                         {item.description && <Text size="xxs" style={{ color: colors.textDim }}>{item.description}</Text>}
                                         {/* {isWhatsApp && waStatus === 'failed' && item.errorMessage ? (
                                             <Text size="xxs" style={{ color: colors.error, marginTop: 2 }}>{item.errorMessage}</Text>

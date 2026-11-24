@@ -159,6 +159,12 @@ async function run(app: FastifyInstance) {
     res = await call('GET', '/api/client/stats');
     check(res.body.data?.totalClients === 2 && res.body.data.activeMembers === 2 && res.body.data.clientsWithBalance === 0, 'client stats', res.body);
 
+    console.log('upgrade options');
+    res = await call('GET', `/api/client/upgrade/options?clientId=${dependent._id}`);
+    check(res.status === 200 && res.body.data.options.length === 0 && !!res.body.data.reason, "a client who can't upgrade gets a reason, not an error", res.body);
+    res = await call('GET', `/api/client/upgrade/options?clientId=${primary._id}`);
+    check(res.status === 200 && res.body.data.current?.planName && Array.isArray(res.body.data.options), 'upgrade options for the paying client', res.body);
+
     console.log('payment edit and delete');
     const paid = (await call('GET', `/api/client/clientInfo?id=${primary._id}`)).body.data.paymentHistory.find((p: any) => p.remarks === 'rest');
     const paymentUrl = `/api/client/${primary._id}/payments/${paid._id}`;

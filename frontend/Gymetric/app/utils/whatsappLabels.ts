@@ -27,5 +27,6 @@ export const WHATSAPP_TEMPLATE_CHIPS = [
 export const whatsappTemplateLabel = (template?: string) =>
   (template && WHATSAPP_TEMPLATE_LABELS[template]) || template || 'WhatsApp'
 
+// "received" is only for client replies, so it has a label but no filter chip (the Report counts outbound only).
 export const whatsappStatusLabel = (status?: string) =>
-  (status && WHATSAPP_STATUS_LABELS[status]) || status || 'Unknown'
+  (status === 'received' ? 'Received' : status && WHATSAPP_STATUS_LABELS[status]) || status || 'Unknown'

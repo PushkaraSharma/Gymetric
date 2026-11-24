@@ -16,7 +16,8 @@ import { api } from '@/services/Api'
 
 type Option = { _id: string; planName: string; price: number; endDate: string; payable: number }
 type Context = {
-  current: { planName: string; startDate: string; endDate: string; totalAmount: number }
+  current: { planName: string; startDate: string; endDate: string; totalAmount: number } | null
+  reason?: string
   credit: number
   options: Option[]
   canDiscount: boolean
@@ -48,6 +49,8 @@ const UpgradeMembershipScreen = ({ route }: any) => {
   }, [clientId])
 
   const choice = context?.options.find((o) => o._id === planId) ?? null
+  // An upgrade keeps the current start date.
+  const startDate = context?.current?.startDate ?? ''
   const due = useMemo(() => (choice ? choice.payable - (Number(discount) || 0) : 0), [choice, discount])
 
   // Default to collecting the full difference whenever the plan or discount changes.
@@ -82,8 +85,12 @@ const UpgradeMembershipScreen = ({ route }: any) => {
   return (
     <Screen preset="fixed" safeAreaEdges={['bottom']} contentContainerStyle={{ flex: 1 }}>
       <Header title="Upgrade membership" leftIcon="caretLeft" onLeftPress={goBack} backgroundColor={colors.surface} safeAreaTop />
-      {!context ? (
-        error ? <NoDataFound title="Can't upgrade" msg={error} /> : <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.primary} />
+      {!context?.current ? (
+        error || context?.reason ? (
+          <NoDataFound title="Can't upgrade" msg={context?.reason ?? error ?? ''} />
+        ) : (
+          <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.primary} />
+        )
       ) : (
         <>
           <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
@@ -111,7 +118,7 @@ const UpgradeMembershipScreen = ({ route }: any) => {
                     <View style={$row}>
                       <View style={{ flex: 1 }}>
                         <Text weight="bold" text={option.planName} />
-                        <Text size="xs" style={{ color: colors.textDim }} text={`${day(context.current.startDate)} – ${day(option.endDate)} · ${rupees(option.price)}`} />
+                        <Text size="xs" style={{ color: colors.textDim }} text={`${day(startDate)} – ${day(option.endDate)} · ${rupees(option.price)}`} />
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
                         <Text size="xxs" style={{ color: colors.textDim }} text="Pay" />

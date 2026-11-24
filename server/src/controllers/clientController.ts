@@ -648,7 +648,17 @@ export const upgradeOptions = async (request: FastifyRequest, reply: FastifyRepl
     try {
         const gymId = (request.user as any).gymId;
         const { clientId } = request.query as { clientId?: string };
-        const { current, credit, options } = await upgradeContext(db, gymId, clientId);
+        let context: Awaited<ReturnType<typeof upgradeContext>>;
+        try {
+            context = await upgradeContext(db, gymId, clientId);
+        } catch (error: any) {
+            // "Can't upgrade" is an answer here, not an error, so the profile can ask quietly and hide the action.
+            if (error instanceof HttpError && error.status === 400) {
+                return reply.send({ success: true, data: { current: null, credit: 0, options: [], reason: error.body?.message, canDiscount: false } });
+            }
+            throw error;
+        }
+        const { current, credit, options } = context;
         return reply.send({
             success: true,
             data: {
@@ -998,7 +1008,10 @@ export const getClientActivity = async (request: FastifyRequest, reply: FastifyR
             ...messages.map((m) => compact({
                 type: 'message',
                 activityType: 'WHATSAPP',
-                title: `WhatsApp: ${m.template}`,
+                title: m.template ? `WhatsApp: ${m.template}` : 'WhatsApp message',
+                // The app turns these into readable titles (template names are internal).
+                template: m.template,
+                direction: m.direction,
                 description: m.summary,
                 date: m.sentAt,
                 status: m.status,
