@@ -5,6 +5,7 @@ import { branches, branchSettings, users } from '../db/schema.js';
 import { serializeGym } from '../db/serializers.js';
 import { findBranch } from '../db/queries.js';
 import { accessOf, can, forbid } from '../services/access.js';
+import { gymPlanOf } from '../services/plan.js';
 import { displayName } from './authController.js';
 import { seedDemoData, clearSeededData } from "../services/seedDemoDataService.js";
 import { invalidateClientCaches } from "../utils/cache.js";
@@ -50,6 +51,8 @@ export const getGymInfo = async (request: any, reply: any) => {
                 viewerRole: access?.roleKey === 'owner' ? 'admin' : access?.roleKey ?? 'admin',
                 viewerName,
                 viewer,
+                // The GymKarta subscription (free | pro | max). "plan" in the app means a membership plan.
+                subscription: access?.plan ?? gymPlanOf(gymInfo),
             },
         });
     } catch (error: any) {
@@ -61,7 +64,7 @@ export const getGymInfo = async (request: any, reply: any) => {
 export const updateGymInfo = async (request: any, reply: any) => {
     try {
         const { gymId } = request.user;
-        if (!can(request, 'settings.gym')) return forbid(reply);
+        if (!can(request, 'settings.branch')) return forbid(reply);
         const body = request.body || {};
         const update: Partial<typeof branches.$inferInsert> = { updatedAt: new Date() };
         for (const key of GYM_FIELDS) {

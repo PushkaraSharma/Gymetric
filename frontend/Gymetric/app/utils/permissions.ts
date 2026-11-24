@@ -1,11 +1,12 @@
 import { useAppSelector } from "@/redux/Hooks"
 import { selectGymInfo } from "@/redux/state/GymStates"
 
+// Same keys as server/src/utils/permissions.ts (CoreWave names where the two products overlap).
 export type Permission =
   | "clients.view"
   | "clients.create"
   | "clients.edit"
-  | "clients.delete"
+  | "clients.archive"
   | "clients.renew"
   | "clients.freeze"
   | "clients.collect"
@@ -20,9 +21,40 @@ export type Permission =
   | "entrance.manage"
   | "whatsapp.chat"
   | "whatsapp.settings"
-  | "settings.gym"
+  | "settings.branch"
   | "settings.plans"
   | "settings.access"
+  | "data.delete"
+
+// GymKarta subscription. Mirrors server/src/utils/plans.ts.
+export type SubscriptionPlan = "free" | "pro" | "max"
+export type Feature = "whatsapp" | "staff" | "reports" | "biometric"
+export type Subscription = { plan: SubscriptionPlan; expiresAt: string | null; features: Feature[] }
+
+// The lowest plan that includes each feature, for PRO / MAX chips and the plans sheet.
+export const FEATURE_PLAN: Record<Feature, Exclude<SubscriptionPlan, "free">> = {
+  whatsapp: "pro",
+  staff: "pro",
+  reports: "pro",
+  biometric: "max",
+}
+
+// A server from before plans sends no `subscription` and gates nothing, so nothing is locked.
+const UNGATED: Subscription = { plan: "max", expiresAt: null, features: ["whatsapp", "staff", "reports", "biometric"] }
+
+export function useSubscription(): Subscription {
+  const gymInfo = useAppSelector(selectGymInfo)
+  return (gymInfo?.subscription as Subscription) ?? UNGATED
+}
+
+export function useFeatures() {
+  const { features } = useSubscription()
+  return (feature: Feature) => features.includes(feature)
+}
+
+export function useFeature(feature: Feature) {
+  return useFeatures()(feature)
+}
 
 export type Viewer = {
   userId?: string

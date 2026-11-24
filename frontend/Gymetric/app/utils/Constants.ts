@@ -26,3 +26,7 @@ export const ONBOARDING_PURPOSES = [
     { label: 'Rehabilitation', value: 'Rehabilitation' },
     { label: 'Stress Relief', value: 'Stress Relief' }
 ];
+// GymKarta team contact, used by Help center and every "Talk to us" / upgrade button.
+export const SUPPORT_PHONE = '+919354454113'
+export const SUPPORT_PHONE_DISPLAY = '+91 93544 54113'
+export const SUPPORT_EMAIL = 'indierootsapps@gmail.com'

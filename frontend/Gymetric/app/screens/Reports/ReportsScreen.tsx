@@ -15,6 +15,9 @@ import { useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo } from '@/redux/state/GymStates'
 import { isoDay } from '@/utils/time'
 import { Report, formatCell, shareReportCsv, shareReportPdf, summaryText } from '@/utils/reportExport'
+import { useFeature } from '@/utils/permissions'
+import { showPremium } from '@/utils/premium'
+import { PlanChip } from '@/components/premium/PlanChip'
 
 const KINDS = [
   { key: 'daybook', label: 'Day book' },
@@ -60,13 +63,22 @@ const ReportsScreen = () => {
   const [report, setReport] = useState<Report | null>(null)
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null)
+  // Free: this month only, no export (the server enforces the same).
+  const hasReports = useFeature('reports')
 
   const load = useCallback(async () => {
+    const now = new Date()
+    if (!hasReports && range.from < new Date(now.getFullYear(), now.getMonth(), 1)) {
+      showPremium('reports', 'reports_range')
+      setPreset('month')
+      setRange(presetRange('month'))
+      return
+    }
     setLoading(true)
     const response = await api.report(kind, isoDay(range.from), isoDay(range.to))
     setLoading(false)
     setReport(response.kind === 'ok' ? response.data : null)
-  }, [kind, range])
+  }, [kind, range, hasReports])
 
   useEffect(() => { load() }, [load])
 
@@ -90,6 +102,10 @@ const ReportsScreen = () => {
 
   const exportAs = async (format: 'csv' | 'pdf') => {
     if (!report) return
+    if (!hasReports) {
+      showPremium('reports', `reports_export_${format}`)
+      return
+    }
     if (report.rows.length === 0) {
       Toast.show({ type: 'info', text1: 'Nothing to export for these dates' })
       return
@@ -151,6 +167,7 @@ const ReportsScreen = () => {
                   loading={exporting === 'pdf'}
                   onPress={() => exportAs('pdf')}
                   LeftAccessory={() => <FileText size={16} color={colors.text} style={{ marginRight: 6 }} />}
+                  RightAccessory={hasReports ? undefined : () => <PlanChip feature="reports" style={{ marginLeft: 6 }} />}
                 />
                 <Button
                   title="CSV / Excel"
@@ -159,6 +176,7 @@ const ReportsScreen = () => {
                   loading={exporting === 'csv'}
                   onPress={() => exportAs('csv')}
                   LeftAccessory={() => <FileSpreadsheet size={16} color={colors.text} style={{ marginRight: 6 }} />}
+                  RightAccessory={hasReports ? undefined : () => <PlanChip feature="reports" style={{ marginLeft: 6 }} />}
                 />
               </View>
 

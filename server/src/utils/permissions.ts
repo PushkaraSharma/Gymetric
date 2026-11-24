@@ -1,8 +1,11 @@
+// Keys shared with CoreWave (packages/shared `permissions`) use CoreWave's exact names so roles,
+// checks and screens can move between the two products. GymKarta-only keys: attendance.manage,
+// door.open, entrance.manage, whatsapp.chat, whatsapp.settings, settings.plans.
 export const PERMISSIONS = [
     "clients.view",
     "clients.create",
     "clients.edit",
-    "clients.delete",
+    "clients.archive",
     "clients.renew",
     "clients.freeze",
     "clients.collect",
@@ -17,9 +20,10 @@ export const PERMISSIONS = [
     "entrance.manage",
     "whatsapp.chat",
     "whatsapp.settings",
-    "settings.gym",
+    "settings.branch",
     "settings.plans",
     "settings.access",
+    "data.delete",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -27,7 +31,7 @@ export const PERMISSION_CATALOG: { key: Permission; group: string; label: string
     { key: "clients.view", group: "Clients", label: "View the client list" },
     { key: "clients.create", group: "Clients", label: "Add a client" },
     { key: "clients.edit", group: "Clients", label: "Edit a client" },
-    { key: "clients.delete", group: "Clients", label: "Delete a client or membership" },
+    { key: "clients.archive", group: "Clients", label: "Delete a client" },
     { key: "clients.renew", group: "Clients", label: "Renew a membership" },
     { key: "clients.freeze", group: "Clients", label: "Freeze and resume" },
     { key: "clients.collect", group: "Clients", label: "Collect a payment" },
@@ -42,9 +46,10 @@ export const PERMISSION_CATALOG: { key: Permission; group: string; label: string
     { key: "entrance.manage", group: "Entrance", label: "Pair and switch the reader" },
     { key: "whatsapp.chat", group: "WhatsApp", label: "Chat with clients" },
     { key: "whatsapp.settings", group: "WhatsApp", label: "Change WhatsApp settings" },
-    { key: "settings.gym", group: "Settings", label: "Edit gym info and receipts" },
+    { key: "settings.branch", group: "Settings", label: "Edit gym info and receipts" },
     { key: "settings.plans", group: "Settings", label: "Edit membership plans" },
     { key: "settings.access", group: "Settings", label: "Edit roles and access" },
+    { key: "data.delete", group: "Data", label: "Delete records (bills, memberships)" },
 ];
 
 export const isPermission = (value: unknown): value is Permission =>

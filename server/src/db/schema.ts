@@ -43,6 +43,9 @@ export const branches = pgTable("branches", {
     gstin: text("gstin"),
     timings: text("timings"),
     attendanceEnabled: boolean("attendance_enabled").notNull().default(false),
+    // GymKarta plan: free | pro | max (see utils/plans.ts). A past plan_expires_at means Free.
+    plan: text("plan").notNull().default("free"),
+    planExpiresAt: ts("plan_expires_at"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
 });

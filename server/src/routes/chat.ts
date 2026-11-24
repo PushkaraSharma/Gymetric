@@ -4,7 +4,7 @@ import { db } from "../db/client.js";
 import { members, memberships, messageLogs, users } from "../db/schema.js";
 import { findBranch, findMember, findSettings } from "../db/queries.js";
 import { whatsappConfig } from "../db/serializers.js";
-import { requirePermission } from "../services/access.js";
+import { requireFeature, requirePermission } from "../services/access.js";
 import { sendWhatsAppTemplate, sendWhatsAppText, toWhatsAppNumber } from "../services/Whatsapp.js";
 import { formatShortDate, getISTMidnightToday } from "../utils/timeUtils.js";
 
@@ -76,6 +76,7 @@ const whatsappReady = async (gymId: string) => {
 
 export async function chatRoutes(fastify: FastifyInstance) {
     fastify.addHook("onRequest", fastify.authenticate);
+    fastify.addHook("preHandler", requireFeature("whatsapp"));
     const canChat = { preHandler: requirePermission("whatsapp.chat") };
 
     fastify.get("/unread", canChat, async (request: FastifyRequest) => {

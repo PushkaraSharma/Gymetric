@@ -14,6 +14,7 @@ import { and, eq, getTableColumns, inArray, isNotNull, notInArray, sql, type SQL
 import type { PgTable } from 'drizzle-orm/pg-core';
 import { closeDatabase, openDatabase, type Tx } from '../db/client.js';
 import { danglingUuid } from '../db/legacyIds.js';
+import { grandfatherPlans } from '../services/plan.js';
 import {
     activities,
     branchSettings,
@@ -575,6 +576,8 @@ async function main() {
         try {
             await db.transaction(async (tx) => {
                 report = await migrateGym(tx, gym);
+                // Imported gyms that already use WhatsApp or staff logins keep them (no-op once a gym has a paid plan).
+                await grandfatherPlans(tx);
                 if (report.mismatches.length) throw new Error('verification failed; rolled back');
                 if (dryRun) throw new DryRunRollback();
             }).catch((error) => {

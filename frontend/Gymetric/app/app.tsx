@@ -19,6 +19,7 @@ import Toast from 'react-native-toast-message';
 import { Provider } from 'react-redux';
 import { store } from "./redux/Store"
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { PremiumSheet } from "@/components/premium/PremiumSheet";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useToastConfig } from "./components/ToastConfig"
 import { trackEvent, AnalyticsEvents } from "./services/analyticsService"
@@ -85,6 +86,7 @@ export function App() {
                   onStateChange={onNavigationStateChange}
                 />
                 <ToastApp />
+                <PremiumSheet />
               </BottomSheetModalProvider>
             </ThemeProvider>
           </Provider>

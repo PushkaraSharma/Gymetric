@@ -5,6 +5,8 @@ import { store } from "@/redux/Store"
 import { setAllClients, setGymInfo } from "@/redux/state/GymStates"
 import Toast from "react-native-toast-message"
 import { ApiConfig, ApiResult, BackendResponse } from "@/utils/types"
+import { FEATURE_PLAN, type Feature } from "@/utils/permissions"
+import { showPremium } from "@/utils/premium"
 
 export const DEFAULT_API_CONFIG: ApiConfig = {
   url: Config.API_URL,
@@ -50,6 +52,20 @@ export class Api {
         return this.apiRequest(method, url, body, params, retries + 1);
       }
       const message = response?.data?.message ?? response?.data?.error ?? "Network error";
+      // A feature the gym's plan doesn't include: a gentle toast that opens the plans sheet, never an error.
+      if (response.status === 403 && (response.data as any)?.code === 'upgrade_required') {
+        const feature = (response.data as any).feature as Feature
+        Toast.show({
+          type: 'info',
+          text1: `Part of GymKarta ${FEATURE_PLAN[feature] === 'max' ? 'Max' : 'Pro'}`,
+          text2: 'Tap to see what you get',
+          onPress: () => {
+            Toast.hide()
+            showPremium(feature, 'api')
+          },
+        })
+        return { kind: 'error', message, status: response.status }
+      }
       const inactive = response.status === 401 && (response.data as any)?.code === 'inactive';
       const title = inactive
         ? 'Access turned off'

@@ -3,7 +3,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../db/client.js";
 import { roles, users } from "../db/schema.js";
 import { PERMISSION_CATALOG, isPermission } from "../utils/permissions.js";
-import { invalidateAccess, requirePermission, roleCounts } from "../services/access.js";
+import { invalidateAccess, requireFeature, requirePermission, roleCounts } from "../services/access.js";
 
 const gymOf = (request: FastifyRequest) => (request.user as { gymId: string }).gymId;
 
@@ -21,6 +21,7 @@ const parseName = (value: unknown) => String(value ?? "").trim().slice(0, 40);
 
 export async function roleRoutes(fastify: any) {
     fastify.addHook("onRequest", fastify.authenticate);
+    fastify.addHook("preHandler", requireFeature("staff"));
 
     // Any logged-in user can read roles: the staff form needs them and so does the viewer's own role.
     fastify.get("/", async (request: FastifyRequest, reply: FastifyReply) => {

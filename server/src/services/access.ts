@@ -3,6 +3,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { db, type Executor } from "../db/client.js";
 import { branches, roles, staff, users } from "../db/schema.js";
 import { PERMISSIONS, SYSTEM_ROLES, type Permission } from "../utils/permissions.js";
+import type { Feature } from "../utils/plans.js";
+import { gymPlanOf, type GymPlan } from "./plan.js";
 
 export type Access = {
     userId: string;
@@ -12,7 +14,12 @@ export type Access = {
     roleKey: string | null;
     roleName: string;
     permissions: Permission[];
+    plan: GymPlan;
 };
+
+// Staff logins are a paid feature. On a plan without it, every login except the owner's is turned off.
+export const loginAllowed = (opts: { isOwner: boolean; userActive: boolean; staffActive: boolean; plan: GymPlan }) =>
+    opts.userActive && opts.staffActive && (opts.isOwner || opts.plan.features.includes("staff"));
 
 // Inserts any system role the branch is missing. Safe to call on every gym creation and at startup.
 export async function ensureRoles(branchId: string, exec: Executor = db) {
@@ -63,8 +70,11 @@ export async function loadAccess(userId: string): Promise<Access | null> {
             roleName: roles.name,
             permissions: roles.permissions,
             staffActive: staff.active,
+            plan: branches.plan,
+            planExpiresAt: branches.planExpiresAt,
         })
         .from(users)
+        .innerJoin(branches, eq(branches.id, users.branchId))
         .leftJoin(roles, eq(roles.id, users.roleId))
         .leftJoin(staff, eq(staff.userId, users.id))
         .where(eq(users.id, userId))
@@ -72,10 +82,12 @@ export async function loadAccess(userId: string): Promise<Access | null> {
     let access: Access | null = null;
     if (row) {
         const isOwner = row.roleKey === "owner" || (!row.roleId && keyForLegacyRole(row.legacyRole) === "owner");
+        const plan = gymPlanOf(row);
         access = {
             userId: row.userId,
             branchId: row.branchId,
-            isActive: row.isActive && row.staffActive !== false,
+            plan,
+            isActive: loginAllowed({ isOwner, userActive: row.isActive, staffActive: row.staffActive !== false, plan }),
             roleId: row.roleId,
             roleKey: isOwner ? "owner" : row.roleKey,
             roleName: row.roleName ?? (isOwner ? "Owner" : row.legacyRole),
@@ -102,6 +114,23 @@ export const requirePermission =
         if (anyOf.some((p) => can(request, p))) return;
         return reply.status(403).send({ success: false, message: "You don't have access to this. Ask the gym owner." });
     };
+
+export const hasPlanFeature = (request: FastifyRequest, feature: Feature) =>
+    accessOf(request)?.plan.features.includes(feature) ?? false;
+
+export const upgradeRequired = (reply: FastifyReply, feature: Feature) =>
+    reply.status(403).send({
+        success: false,
+        code: "upgrade_required",
+        feature,
+        message: "This is part of a GymKarta paid plan. Contact us to upgrade.",
+    });
+
+// Route preHandler or plugin hook: `fastify.addHook("preHandler", requireFeature("whatsapp"))`.
+export const requireFeature = (feature: Feature) => async (request: FastifyRequest, reply: FastifyReply) => {
+    if (hasPlanFeature(request, feature)) return;
+    return upgradeRequired(reply, feature);
+};
 
 export const forbid = (reply: FastifyReply) =>
     reply.status(403).send({ success: false, message: "You don't have access to this. Ask the gym owner." });

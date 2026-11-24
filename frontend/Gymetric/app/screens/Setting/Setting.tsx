@@ -8,12 +8,15 @@ import { MenuRow, MenuSection } from '@/components/common/MenuRow'
 import { useAppTheme } from '@/theme/context'
 import { goBack, navigate } from '@/navigators/navigationUtilities'
 import { api } from '@/services/Api'
-import { usePermissions, useViewer } from '@/utils/permissions'
+import { useFeature, usePermissions, useViewer } from '@/utils/permissions'
+import { PlanChip } from '@/components/premium/PlanChip'
+import { showPremium } from '@/utils/premium'
 
 const Setting = () => {
   const { theme: { colors, spacing } } = useAppTheme()
   const can = usePermissions()
   const viewer = useViewer()
+  const hasStaff = useFeature('staff')
   const canWhatsapp = can('whatsapp.settings')
   const [hasWhatsapp, setHasWhatsapp] = useState<boolean | null>(null)
 
@@ -57,7 +60,8 @@ const Setting = () => {
               icon={ShieldCheck}
               label="Access control"
               description="Roles and what each one can do"
-              onPress={() => navigate('Access Control')}
+              onPress={() => (hasStaff ? navigate('Access Control') : showPremium('staff', 'settings_access'))}
+              right={hasStaff ? undefined : <PlanChip feature="staff" />}
             />
           </MenuSection>
         ) : null}

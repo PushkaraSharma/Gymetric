@@ -9,7 +9,9 @@ import { ThemedStyle } from '@/theme/types'
 import { navigate } from '@/navigators/navigationUtilities'
 import { useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo } from '@/redux/state/GymStates'
-import { usePermissions } from '@/utils/permissions'
+import { useFeatures, usePermissions, useViewer, type Feature } from '@/utils/permissions'
+import { PlanChip } from '@/components/premium/PlanChip'
+import { showPremium } from '@/utils/premium'
 import { OTA_VERSION } from '@/utils/Constants'
 
 type Tile = {
@@ -19,19 +21,23 @@ type Tile = {
   icon: React.ComponentType<{ size: number; color: string }>
   route: string
   visible: boolean
+  // Paid feature behind the tile. Owners see it locked with a chip; staff don't see it at all.
+  feature?: Feature
 }
 
 const MoreScreen = () => {
   const { theme: { colors, spacing, isDark }, themed } = useAppTheme()
   const gym = useAppSelector(selectGymInfo)
   const can = usePermissions()
-  const canEditGym = can('settings.gym')
+  const has = useFeatures()
+  const isOwner = useViewer().roleKey === 'owner'
+  const canEditGym = can('settings.branch')
 
   const tiles: Tile[] = [
-    { key: 'staff', label: 'Staff', hint: 'Team, shifts and logins', icon: Users, route: 'Staff', visible: can('staff.view') },
-    { key: 'attendance', label: 'Attendance', hint: 'Client check-ins and staff punches', icon: CalendarCheck, route: 'Attendance', visible: can('clients.view') || can('attendance.manage') },
+    { key: 'staff', label: 'Staff', hint: 'Team, shifts and logins', icon: Users, route: 'Staff', visible: can('staff.view'), feature: 'staff' },
+    { key: 'attendance', label: 'Attendance', hint: 'Client check-ins and staff punches', icon: CalendarCheck, route: 'Attendance', visible: can('clients.view') || can('attendance.manage'), feature: 'biometric' },
     { key: 'reports', label: 'Reports', hint: 'Day book, expiries, exports', icon: BarChart3, route: 'Reports', visible: can('reports.view') },
-    { key: 'entrance', label: 'Entrance reader', hint: 'Fingerprint door access', icon: Fingerprint, route: 'Entrance', visible: can('entrance.manage') || can('door.open') },
+    { key: 'entrance', label: 'Entrance reader', hint: 'Fingerprint door access', icon: Fingerprint, route: 'Entrance', visible: can('entrance.manage') || can('door.open'), feature: 'biometric' },
     { key: 'plans', label: 'Memberships', hint: 'Plans, prices and durations', icon: CreditCard, route: 'Memberships', visible: can('settings.plans') },
     { key: 'settings', label: 'Settings', hint: 'Notifications, WhatsApp, access', icon: Settings, route: 'Settings', visible: true },
   ]
@@ -64,19 +70,26 @@ const MoreScreen = () => {
         </Pressable>
 
         <View style={$grid}>
-          {tiles.filter((tile) => tile.visible).map((tile) => (
+          {tiles.filter((tile) => tile.visible && (isOwner || !tile.feature || has(tile.feature))).map((tile) => {
+            const locked = !!tile.feature && !has(tile.feature)
+            return (
             <Pressable
               key={tile.key}
               style={({ pressed }) => [themed($tile), { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => navigate(tile.route as any)}
+              onPress={() => (locked ? showPremium(tile.feature!, `more_${tile.key}`) : navigate(tile.route as any))}
+              accessibilityHint={locked ? 'Paid feature. Opens plan details.' : undefined}
             >
-              <View style={themed($tileIcon)}>
-                <tile.icon size={22} color={colors.primary} />
+              <View style={$tileTop}>
+                <View style={themed($tileIcon)}>
+                  <tile.icon size={22} color={locked ? colors.textDim : colors.primary} />
+                </View>
+                {locked ? <PlanChip feature={tile.feature!} /> : null}
               </View>
               <Text weight="semiBold" style={{ marginTop: spacing.sm }} text={tile.label} />
               <Text size="xxs" numberOfLines={2} style={{ color: colors.textDim, marginTop: 2 }} text={tile.hint} />
             </Pressable>
-          ))}
+            )
+          })}
         </View>
 
         <Text size="xxs" style={themed($version)} text={`GymKarta v${Constants.expoConfig?.version}_${OTA_VERSION}`} />
@@ -135,3 +148,5 @@ const $version: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   textAlign: 'center',
   marginTop: spacing.xl,
 })
+
+const $tileTop: ViewStyle = { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }

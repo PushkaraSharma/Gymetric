@@ -32,6 +32,7 @@
     "migrate:mongo": "tsx src/scripts/migrateMongoToPostgres.ts",
     "compare:api": "tsx src/scripts/compareApi.ts",
     "smoke:writes": "tsx src/scripts/smokeWrites.ts",
+    "plan": "tsx src/scripts/setPlan.ts",
     "gcp-build": "tsc --project tsconfig.json --noEmitOnError false || true",
     "start": "node dist/app.js"
   },

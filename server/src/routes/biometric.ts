@@ -16,9 +16,11 @@ import {
     staffFinger,
     unpairDevice,
 } from "../services/biometric.js";
+import { requireFeature } from "../services/access.js";
 
 export async function biometricRoutes(fastify: FastifyInstance) {
     fastify.addHook("onRequest", fastify.authenticate);
+    fastify.addHook("preHandler", requireFeature("biometric"));
     fastify.get("/device", getDevice);
     fastify.post("/enabled", setEnabled);
     fastify.post("/device/pair", pairDevice);

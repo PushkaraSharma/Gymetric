@@ -16,7 +16,7 @@ import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { navigate } from '@/navigators/navigationUtilities'
 import { api } from '@/services/Api'
-import { usePermissions } from '@/utils/permissions'
+import { useFeature, usePermissions } from '@/utils/permissions'
 import { refreshChatUnread, useChatUnread } from '@/utils/chatUnread'
 import { whatsappTemplateLabel } from '@/utils/whatsappLabels'
 
@@ -161,14 +161,16 @@ const WhatsAppScreen = () => {
   const canChat = can('whatsapp.chat')
   const canSettings = can('whatsapp.settings')
   const unread = useChatUnread()
+  const hasWhatsapp = useFeature('whatsapp')
   const [connected, setConnected] = useState<boolean | null>(null)
   const [tab, setTab] = useState<Tab>(canChat ? 'chats' : 'log')
 
   useFocusEffect(useCallback(() => {
     api.getSettings().then((response) => {
-      if (response.kind === 'ok') setConnected(!!response.data?.hasWhatsappConfigured)
+      // Off the plan, a connected gym still sees the upgrade screen; the server refuses chat and sends anyway.
+      if (response.kind === 'ok') setConnected(hasWhatsapp && !!response.data?.hasWhatsappConfigured)
     })
-  }, []))
+  }, [hasWhatsapp]))
 
   return (
     <Screen preset="fixed" safeAreaEdges={['top']} contentContainerStyle={{ flex: 1 }}>

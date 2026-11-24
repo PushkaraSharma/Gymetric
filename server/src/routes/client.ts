@@ -32,5 +32,5 @@ export async function clientRoutes(fastify: any) {
     fastify.post('/membership/resume', { preHandler: need('clients.freeze') }, resumeMembership);
     fastify.get('/upgrade/options', { preHandler: need('clients.upgrade') }, upgradeOptions);
     fastify.post('/upgrade', { preHandler: need('clients.upgrade') }, upgradeMembership);
-    fastify.delete('/delete', { preHandler: need('clients.delete') }, deleteClient);
+    fastify.delete('/delete', { preHandler: need('clients.archive') }, deleteClient);
 }

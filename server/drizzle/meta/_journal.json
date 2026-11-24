@@ -29,6 +29,13 @@
       "when": 1795260281549,
       "tag": "0003_app_rework",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795517827928,
+      "tag": "0004_plans_permissions",
+      "breakpoints": true
     }
   ]
 }

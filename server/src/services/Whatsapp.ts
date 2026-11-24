@@ -3,6 +3,7 @@ import { db } from '../db/client.js';
 import { messageLogs } from '../db/schema.js';
 import { validId } from '../db/queries.js';
 import { graphErrorFromAxios } from '../utils/whatsappStatus.js';
+import { hasFeature } from './plan.js';
 
 const IMAGE_HEADER_TEMPLATES = new Set(['onboarding']);
 const TEXT_HEADER_TEMPLATES = new Set(['renewal', 'renewal_complete', 'expired']);
@@ -34,15 +35,19 @@ export const sendWhatsAppTemplate = async (
     logContext?: LogContext
 ) => {
     const summary = `${templateName}: ${bodyParams.join(', ')}`;
+    // Automatic messages (welcome, renewal, expiry, reminders) all pass here; each send costs money, so the plan is checked.
+    if (!logContext?.gymId) return;
+    if (!(await hasFeature(logContext.gymId, 'whatsapp'))) {
+        await logSkippedWhatsApp(logContext.gymId, logContext.clientId || '', templateName, "Skipped: WhatsApp is not on this gym's plan");
+        return;
+    }
     if (IMAGE_HEADER_TEMPLATES.has(templateName) && !whatsapp?.headerImageUrl) {
-        if (logContext?.gymId) {
-            await logSkippedWhatsApp(
-                logContext.gymId,
-                logContext.clientId || '',
-                templateName,
-                'Skipped: welcome image is not uploaded'
-            );
-        }
+        await logSkippedWhatsApp(
+            logContext.gymId,
+            logContext.clientId || '',
+            templateName,
+            'Skipped: welcome image is not uploaded'
+        );
         return;
     }
     try {

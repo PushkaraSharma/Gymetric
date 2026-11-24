@@ -1,3 +1,4 @@
+import { requireFeature } from "../services/access.js";
 import {
     addPunch,
     attendanceBoard,
@@ -12,6 +13,7 @@ import {
 
 export async function staffRoutes(fastify: any) {
     fastify.addHook("onRequest", fastify.authenticate);
+    fastify.addHook("preHandler", requireFeature("staff"));
 
     fastify.get("/", listStaff);
     fastify.post("/", createStaff);

@@ -2,7 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { and, asc, desc, eq, gte, isNull, lt, ne } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { attendance, memberships, membershipPauses, members, payments, staff, staffAttendance, users } from "../db/schema.js";
-import { requirePermission } from "../services/access.js";
+import { hasPlanFeature, requirePermission, upgradeRequired } from "../services/access.js";
 
 type Column = { key: string; label: string; type?: "text" | "money" | "date" | "datetime" | "number" };
 type Report = { title: string; columns: Column[]; rows: Record<string, unknown>[]; summary: { label: string; value: string | number; money?: boolean }[] };
@@ -251,6 +251,10 @@ export async function reportRoutes(fastify: any) {
         if (!build) return reply.status(404).send({ success: false, message: "Unknown report" });
         const window = range(request.query as { from?: string; to?: string });
         if (!window) return reply.status(400).send({ success: false, message: "Pick a date range of up to one year" });
+        // Free shows this month only; older ranges and exports are part of the paid plans.
+        if (!hasPlanFeature(request, "reports") && window.fromDay < `${istDay(new Date()).slice(0, 7)}-01`) {
+            return upgradeRequired(reply, "reports");
+        }
         const { gymId } = request.user as { gymId: string };
         const report = await build(gymId, window.from, window.to);
         return reply.send({ success: true, data: { ...report, from: window.fromDay, to: window.toDay } });

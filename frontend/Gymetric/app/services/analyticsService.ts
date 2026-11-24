@@ -20,6 +20,8 @@ export const AnalyticsEvents = {
   DARK_MODE_TOGGLED: 'dark_mode_toggled',
   APP_OPENED: 'app_opened',
   SCREEN_VIEWED: 'screen_view',
+  PREMIUM_SHEET_SHOWN: 'premium_sheet_shown',
+  PREMIUM_CONTACT: 'premium_contact',
 } as const
 
 export const trackEvent = async (

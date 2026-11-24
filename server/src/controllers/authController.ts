@@ -6,7 +6,8 @@ import { verifyFirebaseToken } from '../utils/firebaseAdmin.js';
 import { db } from '../db/client.js';
 import { branches, organizations, roles, staff, users } from '../db/schema.js';
 import type { BranchRow, UserRow } from '../db/serializers.js';
-import { ensureRoles, invalidateAccess } from '../services/access.js';
+import { ensureRoles, invalidateAccess, loginAllowed } from '../services/access.js';
+import { gymPlanOf } from '../services/plan.js';
 
 const signToken = (user: UserRow) => jwt.sign(
     { userId: user.id, gymId: user.branchId, role: user.role },
@@ -31,6 +32,15 @@ const staffActive = async (userId: string) => {
     const [row] = await db.select({ active: staff.active }).from(staff).where(eq(staff.userId, userId)).limit(1);
     return row?.active ?? true;
 };
+
+// Same rule `authenticate` applies on every request, so login and later calls never disagree.
+const canLogIn = async (user: UserRow, gym: BranchRow) =>
+    loginAllowed({
+        isOwner: (await roleOf(user)).key === 'owner',
+        userActive: user.isActive,
+        staffActive: await staffActive(user.id),
+        plan: gymPlanOf(gym),
+    });
 
 const INACTIVE = 'Your access is turned off. Contact the gym owner.';
 
@@ -93,7 +103,7 @@ export const verifyOtp = async (request: FastifyRequest, reply: FastifyReply) =>
 
         if (found) {
             const { user, gym } = found;
-            if (!user.isActive || !(await staffActive(user.id))) {
+            if (!(await canLogIn(user, gym))) {
                 return reply.status(403).send({ success: false, message: INACTIVE });
             }
             if (!user.firebaseUid) {
@@ -185,7 +195,7 @@ export const passwordLogin = async (request: FastifyRequest, reply: FastifyReply
         }
         const { user, gym } = found;
 
-        if (!user.isActive || !(await staffActive(user.id))) {
+        if (!(await canLogIn(user, gym))) {
             return reply.status(403).send({ success: false, message: INACTIVE });
         }
 
@@ -316,7 +326,7 @@ export const checkUser = async (request: FastifyRequest, reply: FastifyReply) =>
                     gymName: found.gym.name,
                     gymLogo: found.gym.logo,
                     isStaff: role.key !== 'owner',
-                    isActive: found.user.isActive && (await staffActive(found.user.id)),
+                    isActive: await canLogIn(found.user, found.gym),
                 }
             });
         } else {

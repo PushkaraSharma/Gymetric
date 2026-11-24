@@ -9,7 +9,7 @@ import MoreScreen from "@/screens/More/MoreScreen"
 import WhatsAppScreen from "@/screens/WhatsApp/WhatsAppScreen"
 import { LayoutDashboard, Users, LayoutGrid } from "lucide-react-native"
 import { Ionicons } from "@expo/vector-icons"
-import { usePermissions } from "@/utils/permissions"
+import { useFeature, usePermissions } from "@/utils/permissions"
 import { hapticsSelection } from "@/utils/haptics"
 import { useChatUnread } from "@/utils/chatUnread"
 import { useAppDispatch } from "@/redux/Hooks"
@@ -24,8 +24,10 @@ export function MainNavigator() {
     const isAndroid = Platform.OS === 'android';
     const dispatch = useAppDispatch()
     const can = usePermissions()
+    const hasWhatsapp = useFeature('whatsapp')
     const canChat = can('whatsapp.chat') || can('whatsapp.settings')
-    const unread = useChatUnread(can('whatsapp.chat'))
+    // No polling when the plan has no WhatsApp: the tab then shows the upgrade screen instead.
+    const unread = useChatUnread(can('whatsapp.chat') && hasWhatsapp)
 
     useEffect(() => {
         warmSession(dispatch)

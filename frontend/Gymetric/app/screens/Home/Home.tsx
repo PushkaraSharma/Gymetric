@@ -26,6 +26,7 @@ import { OTA_VERSION } from '@/utils/Constants'
 import Constants from 'expo-constants'
 import { WhatsNewModal } from '@/components/WhatsNewModal'
 import { load, save } from '@/utils/LocalStorage'
+import { useFeature } from '@/utils/permissions'
 
 let hasShownBannerSession = false
 
@@ -69,6 +70,7 @@ const Home = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(cachedSummary)
   const [showBanner, setShowBanner] = useState(false)
   const [hasWhatsapp, setHasWhatsapp] = useState(false)
+  const planHasWhatsapp = useFeature('whatsapp')
   const [whatsappSummary, setWhatsappSummary] = useState<any>(null)
   const [hasMembershipPlans, setHasMembershipPlans] = useState(false)
   const [isLoading, setIsLoading] = useState(!cachedSummary)
@@ -98,7 +100,7 @@ const Home = () => {
       api.dashboardAPI(),
       !hasShownBannerSession || isRefresh ? api.getSettings() : Promise.resolve(null),
       api.allMemberships(),
-      api.getWhatsappSummary(),
+      planHasWhatsapp ? api.getWhatsappSummary() : Promise.resolve(null),
     ])
 
     if (dashboardRes.kind === 'ok') {
@@ -124,7 +126,7 @@ const Home = () => {
       hasShownBannerSession = true
     }
 
-    if (waSummaryRes.kind === 'ok') {
+    if (waSummaryRes?.kind === 'ok') {
       setWhatsappSummary(waSummaryRes.data)
     }
 
@@ -136,7 +138,7 @@ const Home = () => {
 
     if (isRefresh) setRefreshing(false)
     else setIsLoading(false)
-  }, [dispatch, gymInfo?._id, hasWhatsapp, isDark])
+  }, [dispatch, gymInfo?._id, hasWhatsapp, isDark, planHasWhatsapp])
 
   const onRefresh = useCallback(() => { loadData(true) }, [loadData])
 

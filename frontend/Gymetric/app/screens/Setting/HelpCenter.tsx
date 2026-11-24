@@ -8,6 +8,7 @@ import { Mail, Phone, ChevronRight } from 'lucide-react-native'
 import { $styles } from '@/theme/styles'
 import { ThemedStyle } from '@/theme/types'
 import { goBack, navigate } from '@/navigators/navigationUtilities'
+import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_DISPLAY } from '@/utils/Constants'
 
 const HelpCenter = () => {
     const { theme: { colors, spacing, typography }, themed } = useAppTheme()
@@ -25,11 +26,11 @@ const HelpCenter = () => {
     }
 
     const handleEmail = () => {
-        Linking.openURL('mailto:indierootsapps@gmail.com')
+        Linking.openURL(`mailto:${SUPPORT_EMAIL}`)
     }
 
     const handlePhone = () => {
-        Linking.openURL('tel:+919354454113')
+        Linking.openURL(`tel:${SUPPORT_PHONE}`)
     }
 
     const SupportItem = ({ icon, title, value, onPress }: any) => (
@@ -67,13 +68,13 @@ const HelpCenter = () => {
                     <SupportItem
                         icon={<Mail size={22} color={colors.primary} />}
                         title="Email Support"
-                        value="indierootsapps@gmail.com"
+                        value={SUPPORT_EMAIL}
                         onPress={handleEmail}
                     />
                     <SupportItem
                         icon={<Phone size={22} color={colors.primary} />}
                         title="Call Us"
-                        value="+91 9354454113"
+                        value={SUPPORT_PHONE_DISPLAY}
                         onPress={handlePhone}
                     />
                 </View>
