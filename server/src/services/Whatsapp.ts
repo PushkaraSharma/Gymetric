@@ -7,6 +7,8 @@ import { graphErrorFromAxios } from '../utils/whatsappStatus.js';
 const IMAGE_HEADER_TEMPLATES = new Set(['onboarding']);
 const TEXT_HEADER_TEMPLATES = new Set(['renewal', 'renewal_complete', 'expired']);
 
+type LogContext = { gymId: string; clientId?: string; sentByUserId?: string };
+
 const insertLog = (values: Omit<typeof messageLogs.$inferInsert, 'branchId' | 'memberId'> & { gymId: string; clientId?: string }) => {
     const { gymId, clientId, ...rest } = values;
     return db.insert(messageLogs).values({
@@ -15,7 +17,12 @@ const insertLog = (values: Omit<typeof messageLogs.$inferInsert, 'branchId' | 'm
         memberId: validId(clientId),
         channel: 'whatsapp',
         statusUpdatedAt: new Date(),
-    });
+    }).returning();
+};
+
+export const toWhatsAppNumber = (phone: string) => {
+    const digits = phone.replace(/\D/g, '');
+    return digits.length === 10 ? `91${digits}` : digits;
 };
 
 export const sendWhatsAppTemplate = async (
@@ -24,10 +31,10 @@ export const sendWhatsAppTemplate = async (
     bodyParams: any[] = [],
     whatsapp: any,
     headerText: string = "",
-    logContext?: { gymId: string; clientId?: string }
+    logContext?: LogContext
 ) => {
     const summary = `${templateName}: ${bodyParams.join(', ')}`;
-    if (!whatsapp?.headerImageUrl) {
+    if (IMAGE_HEADER_TEMPLATES.has(templateName) && !whatsapp?.headerImageUrl) {
         if (logContext?.gymId) {
             await logSkippedWhatsApp(
                 logContext.gymId,
@@ -81,10 +88,12 @@ export const sendWhatsAppTemplate = async (
             await insertLog({
                 gymId: logContext.gymId,
                 clientId: logContext.clientId,
+                phone: to,
                 template: templateName,
                 status: 'queued',
                 summary,
                 providerMessageId: response.data?.messages?.[0]?.id,
+                sentByUserId: logContext.sentByUserId,
             });
         }
 
@@ -96,13 +105,52 @@ export const sendWhatsAppTemplate = async (
             await insertLog({
                 gymId: logContext.gymId,
                 clientId: logContext.clientId,
+                phone: to,
                 template: templateName,
                 status: 'failed',
                 summary,
                 errorCode,
                 errorMessage,
+                sentByUserId: logContext.sentByUserId,
             }).catch((logError) => console.error('WhatsApp log insert failed:', logError));
         }
+    }
+};
+
+// Free-form text is only accepted by Meta within 24 hours of the client's last message.
+export const sendWhatsAppText = async (to: string, text: string, whatsapp: any, logContext: LogContext) => {
+    try {
+        const response = await axios.post(
+            `https://graph.facebook.com/v22.0/${whatsapp?.phoneNumberId}/messages`,
+            { messaging_product: 'whatsapp', to, type: 'text', text: { body: text } },
+            { headers: { Authorization: `Bearer ${whatsapp?.accessToken}` } },
+        );
+        const [log] = await insertLog({
+            gymId: logContext.gymId,
+            clientId: logContext.clientId,
+            phone: to,
+            body: text,
+            status: 'queued',
+            summary: text.slice(0, 120),
+            providerMessageId: response.data?.messages?.[0]?.id,
+            sentByUserId: logContext.sentByUserId,
+        });
+        return log;
+    } catch (error: any) {
+        console.error("WhatsApp text error:", error.response?.data || error.message);
+        const { errorCode, errorMessage } = graphErrorFromAxios(error);
+        const [log] = await insertLog({
+            gymId: logContext.gymId,
+            clientId: logContext.clientId,
+            phone: to,
+            body: text,
+            status: 'failed',
+            summary: text.slice(0, 120),
+            errorCode,
+            errorMessage,
+            sentByUserId: logContext.sentByUserId,
+        });
+        return log;
     }
 };
 

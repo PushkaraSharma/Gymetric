@@ -1,6 +1,6 @@
 import { getGymInfo, updateGymInfo, handleSeedDemoData } from "../controllers/gymController.js";
 
-export async function gymRoutes(fastify) {
+export async function gymRoutes(fastify: any) {
     fastify.addHook('onRequest', fastify.authenticate);
 
     fastify.get('/info', getGymInfo);

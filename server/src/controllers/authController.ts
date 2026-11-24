@@ -4,14 +4,35 @@ import { eq } from 'drizzle-orm';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { verifyFirebaseToken } from '../utils/firebaseAdmin.js';
 import { db } from '../db/client.js';
-import { branches, organizations, users } from '../db/schema.js';
+import { branches, organizations, roles, staff, users } from '../db/schema.js';
 import type { BranchRow, UserRow } from '../db/serializers.js';
+import { ensureRoles, invalidateAccess } from '../services/access.js';
 
 const signToken = (user: UserRow) => jwt.sign(
     { userId: user.id, gymId: user.branchId, role: user.role },
     process.env.JWT_SECRET || 'secret',
     { expiresIn: '90d' }
 );
+
+export const displayName = async (user: UserRow, gym: BranchRow) => {
+    if (user.name) return user.name;
+    if (user.role === 'admin' || user.role === 'owner') return gym.ownerName || user.username || '';
+    const [person] = await db.select({ name: staff.name }).from(staff).where(eq(staff.userId, user.id)).limit(1);
+    return person?.name || user.username || '';
+};
+
+const roleOf = async (user: UserRow) => {
+    if (!user.roleId) return { key: user.role === 'admin' || user.role === 'owner' ? 'owner' : user.role, name: user.role === 'admin' ? 'Owner' : user.role };
+    const [role] = await db.select({ key: roles.key, name: roles.name }).from(roles).where(eq(roles.id, user.roleId)).limit(1);
+    return { key: role?.key ?? null, name: role?.name ?? '' };
+};
+
+const staffActive = async (userId: string) => {
+    const [row] = await db.select({ active: staff.active }).from(staff).where(eq(staff.userId, userId)).limit(1);
+    return row?.active ?? true;
+};
+
+const INACTIVE = 'Your access is turned off. Contact the gym owner.';
 
 const findUserWithGym = async (where: ReturnType<typeof eq>) => {
     const [row] = await db
@@ -35,9 +56,12 @@ const createGymWithAdmin = async (
         ownerName: gym.ownerName,
         contactNumber: gym.contactNumber,
     }).returning();
+    const roleIds = await ensureRoles(branch.id, tx);
     const [admin] = await tx.insert(users).values({
         ...user,
+        name: gym.ownerName,
         role: 'admin',
+        roleId: roleIds.owner,
         branchId: branch.id,
         isActive: true,
     }).returning();
@@ -69,12 +93,18 @@ export const verifyOtp = async (request: FastifyRequest, reply: FastifyReply) =>
 
         if (found) {
             const { user, gym } = found;
+            if (!user.isActive || !(await staffActive(user.id))) {
+                return reply.status(403).send({ success: false, message: INACTIVE });
+            }
+            if (!user.firebaseUid) {
+                await db.update(users).set({ firebaseUid }).where(eq(users.id, user.id)).catch(() => undefined);
+            }
             return reply.status(200).send({
                 success: true,
                 data: {
                     isNewUser: false,
                     token: signToken(user),
-                    username: gym.ownerName || user.username,
+                    username: await displayName(user, gym),
                     role: user.role,
                     gymName: gym.name,
                     address: gym.address,
@@ -155,6 +185,10 @@ export const passwordLogin = async (request: FastifyRequest, reply: FastifyReply
         }
         const { user, gym } = found;
 
+        if (!user.isActive || !(await staffActive(user.id))) {
+            return reply.status(403).send({ success: false, message: INACTIVE });
+        }
+
         if (!user.passwordHash) {
             return reply.status(400).send({ success: false, message: 'Password login not set up for this user. Please use OTP.' });
         }
@@ -171,7 +205,7 @@ export const passwordLogin = async (request: FastifyRequest, reply: FastifyReply
                 role: user.role,
                 gymName: gym.name,
                 address: gym.address,
-                username: gym.ownerName || user.username,
+                username: await displayName(user, gym),
                 token: signToken(user)
             }
         });
@@ -241,10 +275,13 @@ export const resetPassword = async (request: FastifyRequest, reply: FastifyReply
             return reply.status(404).send({ success: false, message: 'User not found' });
         }
 
+        if (!newPassword || String(newPassword).length < 6) {
+            return reply.status(400).send({ success: false, message: 'Password must be at least 6 characters' });
+        }
         if (oldPassword && user.passwordHash) {
-            const isCorrect = await bcrypt.compare(oldPassword, user.passwordHash);
+            const isCorrect = await bcrypt.compare(String(oldPassword), user.passwordHash);
             if (!isCorrect) {
-                return reply.status(401).send({ success: false, message: 'Invalid old password' });
+                return reply.status(400).send({ success: false, message: 'Current password is wrong' });
             }
         }
 
@@ -266,13 +303,20 @@ export const checkUser = async (request: FastifyRequest, reply: FastifyReply) =>
         const { phoneNumber } = request.body as any;
         const found = phoneNumber ? await findUserWithGym(eq(users.phoneNumber, phoneNumber)) : null;
         if (found) {
-            const name = found.gym.ownerName || found.user.username || '';
+            const name = await displayName(found.user, found.gym);
+            const role = await roleOf(found.user);
             return reply.status(200).send({
                 success: true,
                 data: {
                     exists: true,
                     hasPassword: !!found.user.passwordHash,
-                    username: name
+                    username: name,
+                    role: role.key,
+                    roleName: role.name,
+                    gymName: found.gym.name,
+                    gymLogo: found.gym.logo,
+                    isStaff: role.key !== 'owner',
+                    isActive: found.user.isActive && (await staffActive(found.user.id)),
                 }
             });
         } else {
@@ -288,4 +332,45 @@ export const checkUser = async (request: FastifyRequest, reply: FastifyReply) =>
         request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
     }
+};
+
+const meView = async (userId: string) => {
+    const found = await findUserWithGym(eq(users.id, userId));
+    if (!found) return null;
+    const { user, gym } = found;
+    const role = await roleOf(user);
+    return {
+        _id: user.id,
+        name: await displayName(user, gym),
+        phoneNumber: user.phoneNumber,
+        photo: user.photo,
+        role: role.key,
+        roleName: role.name,
+        hasPassword: !!user.passwordHash,
+        gymName: gym.name,
+    };
+};
+
+export const getMe = async (request: FastifyRequest, reply: FastifyReply) => {
+    const me = await meView((request as any).user.userId);
+    if (!me) return reply.status(404).send({ success: false, message: 'User not found' });
+    return reply.send({ success: true, data: me });
+};
+
+export const updateMe = async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = (request as any).user.userId as string;
+    const body = (request.body ?? {}) as { name?: unknown; photo?: unknown };
+    const patch: { name?: string; photo?: string | null; updatedAt: Date } = { updatedAt: new Date() };
+    if (body.name !== undefined) {
+        const name = String(body.name).trim();
+        if (!name) return reply.status(400).send({ success: false, message: 'Enter your name' });
+        patch.name = name;
+    }
+    if (body.photo !== undefined) patch.photo = body.photo ? String(body.photo) : null;
+    await db.transaction(async (tx) => {
+        await tx.update(users).set(patch).where(eq(users.id, userId));
+        if (patch.name) await tx.update(staff).set({ name: patch.name, updatedAt: new Date() }).where(eq(staff.userId, userId));
+    });
+    invalidateAccess(userId);
+    return reply.send({ success: true, data: await meView(userId) });
 };

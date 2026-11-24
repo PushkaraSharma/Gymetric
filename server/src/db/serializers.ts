@@ -42,6 +42,9 @@ export const serializeGym = (b: BranchRow) => compact({
     contactNumber: b.contactNumber,
     email: b.email,
     logo: b.logo,
+    website: b.website,
+    gstin: b.gstin,
+    timings: b.timings,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
 });

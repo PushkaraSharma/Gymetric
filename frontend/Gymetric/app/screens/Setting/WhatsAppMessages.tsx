@@ -16,6 +16,16 @@ import { Ionicons } from '@expo/vector-icons'
 import { WHATSAPP_STATUS_CHIPS, WHATSAPP_TEMPLATE_CHIPS, whatsappStatusLabel, whatsappTemplateLabel } from '@/utils/whatsappLabels'
 
 export const WhatsAppMessages = () => {
+  const { theme: { colors } } = useAppTheme()
+  return (
+    <Screen preset="fixed" contentContainerStyle={{ flex: 1 }} safeAreaEdges={['bottom']}>
+      <Header title="WhatsApp Messages" showBack onBack={goBack} safeAreaTop backgroundColor={colors.background} />
+      <MessageLog />
+    </Screen>
+  )
+}
+
+export const MessageLog = () => {
   const { themed, theme: { colors } } = useAppTheme()
   const [summary, setSummary] = useState<any>(null)
   const [items, setItems] = useState<any[]>([])
@@ -91,9 +101,7 @@ export const WhatsAppMessages = () => {
   }, [loadLogs])
 
   return (
-    <Screen preset="fixed" contentContainerStyle={{ flex: 1 }} safeAreaEdges={['bottom']}>
-      <Header title="WhatsApp Messages" showBack onBack={goBack} safeAreaTop backgroundColor={colors.background} />
-
+    <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: spacing.md }}>
         {summary ? (
           <View style={themed($statsCard)}>
@@ -124,7 +132,7 @@ export const WhatsAppMessages = () => {
           <Skeleton width="100%" height={110} borderRadius={16} style={{ marginTop: spacing.sm, marginBottom: spacing.md }} />
         )}
 
-        <ClientSearchBar value={search} onChangeText={setSearch} placeholder="Search member or phone" />
+        <ClientSearchBar value={search} onChangeText={setSearch} placeholder="Search client or phone" />
         <View style={{ marginBottom: spacing.xs }}>
           <ClientFilterChips filters={WHATSAPP_TEMPLATE_CHIPS} selected={template} onSelect={setTemplate} />
         </View>
@@ -174,7 +182,7 @@ export const WhatsAppMessages = () => {
                 onPress={() => item.client?._id && navigate('Client Profile', { data: { _id: item.client._id } })}
               >
                 <View style={{ flex: 1 }}>
-                  <Text weight="semiBold" size="sm" numberOfLines={1}>{item.client?.name || 'Unknown member'}</Text>
+                  <Text weight="semiBold" size="sm" numberOfLines={1}>{item.client?.name || 'Unknown client'}</Text>
                   <Text size="xxs" style={{ color: colors.textDim, marginTop: 2 }}>
                     {whatsappTemplateLabel(item.template)} · {item.sentAt ? formatDate(item.sentAt, 'dd MMM · hh:mm a') : ''}
                   </Text>
@@ -190,7 +198,7 @@ export const WhatsAppMessages = () => {
           }}
         />
       )}
-    </Screen>
+    </View>
   )
 }
 

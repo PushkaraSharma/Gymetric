@@ -10,6 +10,16 @@ import { api } from "@/services/Api"
 import { storage } from "@/utils/LocalStorage"
 import { VersionFooter } from "@/components/VersionFooter";
 
+type StaffMatch = {
+    phone: string
+    formatted: string
+    username?: string
+    roleName?: string
+    gymName?: string
+    hasPassword: boolean
+    isActive: boolean
+}
+
 export const PhoneLoginScreen = () => {
     const { theme, isDark } = useAppTheme()
     const styles = getStyles(theme)
@@ -17,6 +27,7 @@ export const PhoneLoginScreen = () => {
     const [phoneNumber, setPhoneNumber] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
+    const [staffMatch, setStaffMatch] = useState<StaffMatch | null>(null)
 
     React.useEffect(() => {
         const auth = getAuth();
@@ -41,14 +52,23 @@ export const PhoneLoginScreen = () => {
         try {
             const formattedNumber = phoneToUse.startsWith('+') ? phoneToUse : `+91${phoneToUse}`;
             const check = await api.checkUser(formattedNumber);
-            if (check.kind === 'ok' && check.data.exists && check.data.hasPassword) {
+            if (check.kind === 'ok' && check.data.exists && check.data.isStaff) {
+                setStaffMatch({
+                    phone: phoneToUse,
+                    formatted: formattedNumber,
+                    username: check.data.username,
+                    roleName: check.data.roleName,
+                    gymName: check.data.gymName,
+                    hasPassword: !!check.data.hasPassword,
+                    isActive: check.data.isActive !== false,
+                })
+            } else if (check.kind === 'ok' && check.data.exists && check.data.hasPassword) {
                 navigation.navigate("PasswordLogin", {
                     phoneNumber: phoneToUse,
                     username: check.data.username
                 });
             } else {
-                const confirmation = await signInWithPhoneNumber(getAuth(), formattedNumber);
-                navigation.navigate("OTPVerification", { confirmation, phoneNumber: formattedNumber });
+                await sendOtp(formattedNumber)
             }
         } catch (e: any) {
             console.error(e);
@@ -56,6 +76,65 @@ export const PhoneLoginScreen = () => {
         } finally {
             setIsLoading(false)
         }
+    }
+
+    const sendOtp = async (formattedNumber: string) => {
+        const confirmation = await signInWithPhoneNumber(getAuth(), formattedNumber);
+        navigation.navigate("OTPVerification", { confirmation, phoneNumber: formattedNumber });
+    }
+
+    const joinGym = async () => {
+        if (!staffMatch) return
+        if (staffMatch.hasPassword) {
+            navigation.navigate("PasswordLogin", { phoneNumber: staffMatch.phone, username: staffMatch.username })
+            return
+        }
+        setIsLoading(true)
+        try {
+            await sendOtp(staffMatch.formatted)
+        } catch (e) {
+            console.error(e)
+            setError("Something went wrong. Please try again.")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    if (staffMatch) {
+        return (
+            <Screen preset="fixed" safeAreaEdges={["top", "bottom"]}>
+                <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                    <View style={styles.logoContainer}>
+                        <Image source={isDark ? require("../../../assets/images/app-icon-dark.png") : require("../../../assets/images/app-icon.png")} style={styles.logo} />
+                    </View>
+                    <Text style={styles.title}>{staffMatch.username ? `Hi ${staffMatch.username.split(" ")[0]}` : "Welcome"}</Text>
+                    <View style={styles.inviteCard}>
+                        <Text style={styles.inviteLabel}>You are added as</Text>
+                        <Text style={styles.inviteRole}>{staffMatch.roleName || "Staff"}</Text>
+                        <Text style={styles.inviteLabel}>at</Text>
+                        <Text style={styles.inviteGym}>{staffMatch.gymName}</Text>
+                    </View>
+                    {staffMatch.isActive ? null : (
+                        <Text style={styles.errorText}>Your access is turned off. Contact the gym owner.</Text>
+                    )}
+                    {error ? <Text style={styles.errorText}>{error}</Text> : null}
+                    <Button
+                        title={isLoading ? "Please wait..." : `Log in to ${staffMatch.gymName ?? "the gym"}`}
+                        variant="primary"
+                        onPress={joinGym}
+                        disabled={isLoading || !staffMatch.isActive}
+                        icon={isLoading ? <ActivityIndicator size="small" color="white" /> : undefined}
+                    />
+                    <Text style={styles.ownGymNote}>
+                        Want to set up your own gym? Use a different phone number.
+                    </Text>
+                    <Text style={styles.changeNumber} onPress={() => { setStaffMatch(null); setPhoneNumber(""); setError("") }}>
+                        Use a different number
+                    </Text>
+                </ScrollView>
+                <VersionFooter />
+            </Screen>
+        )
     }
 
     return (
@@ -142,5 +221,43 @@ const getStyles = (theme: any) => StyleSheet.create({
     errorText: {
         color: theme.colors.error,
         marginBottom: theme.spacing.md,
+    },
+    inviteCard: {
+        backgroundColor: theme.colors.primaryBackground,
+        borderRadius: 16,
+        padding: theme.spacing.lg,
+        alignItems: 'center',
+        marginTop: theme.spacing.md,
+        marginBottom: theme.spacing.xl,
+    },
+    inviteLabel: {
+        fontSize: theme.typography.s,
+        color: theme.colors.textDim,
+    },
+    inviteRole: {
+        fontSize: theme.typography.xl,
+        fontWeight: theme.typography.bold,
+        color: theme.colors.primary,
+        marginVertical: theme.spacing.xxs,
+    },
+    inviteGym: {
+        fontSize: theme.typography.l,
+        fontWeight: theme.typography.semiBold,
+        color: theme.colors.text,
+        marginTop: theme.spacing.xxs,
+        textAlign: 'center',
+    },
+    ownGymNote: {
+        fontSize: theme.typography.xs,
+        color: theme.colors.textDim,
+        textAlign: 'center',
+        marginTop: theme.spacing.lg,
+    },
+    changeNumber: {
+        fontSize: theme.typography.s,
+        color: theme.colors.primary,
+        fontWeight: theme.typography.semiBold,
+        textAlign: 'center',
+        marginTop: theme.spacing.md,
     },
 });

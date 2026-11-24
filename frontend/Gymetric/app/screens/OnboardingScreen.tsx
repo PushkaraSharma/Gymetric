@@ -30,7 +30,7 @@ const slides: { key: string; image: ImageSourcePropType; title: string; body: st
   {
     key: "management",
     title: "Seamless Gym Management",
-    body: "Effortlessly manage your gym operations, members, and memberships in one place.",
+    body: "Effortlessly manage your gym operations, clients, and memberships in one place.",
     image: require("../../assets/images/onboarding1.png"),
   },
   {

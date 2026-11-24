@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } from '../utils/cloudinary.js';
 import { db } from '../db/client.js';
-import { branches, members } from '../db/schema.js';
+import { branches, members, users } from '../db/schema.js';
 import { findBranch, findMember } from '../db/queries.js';
 import { invalidateClientCaches } from '../utils/cache.js';
 
@@ -200,6 +200,28 @@ export const deleteClientProfilePicture = async (request: FastifyRequest, reply:
         return reply.send({ success: true, message: 'Profile picture deleted' });
     } catch (error: any) {
         request.log.error({ err: error }, 'Delete error');
+        return reply.status(500).send({ success: false, error: error.message });
+    }
+};
+
+export const uploadUserPhoto = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { userId } = request.user as any;
+        const data = await (request as any).file();
+        if (!data) {
+            return reply.status(400).send({ success: false, message: 'No file uploaded' });
+        }
+        const buffer = await data.toBuffer();
+        const [user] = await db.select({ photo: users.photo }).from(users).where(eq(users.id, userId)).limit(1);
+        if (user?.photo) {
+            const publicId = getCloudinaryPublicId(user.photo);
+            if (publicId) await deleteFromCloudinary(publicId);
+        }
+        const result = await uploadToCloudinary(buffer, 'gymetric/users', `user_${userId}`);
+        await db.update(users).set({ photo: result.secure_url, updatedAt: new Date() }).where(eq(users.id, userId));
+        return reply.send({ success: true, data: { photo: result.secure_url } });
+    } catch (error: any) {
+        request.log.error({ err: error }, 'Upload error');
         return reply.status(500).send({ success: false, error: error.message });
     }
 };

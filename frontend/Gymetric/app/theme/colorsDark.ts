@@ -20,10 +20,13 @@ const palette = {
   indigo400: "#818CF8",
   indigo500: "#6366F1",
   indigo600: "#4F46E5",
+  indigo700: "#4338CA",
 
   // Success Emerald
   emerald400: "#34D399",
   emerald900: "#064E3B",
+  amber400: "#FBBF24",
+  amber900: "#78350F",
 
   // Error Rose
   rose400: "#FB7185",
@@ -67,6 +70,8 @@ export const colors = {
 
   success: palette.emerald400,
   successBackground: palette.emerald900,
+  warning: palette.amber400,
+  warningBackground: palette.amber900,
 
   // Compatibility
   activeBg: palette.emerald900,

@@ -1,6 +1,6 @@
 import { getActivities, getDashboardSummary, getRevenueStats } from "../controllers/dashboardController.js";
 
-export async function dashboardRoutes(fastify) {
+export async function dashboardRoutes(fastify: any) {
     fastify.addHook('onRequest', fastify.authenticate);
 
     fastify.get('/summary', getDashboardSummary);

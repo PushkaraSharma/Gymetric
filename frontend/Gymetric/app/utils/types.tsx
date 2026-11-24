@@ -48,4 +48,4 @@ export type BackendResponse<T> = {
     error?: string
 }
 
-export type ApiResult = { kind: "ok"; data: any } | { kind: "error"; message: string }
+export type ApiResult = { kind: "ok"; data: any } | { kind: "error"; message: string; status?: number }

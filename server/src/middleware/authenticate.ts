@@ -5,6 +5,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { db } from '../db/client.js';
 import { branches, users } from '../db/schema.js';
 import { isObjectId } from '../db/queries.js';
+import { loadAccess } from '../services/access.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -41,8 +42,6 @@ export default fp(async (fastify: FastifyInstance) => {
     }
 
     const user = request.user as { userId?: string; gymId?: string; role?: string };
-    if (!isObjectId(user.userId) && !isObjectId(user.gymId)) return;
-
     const [userId, gymId] = await Promise.all([
       isObjectId(user.userId) ? resolveLegacy('user', user.userId) : user.userId,
       isObjectId(user.gymId) ? resolveLegacy('gym', user.gymId) : user.gymId,
@@ -50,6 +49,15 @@ export default fp(async (fastify: FastifyInstance) => {
     if (!userId || !gymId) {
       return reply.status(401).send({ success: false, message: 'Unauthorized: Invalid or expired token' });
     }
-    request.user = { ...user, userId, gymId };
+
+    const access = await loadAccess(userId);
+    if (!access || access.branchId !== gymId) {
+      return reply.status(401).send({ success: false, message: 'Unauthorized: Invalid or expired token' });
+    }
+    if (!access.isActive) {
+      return reply.status(401).send({ success: false, code: 'inactive', message: 'Your access is turned off. Contact the gym owner.' });
+    }
+    request.user = { ...user, userId, gymId, role: access.roleKey === 'owner' ? 'admin' : (access.roleKey ?? user.role) };
+    (request as any).access = access;
   });
 });

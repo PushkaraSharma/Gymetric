@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { setupGymAndAdmin, loginAdmin, resetPassword, verifyOtp, onboard, passwordLogin, checkUser } from './../controllers/authController.js'
+import { setupGymAndAdmin, loginAdmin, resetPassword, verifyOtp, onboard, passwordLogin, checkUser, getMe, updateMe } from './../controllers/authController.js'
 
 export async function authRoutes(fastify: FastifyInstance) {
   /**
@@ -43,4 +43,7 @@ export async function authRoutes(fastify: FastifyInstance) {
    * @desc    Check if user exists and has password
    */
   fastify.post('/check-user', checkUser);
+
+  fastify.get('/me', { preHandler: [fastify.authenticate] }, getMe);
+  fastify.patch('/me', { preHandler: [fastify.authenticate] }, updateMe);
 }

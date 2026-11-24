@@ -50,9 +50,13 @@ export class Api {
         return this.apiRequest(method, url, body, params, retries + 1);
       }
       const message = response?.data?.message ?? response?.data?.error ?? "Network error";
-      Toast.show({ type: 'error', text1: response.status == 401 ? 'Session Expired' : 'Internal error', text2: message, visibilityTime: 2000 });
+      const inactive = response.status === 401 && (response.data as any)?.code === 'inactive';
+      const title = inactive
+        ? 'Access turned off'
+        : response.status == 401 ? 'Session Expired' : response.status === 403 ? 'No access' : 'Something went wrong';
+      Toast.show({ type: 'error', text1: title, text2: message, visibilityTime: inactive ? 4000 : 2000 });
       if (response.status === 401) remove('authToken');
-      return { kind: 'error', message };
+      return { kind: 'error', message, status: response.status };
     }
     return { kind: 'ok', data: response?.data?.data as T };
   };
@@ -322,6 +326,86 @@ export class Api {
   seedDemoData = async (action: 'seed' | 'clear') => {
     return this.apiRequest('post', '/api/gym/seed-demo-data', { action });
   };
+
+  listStaff = async () => {
+    return this.apiRequest('get', '/api/staff');
+  };
+
+  createStaff = async (body: any) => {
+    return this.apiRequest('post', '/api/staff', body);
+  };
+
+  updateStaff = async (id: string, body: any) => {
+    return this.apiRequest('patch', `/api/staff/${id}`, body);
+  };
+
+  staffAttendance = async (id: string, date: string) => {
+    return this.apiRequest('get', `/api/staff/${id}/attendance`, undefined, { date });
+  };
+
+  addStaffPunch = async (id: string, note?: string) => {
+    return this.apiRequest('post', `/api/staff/${id}/punches`, note ? { note } : {});
+  };
+
+  voidStaffPunch = async (punchId: string) => {
+    return this.apiRequest('post', `/api/staff/punches/${punchId}/void`);
+  };
+
+  biometricDevice = async () => this.apiRequest('get', '/api/biometric/device');
+  biometricEnabled = async (enabled: boolean) => this.apiRequest('post', '/api/biometric/enabled', { enabled });
+  pairReader = async (serialNumber: string) => this.apiRequest('post', '/api/biometric/device/pair', { serialNumber });
+  unpairReader = async () => this.apiRequest('post', '/api/biometric/device/unpair', {});
+  openDoor = async () => this.apiRequest('post', '/api/biometric/device/open', {});
+  doorCommand = async (commandId: number) => this.apiRequest('get', `/api/biometric/device/commands/${commandId}`);
+  checkins = async (date: string) => this.apiRequest('get', '/api/biometric/checkins', undefined, { date });
+  memberFingerprint = async (id: string) => this.apiRequest('get', `/api/biometric/members/${id}`);
+  startMemberFingerprint = async (id: string) => this.apiRequest('post', `/api/biometric/members/${id}/fingerprint`, {});
+  confirmMemberFingerprint = async (id: string) => this.apiRequest('post', `/api/biometric/members/${id}/fingerprint/confirm`, {});
+  cancelMemberFingerprint = async (id: string) => this.apiRequest('post', `/api/biometric/members/${id}/fingerprint/cancel`, {});
+  staffFingerprint = async (id: string) => this.apiRequest('get', `/api/biometric/staff/${id}`);
+  startStaffFingerprint = async (id: string) => this.apiRequest('post', `/api/biometric/staff/${id}/fingerprint`, {});
+  confirmStaffFingerprint = async (id: string) => this.apiRequest('post', `/api/biometric/staff/${id}/fingerprint/confirm`, {});
+  cancelStaffFingerprint = async (id: string) => this.apiRequest('post', `/api/biometric/staff/${id}/fingerprint/cancel`, {});
+
+  getStaff = async (id: string) => this.apiRequest('get', `/api/staff/${id}`);
+  staffInvite = async (id: string) => this.apiRequest('get', `/api/staff/${id}/invite`);
+  staffMonth = async (id: string, month: string) => this.apiRequest('get', `/api/staff/${id}/attendance`, undefined, { month });
+  staffBoard = async (date?: string) => this.apiRequest('get', '/api/staff/attendance/today', undefined, date ? { date } : undefined);
+
+  getMe = async () => this.apiRequest('get', '/api/auth/me');
+  updateMe = async (body: { name?: string; photo?: string | null }) => this.apiRequest('patch', '/api/auth/me', body);
+  uploadUserPhoto = async (imageUri: string) => {
+    const formData = new FormData();
+    const filename = imageUri.split('/').pop() || 'photo.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    formData.append('file', { uri: imageUri, name: filename, type: match ? `image/${match[1]}` : 'image/jpeg' } as any);
+    const response: any = await this.apisauce.post('/api/upload/user-photo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    if (!response.ok) {
+      const message = response?.data?.message ?? "Upload failed";
+      Toast.show({ type: 'error', text1: 'Upload Error', text2: message });
+      return { kind: 'error', message };
+    }
+    return { kind: 'ok', data: response?.data?.data };
+  };
+
+  listRoles = async () => this.apiRequest('get', '/api/roles');
+  createRole = async (body: { name: string; permissions: string[] }) => this.apiRequest('post', '/api/roles', body);
+  updateRole = async (id: string, body: { name?: string; permissions?: string[] }) => this.apiRequest('patch', `/api/roles/${id}`, body);
+  deleteRole = async (id: string) => this.apiRequest('delete', `/api/roles/${id}`);
+
+  upgradeOptions = async (clientId: string) => this.apiRequest('get', '/api/client/upgrade/options', undefined, { clientId });
+  upgradeMembership = async (body: any) => this.apiRequest('post', '/api/client/upgrade', body);
+  chatUnread = async () => this.apiRequest('get', '/api/chat/unread');
+  chatThreads = async (search?: string) => this.apiRequest('get', '/api/chat/threads', undefined, search ? { search } : undefined);
+  chatThread = async (target: { memberId?: string | null; phone?: string }) =>
+    this.apiRequest('get', '/api/chat/thread', undefined, target.memberId ? { memberId: target.memberId } : { phone: target.phone });
+  chatSend = async (body: { memberId?: string | null; phone?: string; text: string }) => this.apiRequest('post', '/api/chat/send', body);
+  chatSendTemplate = async (body: { memberId: string; template: string }) => this.apiRequest('post', '/api/chat/send-template', body);
+  memberVisits = async (id: string, month: string) => this.apiRequest('get', `/api/biometric/members/${id}/visits`, undefined, { month });
+
+  report = async (kind: string, from: string, to: string) => this.apiRequest('get', `/api/reports/${kind}`, undefined, { from, to });
 
 }
 

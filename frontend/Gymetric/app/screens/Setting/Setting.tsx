@@ -1,201 +1,75 @@
-import { Pressable, ScrollView, View, ViewStyle, TextStyle } from 'react-native'
-import React, { useState } from 'react'
-import Constants from 'expo-constants'
-import { api } from '@/services/Api'
+import React, { useEffect, useState } from 'react'
+import { ScrollView, View } from 'react-native'
+import { Bell, Database, MessageCircle, ShieldCheck } from 'lucide-react-native'
 import { Screen } from '@/components/Screen'
-import { Text } from '@/components/Text'
-import { useAppTheme } from '@/theme/context'
-import { ChevronRight, CreditCard, FileText, MessageCircle } from 'lucide-react-native'
-import { Ionicons } from '@expo/vector-icons'
-import { navigate } from '@/navigators/navigationUtilities'
-import { ThemedStyle } from '@/theme/types'
+import { Header } from '@/components/Header'
 import { Skeleton } from '@/components/Skeleton'
-import { OTA_VERSION } from '@/utils/Constants'
+import { MenuRow, MenuSection } from '@/components/common/MenuRow'
+import { useAppTheme } from '@/theme/context'
+import { goBack, navigate } from '@/navigators/navigationUtilities'
+import { api } from '@/services/Api'
+import { usePermissions, useViewer } from '@/utils/permissions'
 
 const Setting = () => {
-  const { theme: { colors, spacing }, themed } = useAppTheme()
-  const [hasWhatsapp, setHasWhatsapp] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const { theme: { colors, spacing } } = useAppTheme()
+  const can = usePermissions()
+  const viewer = useViewer()
+  const canWhatsapp = can('whatsapp.settings')
+  const [hasWhatsapp, setHasWhatsapp] = useState<boolean | null>(null)
 
-  React.useEffect(() => {
-    const checkSettings = async () => {
-      setIsLoading(true)
-      const response = await api.getSettings()
-      if (response.kind === 'ok' && response.data?.hasWhatsappConfigured) {
-        setHasWhatsapp(true)
-      } else {
-        setHasWhatsapp(false)
-      }
-      setIsLoading(false)
-    }
-    checkSettings()
-  }, [])
-
-  const WhatsAppIcon = ({ size, color }: { size: number; color: string }) => (
-    <Ionicons name="logo-whatsapp" size={size} color={color} />
-  )
-
-  const SettingItem = ({
-    icon: Icon,
-    label,
-    description,
-    onPress,
-    color = colors.primary,
-  }: {
-    icon: any
-    label: string
-    description?: string
-    onPress?: () => void
-    color?: string
-  }) => (
-    <Pressable style={themed($item)} onPress={onPress}>
-      <View style={$itemLeft}>
-        <View style={[themed($itemIconBox), { backgroundColor: color + '15' }]}>
-          <Icon size={20} color={color} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={themed($itemLabel)} text={label} />
-          {description && <Text size="xs" style={themed($itemDesc)} numberOfLines={1} text={description} />}
-        </View>
-      </View>
-      <ChevronRight size={20} color={colors.textDim} />
-    </Pressable>
-  )
-
-  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <View style={{ marginBottom: spacing.lg }}>
-      <Text style={themed($sectionTitle)} text={title} />
-      <View style={themed($sectionContent)}>{children}</View>
-    </View>
-  )
+  useEffect(() => {
+    if (!canWhatsapp) return
+    api.getSettings().then((response) => setHasWhatsapp(response.kind === 'ok' && !!response.data?.hasWhatsappConfigured))
+  }, [canWhatsapp])
 
   return (
-    <Screen preset="fixed" safeAreaEdges={['top']} contentContainerStyle={themed($container)}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
-        <Text preset="heading" style={themed($pageTitle)} text="Settings" />
-
-        <Section title="MANAGEMENT">
-          <SettingItem
-            icon={CreditCard}
-            label="Manage Membership"
-            description="Plans, pricing and durations"
-            onPress={() => navigate('Memberships')}
-            color="#6366F1"
-          />
-          <SettingItem
-            icon={FileText}
-            label="Receipt Settings"
-            description="Logo, signature and footer for payment receipts"
-            onPress={() => navigate('Receipt Settings')}
-            color="#6366F1"
-          />
-        </Section>
-
-        <Section title="NOTIFICATIONS">
-          <SettingItem
-            icon={MessageCircle}
-            label="Push Notifications"
-            description="Daily expiry and balance alerts"
+    <Screen preset="fixed" safeAreaEdges={['bottom']} contentContainerStyle={{ flex: 1 }}>
+      <Header title="Settings" leftIcon="caretLeft" onLeftPress={goBack} backgroundColor={colors.surface} safeAreaTop />
+      <ScrollView contentContainerStyle={{ padding: spacing.md }}>
+        <MenuSection title="NOTIFICATIONS">
+          <MenuRow
+            icon={Bell}
+            label="Push notifications"
+            description="Daily expiry and balance alerts on this phone"
             onPress={() => navigate('Push Notification Settings')}
-            color="#4F46E5"
+            divider={canWhatsapp}
           />
-          {isLoading ? (
-            <View style={themed($item)}>
-              <Skeleton width="100%" height={44} borderRadius={12} />
-            </View>
-          ) : hasWhatsapp ? (
-            <>
-              <SettingItem
-                icon={WhatsAppIcon}
-                label="WhatsApp Messages"
-                description="Delivery status and message history"
-                onPress={() => navigate('WhatsApp Messages')}
-                color="#10B981"
+          {canWhatsapp ? (
+            hasWhatsapp === null ? (
+              <View style={{ padding: spacing.md }}>
+                <Skeleton width="100%" height={40} borderRadius={12} />
+              </View>
+            ) : (
+              <MenuRow
+                icon={MessageCircle}
+                label={hasWhatsapp ? 'WhatsApp settings' : 'Connect WhatsApp'}
+                description={hasWhatsapp ? 'Automatic reminders and templates' : 'Send reminders and receipts on WhatsApp'}
+                color={colors.success}
+                onPress={() => navigate(hasWhatsapp ? 'Notification Settings' : 'WhatsApp Premium')}
               />
-              <SettingItem
-                icon={WhatsAppIcon}
-                label="WhatsApp Settings"
-                description="WhatsApp alerts and reminders"
-                onPress={() => navigate('Notification Settings')}
-                color="#10B981"
-              />
-            </>
-          ) : (
-            <SettingItem
-              icon={WhatsAppIcon}
-              label="Connect WhatsApp"
-              description="Automate reminders & messages"
-              onPress={() => navigate('WhatsApp Premium')}
-              color="#10B981"
-            />
-          )}
-        </Section>
+            )
+          ) : null}
+        </MenuSection>
 
-        <Text
-          weight="medium"
-          style={themed($versionText)}
-          text={`GymKarta v${Constants.expoConfig?.version}_${OTA_VERSION}`}
-        />
+        {can('settings.access') ? (
+          <MenuSection title="TEAM">
+            <MenuRow
+              icon={ShieldCheck}
+              label="Access control"
+              description="Roles and what each one can do"
+              onPress={() => navigate('Access Control')}
+            />
+          </MenuSection>
+        ) : null}
+
+        {__DEV__ && viewer.roleKey === 'owner' ? (
+          <MenuSection title="DEVELOPER">
+            <MenuRow icon={Database} label="Seed demo data" color={colors.textDim} onPress={() => navigate('Seed Data')} />
+          </MenuSection>
+        ) : null}
       </ScrollView>
     </Screen>
   )
 }
 
 export default Setting
-
-const $container: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  flex: 1,
-})
-
-const $pageTitle: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  marginBottom: spacing.lg,
-  fontSize: 32,
-})
-
-const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing, typography }) => ({
-  fontSize: 12,
-  letterSpacing: 1,
-  fontWeight: typography.semiBold,
-  color: colors.textDim,
-  marginBottom: spacing.xxs,
-  marginLeft: 4,
-})
-
-const $sectionContent: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  backgroundColor: colors.surface,
-  borderRadius: 20,
-  overflow: 'hidden',
-  borderWidth: 1,
-  borderColor: colors.border,
-})
-
-const $item: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  paddingVertical: spacing.sm + 2,
-  paddingHorizontal: spacing.md,
-})
-
-const $itemLeft: ViewStyle = { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14 }
-const $itemIconBox: ThemedStyle<ViewStyle> = () => ({
-  width: 40,
-  height: 40,
-  borderRadius: 12,
-  alignItems: 'center',
-  justifyContent: 'center',
-})
-const $itemLabel: ThemedStyle<TextStyle> = ({ typography, colors }) => ({
-  fontWeight: typography.semiBold,
-  fontSize: 15,
-  color: colors.text,
-})
-const $itemDesc: ThemedStyle<TextStyle> = ({ colors }) => ({ color: colors.textDim, marginTop: 2 })
-
-const $versionText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  color: colors.textDim,
-  textAlign: 'center',
-  fontSize: 11,
-  marginTop: spacing.lg,
-})

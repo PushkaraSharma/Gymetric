@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import dayjs from 'dayjs';
 import { and, count, countDistinct, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '../db/client.js';
-import { activities, memberships, membershipMembers, members, payments } from '../db/schema.js';
+import { activities, attendance, memberships, membershipMembers, members, payments } from '../db/schema.js';
 import { compact, serializeActivity } from '../db/serializers.js';
 import {
     addUtcDays,
@@ -15,6 +15,27 @@ import {
     utcStartOfMonth,
 } from "../utils/timeUtils.js";
 import { cache, getCacheKey } from "../utils/cache.js";
+import { can } from "../services/access.js";
+import { getNowIST } from "../utils/timeUtils.js";
+
+const withoutRevenue = (data: Record<string, any>) => {
+    const {
+        revenueTrend: _trend,
+        revenueThisMonth: _month,
+        avgRevenuePerMember: _avg,
+        todayCollection: _today,
+        paymentMethodsToday: _methods,
+        totalPlanRevenueLast6Months: _planRevenue,
+        topSellingPlansLast6Months,
+        ...rest
+    } = data;
+    return {
+        ...rest,
+        topSellingPlansLast6Months: (topSellingPlansLast6Months ?? []).map(
+            ({ revenue: _revenue, avgSaleAmount: _avgSale, ...plan }: Record<string, any>) => plan,
+        ),
+    };
+};
 
 const IST = 'Asia/Kolkata';
 // Inlined rather than bound: GROUP BY only matches the SELECT expression when both use the same literal.
@@ -96,14 +117,64 @@ const getRevenueTrend = async (gymId: string, today: Date) => {
     }));
 };
 
+// Check-ins and the viewer's own collections change by the minute, so they skip the summary cache.
+const liveMetrics = async (gymId: string, userId: string) => {
+    const now = getNowIST();
+    const today = now.startOf('day').toDate();
+    const tomorrow = now.startOf('day').add(1, 'day').toDate();
+    const monthStart = now.startOf('month').toDate();
+    const granted = and(eq(attendance.branchId, gymId), eq(attendance.status, 'granted'));
+    const mine = and(eq(payments.branchId, gymId), eq(payments.collectedByUserId, userId));
+    const [[checkedIn], [unique], entries, [myToday], [myMonth], myMethods] = await Promise.all([
+        db.select({ value: countDistinct(attendance.memberId) }).from(attendance)
+            .where(and(granted, gte(attendance.punchedAt, today), lt(attendance.punchedAt, tomorrow))),
+        db.select({ value: countDistinct(attendance.memberId) }).from(attendance)
+            .where(and(granted, gte(attendance.punchedAt, monthStart))),
+        db.select({
+            _id: attendance.id,
+            memberId: attendance.memberId,
+            name: members.name,
+            profilePicture: members.profilePicture,
+            status: attendance.status,
+            denyReason: attendance.denyReason,
+            punchedAt: attendance.punchedAt,
+        }).from(attendance)
+            .leftJoin(members, eq(members.id, attendance.memberId))
+            .where(eq(attendance.branchId, gymId))
+            .orderBy(desc(attendance.punchedAt))
+            .limit(8),
+        db.select({ total: sumOf(payments.amount), count: count() }).from(payments)
+            .where(and(mine, gte(payments.paidAt, today), lt(payments.paidAt, tomorrow))),
+        db.select({ total: sumOf(payments.amount), count: count() }).from(payments)
+            .where(and(mine, gte(payments.paidAt, monthStart))),
+        db.select({ method: payments.method, total: sumOf(payments.amount) }).from(payments)
+            .where(and(mine, gte(payments.paidAt, today), lt(payments.paidAt, tomorrow)))
+            .groupBy(payments.method),
+    ]);
+    return {
+        checkedInToday: checkedIn?.value ?? 0,
+        uniqueVisitorsThisMonth: unique?.value ?? 0,
+        recentEntries: entries.map((e) => compact(e)),
+        myCollections: {
+            today: myToday?.total ?? 0,
+            todayCount: myToday?.count ?? 0,
+            thisMonth: myMonth?.total ?? 0,
+            methodsToday: myMethods.map((m) => ({ method: m.method, amount: m.total })),
+        },
+    };
+};
+
 export const getDashboardSummary = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const { gymId } = request.user as any;
+        const { gymId, userId } = request.user as any;
+        const live = await liveMetrics(gymId, userId);
+        const present = (data: Record<string, any>) =>
+            ({ ...(can(request, 'dashboard.revenue') ? data : withoutRevenue(data)), ...live });
         const cacheKey = getCacheKey('dashboard_summary', gymId);
 
         const cachedSummary = cache.get(cacheKey);
         if (cachedSummary) {
-            return reply.send({ success: true, data: cachedSummary });
+            return reply.send({ success: true, data: present(cachedSummary as Record<string, any>) });
         }
 
         const today = utcStartOfDay();
@@ -285,7 +356,7 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
 
         return reply.send({
             success: true,
-            data: responseData
+            data: present(responseData)
         });
     } catch (error: any) {
         request.log.error(error);
@@ -296,6 +367,9 @@ export const getDashboardSummary = async (request: FastifyRequest, reply: Fastif
 export const getRevenueStats = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const { gymId } = request.user as any;
+        if (!can(request, 'dashboard.revenue')) {
+            return reply.status(403).send({ success: false, message: 'Revenue is visible to the gym owner' });
+        }
         const { from: fromStr, to: toStr, page: pageStr, limit: limitStr } = (request.query as { from?: string; to?: string; page?: string; limit?: string }) || {};
         const page = Math.max(1, parseInt(pageStr || '1', 10) || 1);
         const limit = Math.min(50, Math.max(1, parseInt(limitStr || '50', 10) || 50));

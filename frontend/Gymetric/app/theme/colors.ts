@@ -28,6 +28,10 @@ const palette = {
   emerald600: "#059669",
   emerald700: "#047857",
 
+  // Warning Amber
+  amber50: "#FFFBEB",
+  amber600: "#D97706",
+
   // Error Rose
   rose50: "#FFF1F2",
   rose100: "#FFE4E6",
@@ -72,6 +76,9 @@ export const colors = {
 
   success: palette.emerald600,
   successBackground: palette.emerald50,
+
+  warning: palette.amber600,
+  warningBackground: palette.amber50,
 
   // Compatibility with existing code if needed
   activeBg: palette.emerald50,

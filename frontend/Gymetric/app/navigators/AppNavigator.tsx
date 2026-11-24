@@ -18,7 +18,8 @@ import ClientDetails from "@/screens/Clients/ClientDetails"
 import UpdateClientbasicInfo from "@/screens/Clients/CreateUpdateClient/UpdateClientBasicInfo"
 import Memberships from "@/screens/Setting/Memberships/Memberships"
 import CreateEditMembership from "@/screens/Setting/Memberships/CreateEditMembership"
-import BusinessProfile from "@/screens/Setting/BusinessProfile"
+import GymInfoScreen from "@/screens/Setting/GymInfoScreen"
+import Setting from "@/screens/Setting/Setting"
 import RenewMembership from "@/screens/Clients/ClientMembership/RenewMembership"
 import SearchClient from "@/screens/Clients/SearchClient"
 import { OnboardingScreen } from "@/screens/OnboardingScreen"
@@ -33,11 +34,20 @@ import Revenue from "@/screens/Revenue/Revenue"
 import Activity from "@/screens/Home/Activity"
 import { WhatsAppPremium } from "@/screens/Setting/WhatsAppPremium"
 import WhatsAppMessages from "@/screens/Setting/WhatsAppMessages"
+import ChatThreadScreen from "@/screens/WhatsApp/ChatThreadScreen"
 import EditMembershipScreen from "@/screens/Clients/EditMembershipScreen"
 import ReceiptSettingsScreen from "@/screens/Setting/ReceiptSettingsScreen"
 import PushNotificationSettings from "@/screens/Setting/PushNotificationSettings"
 import SeedDataScreen from "@/screens/Setting/SeedDataScreen"
-import AccountScreen from "@/screens/Setting/AccountScreen"
+import MyProfileScreen from "@/screens/Profile/MyProfileScreen"
+import StaffScreen from "@/screens/Setting/Staff/StaffScreen"
+import StaffFormScreen from "@/screens/Setting/Staff/StaffFormScreen"
+import StaffProfileScreen from "@/screens/Setting/Staff/StaffProfileScreen"
+import EntranceScreen from "@/screens/Setting/EntranceScreen"
+import AttendanceScreen from "@/screens/Attendance/AttendanceScreen"
+import ReportsScreen from "@/screens/Reports/ReportsScreen"
+import AccessControlScreen from "@/screens/Setting/Access/AccessControlScreen"
+import RoleScreen from "@/screens/Setting/Access/RoleScreen"
 import { trackScreenView } from "@/services/analyticsService"
 import { registerPushToken } from "@/services/pushNotificationService"
 import { SessionBootstrapOverlay } from "@/components/SessionBootstrapOverlay"
@@ -95,20 +105,30 @@ const AppStack = () => {
                 <Stack.Screen name="Memberships" component={Memberships} />
                 <Stack.Screen name="Create Edit Membership" component={CreateEditMembership} />
               </Stack.Group>
-              <Stack.Screen name="Business Profile" component={BusinessProfile} />
+              <Stack.Screen name="Gym Info" component={GymInfoScreen} />
+              <Stack.Screen name="Settings" component={Setting} />
               <Stack.Screen name="Help Center" component={HelpCenter} />
               <Stack.Screen name="Notification Settings" component={NotificationSetting} />
               <Stack.Screen name="WhatsApp Premium" component={WhatsAppPremium} />
               <Stack.Screen name="WhatsApp Messages" component={WhatsAppMessages} />
+              <Stack.Screen name="WhatsApp Chat" component={ChatThreadScreen} />
               <Stack.Screen name="Revenue" component={Revenue} />
               <Stack.Screen name="Activity" component={Activity} />
               <Stack.Screen name="Change Password" component={ChangePassword} />
               <Stack.Screen name="Receipt Settings" component={ReceiptSettingsScreen} />
               <Stack.Screen name="Push Notification Settings" component={PushNotificationSettings} />
               <Stack.Screen name="Seed Data" component={SeedDataScreen} />
+              <Stack.Screen name="Entrance" component={EntranceScreen} />
+              <Stack.Screen name="Attendance" component={AttendanceScreen} />
+              <Stack.Screen name="Reports" component={ReportsScreen} />
+              <Stack.Screen name="Staff" component={StaffScreen} />
+              <Stack.Screen name="Staff Member" component={StaffFormScreen} />
+              <Stack.Screen name="Staff Profile" component={StaffProfileScreen} />
+              <Stack.Screen name="Access Control" component={AccessControlScreen} />
+              <Stack.Screen name="Role" component={RoleScreen} />
               <Stack.Screen
-                name="Account"
-                component={AccountScreen}
+                name="My Profile"
+                component={MyProfileScreen}
                 options={{ animation: 'slide_from_left' }}
               />
             </Stack.Group>

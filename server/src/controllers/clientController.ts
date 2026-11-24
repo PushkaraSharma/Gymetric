@@ -1,7 +1,8 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { and, count, desc, eq, gt, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNotNull, max, sql } from 'drizzle-orm';
 import { db, type Executor } from '../db/client.js';
-import { activities, memberships, membershipMembers, membershipPauses, members, messageLogs, payments } from '../db/schema.js';
+import { activities, attendance, biometricDevices, deviceEnrollments, memberships, membershipMembers, membershipPauses, members, messageLogs, packages, payments } from '../db/schema.js';
+import { can } from '../services/access.js';
 import {
     addMembershipMember,
     findBranch,
@@ -10,6 +11,7 @@ import {
     findPackage,
     findSettings,
     memberDoc,
+    memberIdsFor,
     membershipDoc,
     pausesFor,
     paymentHistoryFor,
@@ -31,6 +33,7 @@ import {
     resolveAmountReceived,
 } from "../utils/membershipValidation.js";
 import { syncMembersForMembership, getMembershipStatusFromDates } from "../utils/membershipHelpers.js";
+import { deleteMemberFromDevice, syncMemberDoor, syncMembershipDoor } from "../services/biometric.js";
 import { STALE_WHATSAPP_SKIP_DAYS } from "../utils/Constants.js";
 import { cache, getCacheKey, invalidateClientCaches } from "../utils/cache.js";
 import { HttpError } from "../utils/httpError.js";
@@ -105,7 +108,8 @@ const applyPayment = async (
     totalAmount: number,
     amountReceived: number,
     method: string,
-    membershipId: string
+    membershipId: string,
+    collectedByUserId?: string,
 ) => {
     const balanceDue = totalAmount - amountReceived;
     const updated = await updateMember(exec, client.id, { balance: (client.balance || 0) + balanceDue });
@@ -123,6 +127,7 @@ const applyPayment = async (
             paidAt: new Date(),
             type: 'membership',
             remarks,
+            collectedByUserId,
         });
     }
     return updated;
@@ -134,50 +139,73 @@ const sendError = (request: FastifyRequest, reply: FastifyReply, error: any, lab
     return reply.status(500).send({ success: false, error: error.message });
 };
 
+// Last visit and fingerprint state change on every door punch, so they stay out of the cached list.
+const liveClientFields = async (gymId: string) => {
+    const [visits, enrollments] = await Promise.all([
+        db.select({ memberId: attendance.memberId, last: max(attendance.punchedAt) }).from(attendance)
+            .where(and(eq(attendance.branchId, gymId), eq(attendance.status, 'granted'), isNotNull(attendance.memberId)))
+            .groupBy(attendance.memberId),
+        db.select({ memberId: deviceEnrollments.memberId, status: deviceEnrollments.fingerprintStatus }).from(deviceEnrollments)
+            .innerJoin(biometricDevices, eq(biometricDevices.id, deviceEnrollments.deviceId))
+            .where(and(eq(biometricDevices.branchId, gymId), eq(biometricDevices.isActive, true), isNotNull(deviceEnrollments.memberId))),
+    ]);
+    return {
+        lastCheckin: new Map(visits.map((v) => [v.memberId as string, v.last])),
+        fingerprint: new Map(enrollments.map((e) => [e.memberId as string, e.status])),
+    };
+};
+
 export const getAllClients = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
         const cacheKey = getCacheKey('client_list', gymId);
 
-        const cachedClients = cache.get(cacheKey);
-        if (cachedClients) {
-            return reply.status(200).send({ success: true, data: cachedClients });
+        let clients = cache.get(cacheKey) as Record<string, any>[] | undefined;
+        if (!clients) {
+            const rows = await db
+                .select({ member: members, membership: memberships, planType: packages.planType })
+                .from(members)
+                .leftJoin(memberships, eq(memberships.id, members.activeMembershipId))
+                .leftJoin(packages, eq(packages.id, memberships.packageId))
+                .where(eq(members.branchId, gymId))
+                // Mongo sorted names by raw bytes (uppercase before lowercase); "C" collation keeps that order.
+                .orderBy(sql`${members.name} collate "C"`);
+
+            const pauses = await pausesFor(db, rows.flatMap((r) => (r.membership ? [r.membership.id] : [])));
+            clients = rows.map(({ member, membership, planType }) => compact({
+                _id: member.id,
+                name: member.name,
+                phoneNumber: member.phoneNumber,
+                gender: member.gender,
+                membershipStatus: member.membershipStatus,
+                activeMembership: membership ? compact({
+                    _id: membership.id,
+                    startDate: membership.startDate,
+                    endDate: membership.endDate,
+                    planName: membership.planName,
+                    planType: planType ?? undefined,
+                    status: membership.status,
+                    pauseHistory: (pauses.get(membership.id) ?? []).map((p) => compact({
+                        _id: p.id, startedAt: p.startedAt, endedAt: p.endedAt, days: p.days, reason: p.reason,
+                    })),
+                    totalPausedDays: membership.totalPausedDays,
+                }) : undefined,
+                balance: member.balance,
+                role: member.role,
+                profilePicture: member.profilePicture,
+                birthday: member.birthday,
+                createdAt: member.createdAt,
+            }));
+            cache.set(cacheKey, clients);
         }
 
-        const rows = await db
-            .select({ member: members, membership: memberships })
-            .from(members)
-            .leftJoin(memberships, eq(memberships.id, members.activeMembershipId))
-            .where(eq(members.branchId, gymId))
-            // Mongo sorted names by raw bytes (uppercase before lowercase); "C" collation keeps that order.
-            .orderBy(sql`${members.name} collate "C"`);
-
-        const pauses = await pausesFor(db, rows.flatMap((r) => (r.membership ? [r.membership.id] : [])));
-        const clients = rows.map(({ member, membership }) => compact({
-            _id: member.id,
-            name: member.name,
-            phoneNumber: member.phoneNumber,
-            gender: member.gender,
-            membershipStatus: member.membershipStatus,
-            activeMembership: membership ? compact({
-                _id: membership.id,
-                endDate: membership.endDate,
-                planName: membership.planName,
-                status: membership.status,
-                pauseHistory: (pauses.get(membership.id) ?? []).map((p) => compact({
-                    _id: p.id, startedAt: p.startedAt, endedAt: p.endedAt, days: p.days, reason: p.reason,
-                })),
-                totalPausedDays: membership.totalPausedDays,
-            }) : undefined,
-            balance: member.balance,
-            role: member.role,
-            profilePicture: member.profilePicture,
-            createdAt: member.createdAt,
+        const live = await liveClientFields(gymId);
+        const data = clients.map((client) => compact({
+            ...client,
+            lastCheckinAt: live.lastCheckin.get(client._id) ?? undefined,
+            fingerprintStatus: live.fingerprint.get(client._id) ?? undefined,
         }));
-
-        cache.set(cacheKey, clients);
-
-        return reply.status(200).send({ success: true, data: clients });
+        return reply.status(200).send({ success: true, data });
     } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({ success: false, error: error.message });
@@ -187,6 +215,7 @@ export const getAllClients = async (request: FastifyRequest, reply: FastifyReply
 export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody }>, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
         const { primaryDetails, dependents = [], planId, method, paymentReceived, amountReceived, startDate, amount } = request.body;
 
         const result = await db.transaction(async (tx) => {
@@ -260,10 +289,11 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
                 activeMembershipId: activeRef ?? null,
                 upcomingMembershipId: upcomingRef ?? null,
             });
-            const savedPrimary = await applyPayment(tx, withRefs, amount, paymentResult.received, method, newAssignedMembership.id);
+            const savedPrimary = await applyPayment(tx, withRefs, amount, paymentResult.received, method, newAssignedMembership.id, userId);
 
             await addActivity(tx, {
                 gymId,
+                actorUserId: userId,
                 type: 'ONBOARDING',
                 title: `New member${dependents.length > 0 ? 's' : ''} joined`,
                 description: `${primaryClient.name} joined with a ${plan.planName} plan starting ${formatDisplayDate(customStartDate)}${dependents.length > 0 ? ` along with ${dependents.length} members` : ''}`,
@@ -298,6 +328,7 @@ export const onBoarding = async (request: FastifyRequest<{ Body: OnboardingBody 
 export const getClientStats = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
         const countWhere = async (extra?: any) => {
             const [{ value }] = await db.select({ value: count() }).from(members).where(extra ? and(eq(members.branchId, gymId), extra) : eq(members.branchId, gymId));
             return value;
@@ -332,6 +363,7 @@ export const getClientStats = async (request: FastifyRequest, reply: FastifyRepl
 export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBody }>, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
         const { id, planId, startDate, amount, method, paymentReceived, amountReceived, dependents = [] } = request.body;
 
         const result = await db.transaction(async (tx) => {
@@ -392,10 +424,11 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
                 withRefs = await updateMember(tx, primaryClient.id, { upcomingMembershipId: renewedMembership.id });
             }
 
-            const savedPrimary = await applyPayment(tx, withRefs, amount, paymentResult.received, method, renewedMembership.id);
+            const savedPrimary = await applyPayment(tx, withRefs, amount, paymentResult.received, method, renewedMembership.id, userId);
 
             await addActivity(tx, {
                 gymId,
+                actorUserId: userId,
                 type: activityType,
                 title: activityType === 'RENEWAL' ? 'Membership Renewed' : 'Advance Renewal',
                 description: activityType === 'RENEWAL' ?
@@ -406,10 +439,11 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
                 date: new Date(),
             });
 
-            return { primaryClient: savedPrimary, plan, newStartDate, newEndDate };
+            return { primaryClient: savedPrimary, plan, newStartDate, newEndDate, membershipId: renewedMembership.id };
         });
 
-        const { primaryClient, plan, newStartDate, newEndDate } = result;
+        const { primaryClient, plan, newStartDate, newEndDate, membershipId } = result;
+        await syncMembershipDoor(membershipId);
         const settings = await findSettings(db, gymId);
         if (settings?.whatsappActive && settings.whatsappSendOnRenewal !== false) {
             const gymInfo = await findBranch(db, gymId);
@@ -427,6 +461,7 @@ export const renewMembership = async (request: FastifyRequest<{ Body: RenewalBod
 export const collectPayment = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
         const { clientId, amount, method, date, remarks } = request.body as any;
 
         const client = await db.transaction(async (tx) => {
@@ -448,11 +483,13 @@ export const collectPayment = async (request: FastifyRequest, reply: FastifyRepl
                 paidAt: paymentDate,
                 remarks: remarks || 'Balance collection',
                 type: 'balance_collection',
+                collectedByUserId: userId,
             });
             const saved = await updateMember(tx, found.id, { balance: found.balance - amount });
 
             await addActivity(tx, {
                 gymId,
+                actorUserId: userId,
                 type: 'PAYMENT',
                 title: 'Balance collected',
                 description: `₹${amount} collected from ${found.name}${remarks ? ` — ${remarks}` : ''}`,
@@ -464,15 +501,147 @@ export const collectPayment = async (request: FastifyRequest, reply: FastifyRepl
         });
 
         invalidateClientCaches(gymId);
+        await syncMemberDoor(client.id);
         return reply.send({ success: true, data: await memberDoc(db, client) });
     } catch (error: any) {
         return sendError(request, reply, error);
     }
 };
 
+// Upgrade keeps the start date and gives the whole price of the current plan as credit,
+// so the client pays only the difference. Same plan type and seats; trials cannot be upgraded.
+const upgradeContext = async (exec: Executor, gymId: string, clientId: unknown) => {
+    const client = await findMember(exec, clientId, gymId);
+    if (!client) throw new HttpError(404, { success: false, message: 'Client not found' });
+    const current = client.activeMembershipId ? await findMembership(exec, client.activeMembershipId, gymId) : null;
+    if (!current || current.status !== 'active' || current.endDate < getISTMidnightToday()) {
+        throw new HttpError(400, { success: false, message: 'Only an active membership can be upgraded' });
+    }
+    if (current.primaryMemberId !== client.id) {
+        throw new HttpError(400, { success: false, message: 'Upgrade from the profile of the client who paid for this plan' });
+    }
+    const currentPackage = current.packageId ? await findPackage(exec, current.packageId) : null;
+    const planType = currentPackage?.planType ?? 'indivisual';
+    const seats = currentPackage?.membersAllowed ?? 1;
+    const credit = current.totalAmount ?? 0;
+    const choices = await exec.select().from(packages)
+        .where(and(eq(packages.branchId, gymId), eq(packages.active, true), eq(packages.isTrial, false), eq(packages.planType, planType), eq(packages.membersAllowed, seats)))
+        .orderBy(packages.sortIndex);
+    const options = choices
+        .filter((p) => p.id !== current.packageId && p.price > credit)
+        .map((p) => ({
+            _id: p.id,
+            planName: p.planName,
+            price: p.price,
+            durationInMonths: p.durationInMonths,
+            durationInDays: p.durationInDays,
+            endDate: calculateMembershipExpiry(current.startDate, p.durationInMonths, p.durationInDays),
+            payable: p.price - credit,
+        }))
+        .filter((p) => p.endDate >= getISTMidnightToday());
+    return { client, current, credit, options };
+};
+
+export const upgradeOptions = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const gymId = (request.user as any).gymId;
+        const { clientId } = request.query as { clientId?: string };
+        const { current, credit, options } = await upgradeContext(db, gymId, clientId);
+        return reply.send({
+            success: true,
+            data: {
+                current: { _id: current.id, planName: current.planName, startDate: current.startDate, endDate: current.endDate, totalAmount: current.totalAmount },
+                credit,
+                options,
+                canDiscount: can(request, 'bill.discount'),
+            },
+        });
+    } catch (error: any) {
+        return sendError(request, reply, error);
+    }
+};
+
+export const upgradeMembership = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
+        const body = (request.body ?? {}) as { clientId?: string; planId?: string; discount?: number; amountReceived?: number; method?: string; reason?: string };
+        const discount = Math.max(0, Math.round(Number(body.discount) || 0));
+        const received = Math.max(0, Math.round(Number(body.amountReceived) || 0));
+        const reason = String(body.reason ?? '').trim();
+        if (discount > 0 && !can(request, 'bill.discount')) {
+            return reply.status(403).send({ success: false, message: "You can't give discounts. Ask the gym owner." });
+        }
+        if (!reason) return reply.status(400).send({ success: false, message: 'Add a reason for the upgrade' });
+
+        const result = await db.transaction(async (tx) => {
+            const { client, current, credit, options } = await upgradeContext(tx, gymId, body.clientId);
+            const choice = options.find((o) => o._id === body.planId);
+            if (!choice) throw new HttpError(400, { success: false, message: 'This plan is not available as an upgrade' });
+            const newNet = choice.price - discount;
+            if (newNet <= credit) throw new HttpError(400, { success: false, message: 'Discount is too large: the new plan must cost more than the current one' });
+            const due = newNet - credit;
+            if (received > due) throw new HttpError(400, { success: false, message: `Amount received cannot be more than ₹${due}` });
+
+            const [upgraded] = await tx.insert(memberships).values({
+                branchId: gymId,
+                primaryMemberId: client.id,
+                packageId: choice._id,
+                planName: choice.planName,
+                startDate: current.startDate,
+                endDate: choice.endDate,
+                totalAmount: newNet,
+                totalPausedDays: current.totalPausedDays,
+                status: 'active',
+            }).returning();
+            await tx.update(memberships).set({ status: 'upgraded', updatedAt: new Date() }).where(eq(memberships.id, current.id));
+
+            const people = await memberIdsFor(tx, current.id);
+            for (const memberId of people) {
+                await addMembershipMember(tx, upgraded.id, memberId);
+                await tx.update(members).set({ activeMembershipId: upgraded.id, membershipStatus: 'active', updatedAt: new Date() })
+                    .where(eq(members.id, memberId));
+            }
+
+            const saved = await updateMember(tx, client.id, { balance: (client.balance || 0) + (due - received) });
+            if (received > 0) {
+                await tx.insert(payments).values({
+                    branchId: gymId,
+                    memberId: client.id,
+                    membershipId: upgraded.id,
+                    amount: received,
+                    method: body.method || 'Cash',
+                    paidAt: new Date(),
+                    type: 'membership',
+                    remarks: `Upgrade from ${current.planName} to ${choice.planName}`,
+                    collectedByUserId: userId,
+                });
+            }
+            await addActivity(tx, {
+                gymId,
+                actorUserId: userId,
+                type: 'UPGRADE',
+                title: 'Membership upgraded',
+                description: `${client.name} moved from ${current.planName} to ${choice.planName} (${reason})`,
+                amount: received,
+                memberId: client.id,
+                date: new Date(),
+            });
+            return { saved, membershipId: upgraded.id };
+        });
+
+        await syncMembershipDoor(result.membershipId);
+        invalidateClientCaches(gymId);
+        return reply.send({ success: true, data: await memberDoc(db, result.saved) });
+    } catch (error: any) {
+        return sendError(request, reply, error, 'Upgrade Error');
+    }
+};
+
 export const amendMembership = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
         const { clientId, membershipId, planId, startDate, endDate, totalAmount, reason } = request.body as any;
 
         const result = await db.transaction(async (tx) => {
@@ -572,6 +741,7 @@ export const amendMembership = async (request: FastifyRequest, reply: FastifyRep
 
             await addActivity(tx, {
                 gymId,
+                actorUserId: userId,
                 type: 'MEMBERSHIP_AMENDED',
                 title: 'Membership updated',
                 description: `${client.name}'s ${savedMembership.planName} updated: ${reason}`,
@@ -583,6 +753,7 @@ export const amendMembership = async (request: FastifyRequest, reply: FastifyRep
         });
 
         invalidateClientCaches(gymId);
+        await syncMembershipDoor(result.membership.id);
         const client = await findMember(db, result.clientId);
         return reply.send({
             success: true,
@@ -599,6 +770,7 @@ export const amendMembership = async (request: FastifyRequest, reply: FastifyRep
 export const pauseMembership = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
         const { membershipId, reason } = request.body as any;
 
         const membership = await db.transaction(async (tx) => {
@@ -620,6 +792,7 @@ export const pauseMembership = async (request: FastifyRequest, reply: FastifyRep
             const primaryClient = await findMember(tx, found.primaryMemberId);
             await addActivity(tx, {
                 gymId,
+                actorUserId: userId,
                 type: 'PAUSE',
                 title: 'Membership paused',
                 description: `${primaryClient?.name}'s ${found.planName} membership paused${reason ? `: ${reason}` : ''}`,
@@ -630,6 +803,7 @@ export const pauseMembership = async (request: FastifyRequest, reply: FastifyRep
         });
 
         invalidateClientCaches(gymId);
+        await syncMembershipDoor(membership.id);
         return reply.send({ success: true, data: await membershipDoc(db, membership) });
     } catch (error: any) {
         return sendError(request, reply, error);
@@ -639,6 +813,7 @@ export const pauseMembership = async (request: FastifyRequest, reply: FastifyRep
 export const resumeMembership = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
         const { membershipId } = request.body as any;
 
         const membership = await db.transaction(async (tx) => {
@@ -674,6 +849,7 @@ export const resumeMembership = async (request: FastifyRequest, reply: FastifyRe
             const primaryClient = await findMember(tx, found.primaryMemberId);
             await addActivity(tx, {
                 gymId,
+                actorUserId: userId,
                 type: 'RESUME',
                 title: 'Membership resumed',
                 description: `${primaryClient?.name}'s ${found.planName} resumed after ${pauseDays} day(s). New expiry: ${formatDisplayDate(newEndDate)}`,
@@ -684,6 +860,7 @@ export const resumeMembership = async (request: FastifyRequest, reply: FastifyRe
         });
 
         invalidateClientCaches(gymId);
+        await syncMembershipDoor(membership.id);
         return reply.send({ success: true, data: await membershipDoc(db, membership) });
     } catch (error: any) {
         return sendError(request, reply, error);
@@ -693,6 +870,7 @@ export const resumeMembership = async (request: FastifyRequest, reply: FastifyRe
 export const getClientActivity = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
         const { id } = request.query as any;
         const member = await findMember(db, id, gymId);
         if (!member) return reply.send({ success: true, data: [] });
@@ -823,6 +1001,7 @@ export const deleteClient = async (request: any, reply: any) => {
             return reply.status(404).send({ success: false, message: 'Client not found' });
         }
 
+        await deleteMemberFromDevice(client.id);
         // Delete associated assigned memberships, activities and message logs
         await db.transaction(async (tx) => {
             await tx.delete(memberships).where(eq(memberships.primaryMemberId, client.id));

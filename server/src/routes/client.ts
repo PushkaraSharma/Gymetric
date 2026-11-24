@@ -1,4 +1,3 @@
-import { FastifyInstance } from "fastify";
 import {
     getAllClients,
     getClientById,
@@ -12,21 +11,26 @@ import {
     amendMembership,
     pauseMembership,
     resumeMembership,
+    upgradeOptions,
+    upgradeMembership,
 } from "../controllers/clientController.js";
+import { requirePermission as need } from "../services/access.js";
 
-export async function clientRoutes(fastify: FastifyInstance) {
+export async function clientRoutes(fastify: any) {
     fastify.addHook('onRequest', fastify.authenticate);
 
-    fastify.get('/all', getAllClients);
-    fastify.post('/add', onBoarding);
-    fastify.patch('/update', updateClient);
-    fastify.get('/clientInfo', getClientById);
-    fastify.get('/stats', getClientStats);
-    fastify.get('/activity', getClientActivity);
-    fastify.patch('/renew', renewMembership);
-    fastify.post('/collect-payment', collectPayment);
-    fastify.patch('/membership/amend', amendMembership);
-    fastify.post('/membership/pause', pauseMembership);
-    fastify.post('/membership/resume', resumeMembership);
-    fastify.delete('/delete', deleteClient);
+    fastify.get('/all', { preHandler: need('clients.view') }, getAllClients);
+    fastify.post('/add', { preHandler: need('clients.create') }, onBoarding);
+    fastify.patch('/update', { preHandler: need('clients.edit') }, updateClient);
+    fastify.get('/clientInfo', { preHandler: need('clients.view') }, getClientById);
+    fastify.get('/stats', { preHandler: need('clients.view') }, getClientStats);
+    fastify.get('/activity', { preHandler: need('clients.view') }, getClientActivity);
+    fastify.patch('/renew', { preHandler: need('clients.renew') }, renewMembership);
+    fastify.post('/collect-payment', { preHandler: need('clients.collect') }, collectPayment);
+    fastify.patch('/membership/amend', { preHandler: need('clients.edit') }, amendMembership);
+    fastify.post('/membership/pause', { preHandler: need('clients.freeze') }, pauseMembership);
+    fastify.post('/membership/resume', { preHandler: need('clients.freeze') }, resumeMembership);
+    fastify.get('/upgrade/options', { preHandler: need('clients.upgrade') }, upgradeOptions);
+    fastify.post('/upgrade', { preHandler: need('clients.upgrade') }, upgradeMembership);
+    fastify.delete('/delete', { preHandler: need('clients.delete') }, deleteClient);
 }

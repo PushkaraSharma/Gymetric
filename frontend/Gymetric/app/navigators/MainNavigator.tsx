@@ -5,9 +5,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAppTheme } from "@/theme/context"
 import Home from "@/screens/Home/Home"
 import ClientsList from "@/screens/Clients/ClientsList"
-import Setting from "@/screens/Setting/Setting"
-import { LayoutDashboard, Users, Settings } from "lucide-react-native"
+import MoreScreen from "@/screens/More/MoreScreen"
+import WhatsAppScreen from "@/screens/WhatsApp/WhatsAppScreen"
+import { LayoutDashboard, Users, LayoutGrid } from "lucide-react-native"
+import { Ionicons } from "@expo/vector-icons"
+import { usePermissions } from "@/utils/permissions"
 import { hapticsSelection } from "@/utils/haptics"
+import { useChatUnread } from "@/utils/chatUnread"
 import { useAppDispatch } from "@/redux/Hooks"
 import { warmSession } from "@/services/sessionBootstrapService"
 import type { MainTabParamList } from "./navigationTypes"
@@ -19,6 +23,9 @@ export function MainNavigator() {
     const insets = useSafeAreaInsets()
     const isAndroid = Platform.OS === 'android';
     const dispatch = useAppDispatch()
+    const can = usePermissions()
+    const canChat = can('whatsapp.chat') || can('whatsapp.settings')
+    const unread = useChatUnread(can('whatsapp.chat'))
 
     useEffect(() => {
         warmSession(dispatch)
@@ -64,20 +71,35 @@ export function MainNavigator() {
                 component={ClientsList}
                 listeners={{ tabPress: () => hapticsSelection() }}
                 options={{
-                    tabBarLabel: "Members",
+                    tabBarLabel: "Clients",
                     tabBarIcon: ({ color, size }) => (
                         <Users size={size} color={color} />
                     ),
                 }}
             />
+            {canChat && (
+                <Tab.Screen
+                    name="WhatsApp"
+                    component={WhatsAppScreen}
+                    listeners={{ tabPress: () => hapticsSelection() }}
+                    options={{
+                        tabBarLabel: 'WhatsApp',
+                        tabBarBadge: unread > 0 ? (unread > 99 ? '99+' : unread) : undefined,
+                        tabBarBadgeStyle: { backgroundColor: theme.colors.success, fontSize: 10 },
+                        tabBarIcon: ({ color, size }) => (
+                            <Ionicons name="logo-whatsapp" size={size} color={color} />
+                        ),
+                    }}
+                />
+            )}
             <Tab.Screen
-                name="Setting"
-                component={Setting}
+                name="More"
+                component={MoreScreen}
                 listeners={{ tabPress: () => hapticsSelection() }}
                 options={{
-                    tabBarLabel: 'Setting',
+                    tabBarLabel: 'More',
                     tabBarIcon: ({ color, size }) => (
-                        <Settings size={size} color={color} />
+                        <LayoutGrid size={size} color={color} />
                     ),
                 }}
             />

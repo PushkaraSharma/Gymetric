@@ -60,7 +60,7 @@ const ChangePassword = () => {
             />
             <ScrollView style={{ flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.md }}>
                 <Text size='xs' style={{ marginBottom: spacing.lg, color: colors.textDim }}>
-                    Enter your old password and a new secure password to update your account access.
+                    Forgot your current password? Leave it empty. You are already signed in with your phone number.
                 </Text>
 
                 <TextField

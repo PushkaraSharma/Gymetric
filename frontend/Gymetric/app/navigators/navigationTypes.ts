@@ -4,7 +4,8 @@ import { NavigationContainer, NavigatorScreenParams } from "@react-navigation/na
 export type MainTabParamList = {
   Home: undefined
   Clients: { filter?: string } | undefined
-  Setting: undefined
+  WhatsApp: undefined
+  More: undefined
 }
 
 export type AppStackParamList = {
@@ -19,21 +20,31 @@ export type AppStackParamList = {
   "Update Basic Information": { client: any }
   "Renew Membership": { client: any }
   "Edit Membership": { client: any; membership: any }
-  "Search Client": undefined
+  "Search Client": { intent?: "message"; index?: number; handleSelect?: (...args: any[]) => void } | undefined
   Memberships: undefined
   "Create Edit Membership": { membership?: any }
-  "Business Profile": undefined
+  "Gym Info": undefined
+  Settings: undefined
   "Help Center": undefined
   "Notification Settings": undefined
   "WhatsApp Premium": undefined
   "WhatsApp Messages": undefined
+  "WhatsApp Chat": { memberId?: string | null; phone?: string; name?: string | null }
   Revenue: undefined
   Activity: undefined
   "Change Password": undefined
   "Receipt Settings": undefined
   "Push Notification Settings": undefined
   "Seed Data": undefined
-  Account: undefined
+  "My Profile": undefined
+  Entrance: undefined
+  Attendance: undefined
+  Reports: undefined
+  Staff: undefined
+  "Staff Member": { staff?: any }
+  "Staff Profile": { staffId: string }
+  "Access Control": undefined
+  Role: { role?: any; catalog: any[] }
 }
 
 export interface NavigationProps extends Partial<

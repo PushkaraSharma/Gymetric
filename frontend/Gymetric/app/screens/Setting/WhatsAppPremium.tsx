@@ -39,7 +39,7 @@ export const WhatsAppPremium = () => {
         {
             icon: <Ionicons name="logo-whatsapp" size={24} color={colors.primary} />,
             title: "Welcome Messages",
-            description: "Automatically welcome new members instantly after registration."
+            description: "Automatically welcome new clients instantly after registration."
         },
         {
             icon: <Calendar size={24} color={colors.primary} />,

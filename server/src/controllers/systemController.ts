@@ -9,6 +9,7 @@ import { getISTMidnightToday, formatShortDate } from "../utils/timeUtils.js";
 import { sendWhatsAppTemplate } from "../services/Whatsapp.js";
 import { sendExpoPush } from "../services/pushNotificationService.js";
 import { invalidateClientCachesMany } from "../utils/cache.js";
+import { syncMembershipDoor } from "../services/biometric.js";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -68,6 +69,7 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
             await db.update(members)
                 .set({ membershipStatus: newStatus, updatedAt: new Date() })
                 .where(and(inArray(members.id, onPlan), eq(members.activeMembershipId, memb.id)));
+            await syncMembershipDoor(memb.id);
             affectedGymIds.add(memb.branchId);
 
             const primaryMember = await findMember(db, memb.primaryMemberId);

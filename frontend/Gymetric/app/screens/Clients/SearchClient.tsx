@@ -14,7 +14,8 @@ import { Text } from '@/components/Text'
 import ProfileInitialLogo from '@/components/ProfileInitialLogo'
 import { TextInput } from 'react-native-gesture-handler'
 
-const SearchClient = ({ route }: any) => {
+const SearchClient = ({ route, navigation }: any) => {
+    const messaging = route?.params?.intent === 'message';
     const [searchText, setSearchText] = useState<string>('');
     const { theme: { colors }, themed } = useAppTheme();
     const inputRef = useRef<TextInput>(null);
@@ -23,7 +24,10 @@ const SearchClient = ({ route }: any) => {
     const filteredClients = search ? clients?.filter((c) => c.name?.toLowerCase().includes(search) || c.phoneNumber?.includes(search)) : clients;
 
     const RenderItem = ({ item }: any) => (
-        <Pressable style={[themed($item), $styles.flexRow]} onPress={() => { route?.params?.handleSelect?.(route?.params?.index, 'add', item); goBack(); }}>
+        <Pressable style={[themed($item), $styles.flexRow]} onPress={() => {
+            if (messaging) return navigation.replace('WhatsApp Chat', { memberId: item._id, name: item.name, phone: item.phoneNumber });
+            route?.params?.handleSelect?.(route?.params?.index, 'add', item); goBack();
+        }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <ProfileInitialLogo name={item.name} imageUrl={item.profilePicture} />
                 <View>
@@ -48,7 +52,7 @@ const SearchClient = ({ route }: any) => {
             safeAreaEdges={["bottom"]}
             {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}
         >
-            <Header safeAreaTop title={`Add Dependent ${route?.params?.index + 1}`} backgroundColor={colors.surface} leftAction={<Pressable style={[$styles.row, { paddingHorizontal: 10 }]} onPress={goBack}>
+            <Header safeAreaTop title={messaging ? 'Message a client' : `Add Dependent ${route?.params?.index + 1}`} backgroundColor={colors.surface} leftAction={<Pressable style={[$styles.row, { paddingHorizontal: 10 }]} onPress={goBack}>
                 <Ionicons name={'close'} size={25} color={colors.text} />
             </Pressable>} />
             <View style={{ flex: 1, paddingTop: 10 }}>

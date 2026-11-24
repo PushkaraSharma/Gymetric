@@ -13,9 +13,16 @@ import { settingRoutes } from './routes/settings.js';
 import { uploadRoutes } from './routes/upload.js';
 import { userRoutes } from './routes/user.js';
 import { whatsappRoutes } from './routes/whatsapp.js';
+import { staffRoutes } from './routes/staff.js';
+import { biometricRoutes, iclockRoutes } from './routes/biometric.js';
+import { roleRoutes } from './routes/roles.js';
+import { chatRoutes } from './routes/chat.js';
+import { reportRoutes } from './routes/reports.js';
+import { syncRoles } from './services/access.js';
 
 // Expects openDatabase() to have run. Used by app.ts and by the in-process smoke test.
 export async function buildApp(): Promise<FastifyInstance> {
+    await syncRoles();
     const app: FastifyInstance = fastify({
         logger: {
             level: 'error'
@@ -47,6 +54,12 @@ export async function buildApp(): Promise<FastifyInstance> {
     await app.register(uploadRoutes, { prefix: '/api/upload' });
     await app.register(userRoutes, { prefix: '/api/user' });
     await app.register(whatsappRoutes, { prefix: '/api/whatsapp' });
+    await app.register(staffRoutes, { prefix: '/api/staff' });
+    await app.register(biometricRoutes, { prefix: '/api/biometric' });
+    await app.register(iclockRoutes, { prefix: '/iclock' });
+    await app.register(roleRoutes, { prefix: '/api/roles' });
+    await app.register(chatRoutes, { prefix: '/api/chat' });
+    await app.register(reportRoutes, { prefix: '/api/reports' });
 
     app.setErrorHandler((error: any, request: any, reply: any) => {
         Sentry.captureException(error);

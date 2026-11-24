@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 import { and, count, desc, eq, gte, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '../db/client.js';
-import { members, messageLogs } from '../db/schema.js';
+import { branchSettings, members, messageLogs } from '../db/schema.js';
 import { MESSAGE_LOG_STATUSES } from '../utils/Constants.js';
 import { getISTMidnightToday, addUtcDays } from '../utils/timeUtils.js';
 import { shouldApplyWhatsAppStatus } from '../utils/whatsappStatus.js';
@@ -113,6 +113,9 @@ export const handleWhatsAppWebhook = async (request: FastifyRequest, reply: Fast
                     await db.update(messageLogs).set(update).where(eq(messageLogs.id, log.id));
                     console.log('WhatsApp webhook status updated', { suffix: wamidSuffix(wamid), nextStatus });
                 }
+
+                const inbound = change?.value?.messages || [];
+                if (inbound.length) await storeInbound(change.value.metadata?.phone_number_id, inbound, change.value.contacts || []);
             }
         }
 
@@ -121,6 +124,54 @@ export const handleWhatsAppWebhook = async (request: FastifyRequest, reply: Fast
         request.log?.error?.(error);
         console.error('WhatsApp webhook error:', error);
         return reply.status(200).send({ success: true });
+    }
+};
+
+const inboundText = (message: any) => {
+    switch (message?.type) {
+        case 'text': return message.text?.body ?? '';
+        case 'button': return message.button?.text ?? '[Button]';
+        case 'interactive': return message.interactive?.button_reply?.title ?? message.interactive?.list_reply?.title ?? '[Reply]';
+        case 'image': return message.image?.caption ? `[Photo] ${message.image.caption}` : '[Photo]';
+        case 'video': return '[Video]';
+        case 'audio': return '[Voice message]';
+        case 'document': return `[Document] ${message.document?.filename ?? ''}`.trim();
+        case 'sticker': return '[Sticker]';
+        case 'location': return '[Location]';
+        default: return `[${message?.type ?? 'Message'}]`;
+    }
+};
+
+const storeInbound = async (phoneNumberId: string | undefined, messages: any[], contacts: any[]) => {
+    if (!phoneNumberId) return;
+    const [setting] = await db.select({ branchId: branchSettings.branchId }).from(branchSettings)
+        .where(eq(branchSettings.whatsappPhoneNumberId, phoneNumberId)).limit(1);
+    if (!setting) {
+        console.warn('WhatsApp inbound for unknown phone number id');
+        return;
+    }
+    for (const message of messages) {
+        const from = String(message?.from ?? '');
+        if (!from || !message?.id) continue;
+        const local = from.slice(-10);
+        const [member] = await db.select({ id: members.id }).from(members)
+            .where(and(eq(members.branchId, setting.branchId), eq(members.phoneNumber, local)))
+            .limit(1);
+        const name = contacts.find((c: any) => c?.wa_id === from)?.profile?.name;
+        const body = inboundText(message);
+        await db.insert(messageLogs).values({
+            branchId: setting.branchId,
+            memberId: member?.id ?? null,
+            channel: 'whatsapp',
+            direction: 'in',
+            phone: from,
+            body,
+            status: 'received',
+            summary: name ? `${name}: ${body}`.slice(0, 120) : body.slice(0, 120),
+            providerMessageId: message.id,
+            sentAt: message.timestamp ? new Date(Number(message.timestamp) * 1000) : new Date(),
+            statusUpdatedAt: new Date(),
+        }).onConflictDoNothing();
     }
 };
 
@@ -140,7 +191,7 @@ const verifyMetaSignature = (rawBody: string, signatureHeader?: string) => {
 const statusCounts = (gymId: string, since: Date) => db
     .select({ status: messageLogs.status, count: count() })
     .from(messageLogs)
-    .where(and(eq(messageLogs.branchId, gymId), gte(messageLogs.sentAt, since)))
+    .where(and(eq(messageLogs.branchId, gymId), eq(messageLogs.direction, 'out'), gte(messageLogs.sentAt, since)))
     .groupBy(messageLogs.status);
 
 export const getWhatsAppSummary = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -154,7 +205,7 @@ export const getWhatsAppSummary = async (request: FastifyRequest, reply: Fastify
             statusCounts(gymId, sevenDaysStart),
             db.select({ template: messageLogs.template, status: messageLogs.status, count: count() })
                 .from(messageLogs)
-                .where(and(eq(messageLogs.branchId, gymId), gte(messageLogs.sentAt, sevenDaysStart)))
+                .where(and(eq(messageLogs.branchId, gymId), eq(messageLogs.direction, 'out'), gte(messageLogs.sentAt, sevenDaysStart)))
                 .groupBy(messageLogs.template, messageLogs.status),
         ]);
 
@@ -194,7 +245,7 @@ export const getWhatsAppLogs = async (request: FastifyRequest, reply: FastifyRep
         const pageNum = Math.max(parseInt(page, 10) || 1, 1);
         const limitNum = Math.min(Math.max(parseInt(limit, 10) || 30, 1), 100);
 
-        const filters: SQL[] = [eq(messageLogs.branchId, gymId)];
+        const filters: SQL[] = [eq(messageLogs.branchId, gymId), eq(messageLogs.direction, 'out')];
         if (status && status !== 'all' && (MESSAGE_LOG_STATUSES as readonly string[]).includes(status)) {
             filters.push(eq(messageLogs.status, status));
         }
