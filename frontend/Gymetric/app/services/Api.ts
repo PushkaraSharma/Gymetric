@@ -420,8 +420,12 @@ export class Api {
     this.apiRequest('delete', `/api/client/${clientId}/payments/${paymentId}`, undefined, { reason });
   chatUnread = async () => this.apiRequest('get', '/api/chat/unread');
   chatThreads = async (search?: string) => this.apiRequest('get', '/api/chat/threads', undefined, search ? { search } : undefined);
-  chatThread = async (target: { memberId?: string | null; phone?: string }) =>
-    this.apiRequest('get', '/api/chat/thread', undefined, target.memberId ? { memberId: target.memberId } : { phone: target.phone });
+  // `before` (an older message's `at`) loads the page before it; without it, the newest page.
+  chatThread = async (target: { memberId?: string | null; phone?: string }, before?: string) =>
+    this.apiRequest('get', '/api/chat/thread', undefined, {
+      ...(target.memberId ? { memberId: target.memberId } : { phone: target.phone }),
+      ...(before ? { before } : {}),
+    });
   chatSend = async (body: { memberId?: string | null; phone?: string; text: string }) => this.apiRequest('post', '/api/chat/send', body);
   chatSendTemplate = async (body: { memberId: string; template: string }) => this.apiRequest('post', '/api/chat/send-template', body);
   memberVisits = async (id: string, month: string) => this.apiRequest('get', `/api/biometric/members/${id}/visits`, undefined, { month });

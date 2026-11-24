@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, FlatList, Platform, Pressable, TextInput, View, ViewStyle, TextStyle } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { format, isSameDay, isToday, isYesterday } from 'date-fns'
@@ -32,6 +32,7 @@ type Thread = {
   name: string | null
   connected: boolean
   windowEndsAt: string | null
+  hasMore?: boolean
   templates: { key: string; label: string; preview: string }[]
   messages: Message[]
 }
@@ -44,7 +45,7 @@ const dayLabel = (date: Date) => (isToday(date) ? 'Today' : isYesterday(date) ? 
 const messageText = (m: Message) => (m.template && m.body.startsWith(`${m.template}:`) ? m.body.slice(m.template.length + 1).trim() : m.body)
 
 function Bubble({ message, showDay }: { message: Message; showDay: boolean }) {
-  const { themed, theme: { colors } } = useAppTheme()
+  const { themed, theme: { colors }, isDark } = useAppTheme()
   const mine = message.direction === 'out'
   const at = new Date(message.at)
   const Tick = message.status === 'read' || message.status === 'delivered' ? CheckCheck : message.status === 'queued' ? Clock : Check
@@ -55,7 +56,7 @@ function Bubble({ message, showDay }: { message: Message; showDay: boolean }) {
           <Text size="xxs" weight="medium" style={{ color: colors.textDim }} text={dayLabel(at)} />
         </View>
       ) : null}
-      <View style={[themed($bubble), mine ? themed($mine) : themed($theirs)]}>
+      <View style={[themed($bubble), mine ? $mine : $theirs, { backgroundColor: mine ? (isDark ? WA.darkMine : WA.lightMine) : (isDark ? WA.darkTheirs : colors.surface) }]}>
         {message.template ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
             <FileText size={12} color={colors.textDim} />
@@ -69,7 +70,7 @@ function Bubble({ message, showDay }: { message: Message; showDay: boolean }) {
           {mine ? (
             message.status === 'failed'
               ? <Ionicons name="alert-circle" size={13} color={colors.error} />
-              : <Tick size={13} color={message.status === 'read' ? colors.primary : colors.textDim} />
+              : <Tick size={13} color={message.status === 'read' ? WA.readTick : colors.textDim} />
           ) : null}
         </View>
         {message.status === 'failed' && message.errorMessage ? (
@@ -82,18 +83,38 @@ function Bubble({ message, showDay }: { message: Message; showDay: boolean }) {
 
 const ChatThreadScreen = ({ route }: any) => {
   const params = route.params as Params
-  const { themed, theme: { colors, spacing } } = useAppTheme()
+  const { themed, theme: { colors, spacing }, isDark } = useAppTheme()
   const [thread, setThread] = useState<Thread | null>(null)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  // Messages from older pages, kept when the newest page refreshes every 15 seconds.
+  const [older, setOlder] = useState<Message[]>([])
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const olderLoaded = useRef(false)
 
   const load = useCallback(async () => {
     const response = await api.chatThread({ memberId: params.memberId, phone: params.phone })
     if (response.kind === 'ok') {
       setThread(response.data)
+      // Until an older page is fetched, the newest page decides whether there is more to load.
+      if (!olderLoaded.current) setHasMore(!!response.data?.hasMore)
       refreshChatUnread()
     }
   }, [params.memberId, params.phone])
+
+  const loadOlder = async () => {
+    const oldest = older[0] ?? thread?.messages[0]
+    if (!hasMore || loadingOlder || !oldest) return
+    setLoadingOlder(true)
+    const response = await api.chatThread({ memberId: params.memberId, phone: params.phone }, oldest.at)
+    setLoadingOlder(false)
+    if (response.kind === 'ok') {
+      olderLoaded.current = true
+      setOlder((current) => [...(response.data?.messages ?? []), ...current])
+      setHasMore(!!response.data?.hasMore)
+    }
+  }
 
   useFocusEffect(useCallback(() => {
     load()
@@ -134,8 +155,11 @@ const ChatThreadScreen = ({ route }: any) => {
   }
 
   const title = thread?.name ?? params.name ?? `+91 ${params.phone ?? ''}`
-  const messages = thread?.messages ?? []
+  const latest = thread?.messages ?? []
+  const latestIds = new Set(latest.map((m) => m._id))
+  const messages = [...older.filter((m) => !latestIds.has(m._id)), ...latest]
   const reversed = messages.slice().reverse()
+  const wallpaper = isDark ? WA.darkWallpaper : WA.lightWallpaper
 
   return (
     <Screen
@@ -165,7 +189,11 @@ const ChatThreadScreen = ({ route }: any) => {
             inverted
             data={reversed}
             keyExtractor={(m) => m._id}
+            style={{ backgroundColor: wallpaper }}
             contentContainerStyle={{ padding: spacing.md }}
+            onEndReached={loadOlder}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={loadingOlder ? <ActivityIndicator color={colors.textDim} style={{ marginVertical: spacing.sm }} /> : null}
             renderItem={({ item, index }) => {
               const older = reversed[index + 1]
               return <Bubble message={item} showDay={!older || !isSameDay(new Date(older.at), new Date(item.at))} />
@@ -248,19 +276,33 @@ const $bubble: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: 6,
 })
 
-const $mine: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  alignSelf: 'flex-end',
-  backgroundColor: colors.successBackground,
-  borderBottomRightRadius: 4,
-})
+// WhatsApp's own chat colours (CoreWave's wa-* tokens), so the thread reads like WhatsApp.
+const WA = {
+  lightWallpaper: '#EFEAE2',
+  darkWallpaper: '#0B141A',
+  lightMine: '#D9FDD3',
+  darkMine: '#005C4B',
+  darkTheirs: '#202C33',
+  readTick: '#53BDEB',
+}
 
-const $theirs: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $mine: ViewStyle = {
+  alignSelf: 'flex-end',
+  borderTopRightRadius: 4,
+  shadowColor: '#0B141A',
+  shadowOpacity: 0.08,
+  shadowRadius: 1,
+  shadowOffset: { width: 0, height: 1 },
+}
+
+const $theirs: ViewStyle = {
   alignSelf: 'flex-start',
-  backgroundColor: colors.surface,
-  borderWidth: 1,
-  borderColor: colors.border,
-  borderBottomLeftRadius: 4,
-})
+  borderTopLeftRadius: 4,
+  shadowColor: '#0B141A',
+  shadowOpacity: 0.08,
+  shadowRadius: 1,
+  shadowOffset: { width: 0, height: 1 },
+}
 
 const $notice: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   padding: spacing.md,

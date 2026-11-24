@@ -199,7 +199,7 @@ const WhatsAppScreen = () => {
           {canChat ? (
             <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.xs }}>
               <Segmented<Tab>
-                options={[{ value: 'chats', label: 'Chats', badge: unread || undefined }, { value: 'log', label: 'Message log' }]}
+                options={[{ value: 'chats', label: 'Chats', badge: unread || undefined }, { value: 'log', label: 'Report' }]}
                 value={tab}
                 onChange={setTab}
               />

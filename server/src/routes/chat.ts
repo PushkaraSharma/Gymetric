@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { and, count, desc, eq, gte, inArray, isNull, like, ne, or, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNull, like, lt, ne, or, type SQL } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { members, memberships, messageLogs, users } from "../db/schema.js";
 import { findBranch, findMember, findSettings } from "../db/queries.js";
@@ -74,6 +74,8 @@ const whatsappReady = async (gymId: string) => {
     return settings?.whatsappActive && settings.whatsappPhoneNumberId ? settings : null;
 };
 
+const THREAD_PAGE = 50;
+
 export async function chatRoutes(fastify: FastifyInstance) {
     fastify.addHook("onRequest", fastify.authenticate);
     fastify.addHook("preHandler", requireFeature("whatsapp"));
@@ -140,7 +142,10 @@ export async function chatRoutes(fastify: FastifyInstance) {
 
     fastify.get("/thread", canChat, async (request: FastifyRequest, reply: FastifyReply) => {
         const { gymId } = user(request);
-        const query = request.query as { memberId?: string; phone?: string };
+        const query = request.query as { memberId?: string; phone?: string; before?: string };
+        // Pages of THREAD_PAGE, newest first; `before` (a message's `at`) loads the page older than it (CoreWave shape).
+        const before = query.before ? new Date(query.before) : null;
+        if (before && Number.isNaN(before.getTime())) return reply.status(400).send({ success: false, message: "Invalid cursor" });
         const resolved = await resolveTarget(gymId, query);
         if (!resolved) return reply.status(404).send({ success: false, message: "Chat not found" });
         const { target, member } = resolved;
@@ -148,9 +153,12 @@ export async function chatRoutes(fastify: FastifyInstance) {
 
         const rows = await db.select({ log: messageLogs, senderName: users.name }).from(messageLogs)
             .leftJoin(users, eq(users.id, messageLogs.sentByUserId))
-            .where(and(where, ne(messageLogs.status, "skipped")))
-            .orderBy(desc(messageLogs.sentAt)).limit(200);
-        const unseen = rows.filter(({ log }) => log.direction === "in" && !log.seenAt).map(({ log }) => log.id);
+            .where(and(where, ne(messageLogs.status, "skipped"), before ? lt(messageLogs.sentAt, before) : undefined))
+            .orderBy(desc(messageLogs.sentAt)).limit(THREAD_PAGE + 1);
+        const hasMore = rows.length > THREAD_PAGE;
+        if (hasMore) rows.pop();
+        // Opening the thread (the newest page) is what marks the client's messages as seen.
+        const unseen = before ? [] : rows.filter(({ log }) => log.direction === "in" && !log.seenAt).map(({ log }) => log.id);
         if (unseen.length) await db.update(messageLogs).set({ seenAt: new Date() }).where(inArray(messageLogs.id, unseen));
 
         const lastIn = await lastInboundAt(gymId, target);
@@ -167,6 +175,7 @@ export async function chatRoutes(fastify: FastifyInstance) {
                 photo: member?.profilePicture ?? null,
                 connected: !!settings,
                 windowEndsAt,
+                hasMore,
                 templates: (Object.keys(TEMPLATE_LABELS) as ChatTemplate[])
                     .filter((key) => templates[key])
                     .map((key) => ({ key, label: TEMPLATE_LABELS[key], preview: templates[key]!.preview })),
