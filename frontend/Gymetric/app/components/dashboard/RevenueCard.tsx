@@ -13,10 +13,14 @@ interface RevenueCardProps {
   retentionRate?: number
   avgRevenuePerMember?: number
   todayCollection?: number
-  onPress: () => void
+  onPress?: () => void
+  // The same purple card is reused for staff without revenue access ("My collections").
+  label?: string
+  footerLabel?: string | null
+  stats?: { label: string; value: string }[]
 }
 
-export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, todayCollection, onPress }: RevenueCardProps) {
+export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, todayCollection, onPress, label = 'REVENUE THIS MONTH', footerLabel = 'View breakdown', stats }: RevenueCardProps) {
   const { themed, theme: { colors, spacing } } = useAppTheme()
   const { palette } = colors
   const [tooltipVisible, setTooltipVisible] = useState<'retention' | 'avgMember' | null>(null)
@@ -26,6 +30,7 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
     <>
       <Pressable
         onPress={onPress}
+        disabled={!onPress}
         style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
       >
         <MotiView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} style={themed($cardOuter)}>
@@ -37,10 +42,10 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
             style={themed($card)}
           >
           <View style={$header}>
-            <Text style={themed($label)} text="REVENUE THIS MONTH" />
+            <Text style={themed($label)} text={label} />
             <View style={$headerIcons}>
               <Wallet size={22} color={colors.white} opacity={0.8} />
-              <ChevronRight size={20} color={colors.white} opacity={0.9} />
+              {onPress ? <ChevronRight size={20} color={colors.white} opacity={0.9} /> : null}
             </View>
           </View>
           <Text style={themed($value)} text={`₹${value.toLocaleString('en-IN')}`} />
@@ -53,9 +58,18 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
                 <Text style={themed($trendText)} size="xs" text={trendText} />
               </View>
             )}
-            <Text style={themed($viewBreakdown)} text="View breakdown" />
+            {footerLabel ? <Text style={themed($viewBreakdown)} text={footerLabel} /> : null}
           </View>
-          {(todayCollection !== undefined || retentionRate !== undefined || avgRevenuePerMember !== undefined) && (
+          {stats ? (
+            <View style={[themed($statsRow), { marginTop: spacing.sm }]}>
+              {stats.map((stat, index) => (
+                <View key={stat.label} style={[themed($statItem), index > 0 && $statDivider]}>
+                  <Text style={themed($statValue)} text={stat.value} />
+                  <Text style={themed($statLabel)} text={stat.label} />
+                </View>
+              ))}
+            </View>
+          ) : (todayCollection !== undefined || retentionRate !== undefined || avgRevenuePerMember !== undefined) && (
             <View style={[themed($statsRow), { marginTop: spacing.sm }]}>
               {todayCollection !== undefined && (
                 <View style={themed($statItem)}>
@@ -88,7 +102,7 @@ export function RevenueCard({ value, trend, retentionRate, avgRevenuePerMember, 
                       <Info size={12} color="rgba(255,255,255,0.7)" />
                     </Pressable>
                   </View>
-                  <Text style={themed($statLabel)} text="Avg / Member" />
+                  <Text style={themed($statLabel)} text="Avg / Client" />
                 </View>
               )}
             </View>
@@ -159,3 +173,5 @@ const $statLabel: ThemedStyle<TextStyle> = () => ({ color: 'rgba(255,255,255,0.7
 const $statHeader: ViewStyle = { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }
 const $tooltipOverlay: ViewStyle = { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }
 const $tooltipBox: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({ backgroundColor: colors.background, borderRadius: 16, padding: spacing.lg, maxWidth: 320 })
+
+const $statDivider: ViewStyle = { borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }

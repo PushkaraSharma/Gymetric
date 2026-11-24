@@ -20,7 +20,7 @@ export type AppStackParamList = {
   "Update Basic Information": { client: any }
   "Renew Membership": { client: any }
   "Edit Membership": { client: any; membership: any }
-  "Search Client": { intent?: "message"; index?: number; handleSelect?: (...args: any[]) => void } | undefined
+  "Search Client": { intent?: "message" | "renew"; index?: number; handleSelect?: (...args: any[]) => void } | undefined
   Memberships: undefined
   "Create Edit Membership": { membership?: any }
   "Gym Info": undefined

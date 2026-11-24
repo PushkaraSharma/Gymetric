@@ -65,7 +65,10 @@ const MyProfileScreen = () => {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    api.gymInfo() // refreshes the plan and role shown here
+  }, [load])
 
   const saveName = async () => {
     if (!name.trim()) return
@@ -237,6 +240,7 @@ const MyProfileScreen = () => {
         confirmText="Log out"
         cancelText="Cancel"
         variant="danger"
+        icon={LogOut}
       />
     </Screen>
   )

@@ -161,7 +161,7 @@ const ClientDetails = ({ route }: any) => {
         return (
             <Screen preset="fixed" contentContainerStyle={[$styles.flex1]} safeAreaEdges={[]}>
                 <Header
-                    title='Member Profile'
+                    title='Client Profile'
                     backgroundColor={colors.surface}
                     leftIcon="caretLeft"
                     onLeftPress={goBack}
@@ -182,7 +182,7 @@ const ClientDetails = ({ route }: any) => {
     return (
         <Screen preset="fixed" contentContainerStyle={[$styles.flex1]} safeAreaEdges={[]} {...(Platform.OS === "android" ? { KeyboardAvoidingViewProps: { behavior: undefined } } : {})}>
             <Header
-                title='Member Profile'
+                title='Client Profile'
                 backgroundColor={colors.surface}
                 leftIcon="caretLeft"
                 onLeftPress={goBack}

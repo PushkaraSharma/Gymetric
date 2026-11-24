@@ -207,7 +207,7 @@ const CreateClient = () => {
                 }}
             />
 
-            <ClientWizardStepper steps={Steps} currentStep={currentStep} onBack={handleStepperBack} title="Add Member" />
+            <ClientWizardStepper steps={Steps} currentStep={currentStep} onBack={handleStepperBack} title="Add Client" />
 
             <Animated.View style={[{ flex: 1 }, animatedStyle]}>
                 <ScrollView

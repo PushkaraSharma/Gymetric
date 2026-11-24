@@ -120,7 +120,7 @@ const ClientsList = ({ route }: any) => {
     <SafeAreaView style={themed($container)} edges={['top']}>
       <View style={themed($header)}>
         <View style={$headerRow}>
-          <Text style={themed($pageTitle)}>Members</Text>
+          <Text style={themed($pageTitle)}>Clients</Text>
           <View style={$headerActions}>
             <TouchableOpacity
               onPress={() => sortSheetRef.current?.present()}
@@ -197,7 +197,7 @@ const ClientsList = ({ route }: any) => {
                   {searchText ? 'Try a different search term' : selectedFilter !== 'All Clients' || activeFilterCount > 0 ? 'No members match this filter' : 'Add your first gym member to get started'}
                 </Text>
                 {!searchText && selectedFilter === 'All Clients' && activeFilterCount === 0 && (
-                  <Button title="Add Member" onPress={() => navigate('Add Client')} style={{ marginTop: spacing.lg, minWidth: 160 }} />
+                  <Button title="Add Client" onPress={() => navigate('Add Client')} style={{ marginTop: spacing.lg, minWidth: 160 }} />
                 )}
               </View>
             }

@@ -2,7 +2,7 @@ import { ScrollView, Pressable, RefreshControl, View, StyleSheet, Text } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppTheme } from '@/theme/context'
-import { Plus, Users, Activity as ActivityIconLucide, Clock, UserPlus, UserX, Wallet, IndianRupee } from 'lucide-react-native'
+import { Users, Activity as ActivityIconLucide, Clock, UserPlus, UserX, Wallet, IndianRupee, RefreshCw } from 'lucide-react-native'
 import { useAppDispatch, useAppSelector } from '@/redux/Hooks'
 import { selectDashboardSummary, selectGymInfo, setDashboardSummary } from '@/redux/state/GymStates'
 import { api } from '@/services/Api'
@@ -26,7 +26,8 @@ import { OTA_VERSION } from '@/utils/Constants'
 import Constants from 'expo-constants'
 import { WhatsNewModal } from '@/components/WhatsNewModal'
 import { load, save } from '@/utils/LocalStorage'
-import { useFeature, useViewer } from '@/utils/permissions'
+import { useFeature, usePermissions, useViewer } from '@/utils/permissions'
+import { QuickActionFab, type QuickAction } from '@/components/dashboard/QuickActionFab'
 
 let hasShownBannerSession = false
 
@@ -58,6 +59,8 @@ export interface DashboardSummary {
   }[]
   totalPlanSalesLast6Months?: number
   totalPlanRevenueLast6Months?: number
+  // The viewer's own collections; sent to everyone, shown to those without revenue access.
+  myCollections?: { today: number; todayCount: number; thisMonth: number }
 }
 
 const Home = () => {
@@ -72,6 +75,10 @@ const Home = () => {
   const [hasWhatsapp, setHasWhatsapp] = useState(false)
   const planHasWhatsapp = useFeature('whatsapp')
   const viewer = useViewer()
+  const can = usePermissions()
+  const isOwner = viewer.roleKey === 'owner'
+  const canRevenue = can('dashboard.revenue')
+  const canClients = can('clients.view')
   const [whatsappSummary, setWhatsappSummary] = useState<any>(null)
   const [hasMembershipPlans, setHasMembershipPlans] = useState(false)
   const [isLoading, setIsLoading] = useState(!cachedSummary)
@@ -119,9 +126,11 @@ const Home = () => {
     }
 
     if (settingsRes?.kind === 'ok') {
-      const whatsappConfigured = !!settingsRes.data?.hasWhatsappConfigured
+      // WhatsApp counts as on only when it is connected and the plan includes it.
+      const whatsappConfigured = !!settingsRes.data?.hasWhatsappConfigured && planHasWhatsapp
       setHasWhatsapp(whatsappConfigured)
-      if (!hasShownBannerSession && !whatsappConfigured) {
+      // The "Premium Integration" banner is a sales nudge, so only the owner sees it.
+      if (!hasShownBannerSession && !whatsappConfigured && isOwner) {
         setShowBanner(true)
       }
       hasShownBannerSession = true
@@ -139,7 +148,7 @@ const Home = () => {
 
     if (isRefresh) setRefreshing(false)
     else setIsLoading(false)
-  }, [dispatch, gymInfo?._id, hasWhatsapp, isDark, planHasWhatsapp])
+  }, [dispatch, gymInfo?._id, hasWhatsapp, isDark, planHasWhatsapp, isOwner])
 
   const onRefresh = useCallback(() => { loadData(true) }, [loadData])
 
@@ -184,6 +193,11 @@ const Home = () => {
 
   const handleStatPress = (filter: string) => navigateToMembers(filter)
 
+  const quickActions: QuickAction[] = [
+    ...(can('clients.create') ? [{ key: 'add', label: 'Add client', icon: UserPlus, onPress: () => navigate('Add Client') }] : []),
+    ...(can('clients.renew') ? [{ key: 'renew', label: 'Renew', icon: RefreshCw, onPress: () => navigate('Search Client', { intent: 'renew' }) }] : []),
+  ]
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -217,28 +231,43 @@ const Home = () => {
             <>
               {showBanner && <WhatsAppBanner onDismiss={() => setShowBanner(false)} />}
 
-              <GetStartedCard
-                totalClients={summary?.totalClients ?? 0}
-                hasMembershipPlans={hasMembershipPlans}
-              />
+              {isOwner ? (
+                <GetStartedCard
+                  totalClients={summary?.totalClients ?? 0}
+                  hasMembershipPlans={hasMembershipPlans}
+                />
+              ) : null}
 
               <View style={{ marginBottom: theme.spacing.md }}>
-                <RevenueCard
-                  value={summary?.revenueThisMonth?.value ?? 0}
-                  trend={summary?.revenueThisMonth?.trend ?? null}
-                  retentionRate={summary?.retentionRate}
-                  avgRevenuePerMember={summary?.avgRevenuePerMember}
-                  todayCollection={summary?.todayCollection}
-                  onPress={() => navigate('Revenue')}
-                />
+                {canRevenue ? (
+                  <RevenueCard
+                    value={summary?.revenueThisMonth?.value ?? 0}
+                    trend={summary?.revenueThisMonth?.trend ?? null}
+                    retentionRate={summary?.retentionRate}
+                    avgRevenuePerMember={summary?.avgRevenuePerMember}
+                    todayCollection={summary?.todayCollection}
+                    onPress={() => navigate('Revenue')}
+                  />
+                ) : (
+                  <RevenueCard
+                    label="MY COLLECTIONS TODAY"
+                    value={summary?.myCollections?.today ?? 0}
+                    trend={null}
+                    footerLabel={null}
+                    stats={[
+                      { label: 'Payments today', value: String(summary?.myCollections?.todayCount ?? 0) },
+                      { label: 'This month', value: `₹${(summary?.myCollections?.thisMonth ?? 0).toLocaleString('en-IN')}` },
+                    ]}
+                  />
+                )}
               </View>
 
-              {(summary?.expiringIn7Days ?? 0) > 0 && (
+              {canClients && (summary?.expiringIn7Days ?? 0) > 0 && (
                 <ActionAlertCard
                   label="EXPIRING SOON"
                   title={String(summary?.expiringIn7Days)}
-                  description={`member${summary?.expiringIn7Days === 1 ? '' : 's'} expiring in the next 7 days`}
-                  primaryAction="View Members"
+                  description={`client${summary?.expiringIn7Days === 1 ? "" : "s"} expiring in the next 7 days`}
+                  primaryAction="View Clients"
                   secondaryAction={hasWhatsapp ? 'Reminders' : undefined}
                   onPrimaryPress={() => navigateToMembers('Expiring Soon')}
                   onSecondaryPress={hasWhatsapp ? () => navigate('WhatsApp Messages') : undefined}
@@ -246,18 +275,18 @@ const Home = () => {
                 />
               )}
 
-              {(summary?.recentlyExpiredMembers ?? 0) > 0 && (
+              {canClients && (summary?.recentlyExpiredMembers ?? 0) > 0 && (
                 <ActionAlertCard
                   label="RECENTLY EXPIRED"
                   title={String(summary?.recentlyExpiredMembers)}
                   description="expired in the last 14 days — still worth a call."
-                  primaryAction="View Members"
+                  primaryAction="View Clients"
                   onPrimaryPress={() => navigateToMembers('Recently Expired')}
                   variant="danger"
                 />
               )}
 
-              {(summary?.totalOutstanding ?? 0) > 0 && (
+              {canClients && can('clients.collect') && (summary?.totalOutstanding ?? 0) > 0 && (
                 <ActionAlertCard
                   label="OUTSTANDING"
                   title={`₹${summary?.totalOutstanding}`}
@@ -268,7 +297,7 @@ const Home = () => {
                 />
               )}
 
-              {(summary?.expiringToday ?? 0) > 0 && (
+              {canClients && (summary?.expiringToday ?? 0) > 0 && (
                 <ActionAlertCard
                   label="EXPIRING TODAY"
                   title={String(summary?.expiringToday)}
@@ -279,15 +308,18 @@ const Home = () => {
                 />
               )}
 
-              <StatGrid stats={statItems} onStatPress={handleStatPress} />
+              {canClients ? <StatGrid stats={statItems} onStatPress={handleStatPress} /> : null}
 
-              <TopSellingPlanCard
-                plans={summary?.topSellingPlansLast6Months ?? []}
-                totalSales={summary?.totalPlanSalesLast6Months ?? 0}
-                totalRevenue={summary?.totalPlanRevenueLast6Months ?? 0}
-              />
-
-              <RevenueTrendChart trends={summary?.revenueTrend ?? []} />
+              {canRevenue ? (
+                <>
+                  <TopSellingPlanCard
+                    plans={summary?.topSellingPlansLast6Months ?? []}
+                    totalSales={summary?.totalPlanSalesLast6Months ?? 0}
+                    totalRevenue={summary?.totalPlanRevenueLast6Months ?? 0}
+                  />
+                  <RevenueTrendChart trends={summary?.revenueTrend ?? []} />
+                </>
+              ) : null}
 
               {hasWhatsapp && (
                 <WhatsAppWidget
@@ -310,9 +342,7 @@ const Home = () => {
         </View>
       </ScrollView>
 
-      <Pressable style={styles.fab} onPress={() => navigate('Add Client')}>
-        <Plus size={28} color={theme.colors.background} />
-      </Pressable>
+      <QuickActionFab actions={quickActions} />
       <WhatsNewModal visible={showWhatsNew} onClose={handleWhatsNewClose} />
     </SafeAreaView>
   )
@@ -336,21 +366,5 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: theme.typography.bold,
     fontSize: 20,
     color: theme.colors.text,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
   },
 })

@@ -23,6 +23,8 @@ interface ConfirmationModalProps {
     variant?: 'danger' | 'warning' | 'info';
     loading?: boolean;
     children?: React.ReactNode;
+    // Overrides the variant's default icon (a bin for danger), e.g. a log-out arrow.
+    icon?: React.ComponentType<{ size: number; color: string }>;
 }
 
 export function ConfirmationModal({
@@ -35,13 +37,15 @@ export function ConfirmationModal({
     cancelText = 'Cancel',
     variant = 'danger',
     loading = false,
-    children
+    children,
+    icon: CustomIcon,
 }: ConfirmationModalProps) {
     const { theme, isDark } = useAppTheme();
     const insets = useSafeAreaInsets();
     const styles = getStyles(theme, isDark, variant);
 
     const getIcon = () => {
+        if (CustomIcon) return <CustomIcon size={32} color={variant === 'info' ? theme.colors.primary : theme.colors.error} />;
         switch (variant) {
             case 'danger':
                 return <Trash2 size={32} color={theme.colors.error} />;
