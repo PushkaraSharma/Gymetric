@@ -159,6 +159,24 @@ async function run(app: FastifyInstance) {
     res = await call('GET', '/api/client/stats');
     check(res.body.data?.totalClients === 2 && res.body.data.activeMembers === 2 && res.body.data.clientsWithBalance === 0, 'client stats', res.body);
 
+    console.log('payment edit and delete');
+    const paid = (await call('GET', `/api/client/clientInfo?id=${primary._id}`)).body.data.paymentHistory.find((p: any) => p.remarks === 'rest');
+    const paymentUrl = `/api/client/${primary._id}/payments/${paid._id}`;
+    res = await call('PATCH', paymentUrl, { amount: 600, method: 'upi', reason: 'typo' });
+    check(res.status === 400, 'edit cannot make the client owed money', res.body);
+    res = await call('PATCH', paymentUrl, { amount: 300, method: 'cash' });
+    check(res.status === 400, 'edit needs a reason', res.body);
+    res = await call('PATCH', paymentUrl, { amount: 300, method: 'cash', reason: 'typed 500 by mistake' });
+    check(res.status === 200 && res.body.data.balance === 200, 'edit moves the difference back to the balance', res.body);
+    res = await call('DELETE', paymentUrl);
+    check(res.status === 400, 'delete needs a reason', res.body);
+    res = await call('DELETE', `${paymentUrl}?reason=${encodeURIComponent('collected twice')}`);
+    check(res.status === 200 && res.body.data.balance === 500 && !res.body.data.paymentHistory.some((p: any) => p._id === paid._id), 'delete restores the balance', res.body);
+    res = await call('DELETE', `${paymentUrl}?reason=again`);
+    check(res.status === 404, 'a deleted payment is gone', res.body);
+    res = await call('POST', '/api/client/collect-payment', { clientId: primary._id, amount: 500, method: 'upi', remarks: 'rest' });
+    check(res.status === 200 && res.body.data.balance === 0, 'collect again after the correction', res.body);
+
     console.log('pause and resume');
     const membershipId = primary.activeMembership;
     res = await call('POST', '/api/client/membership/pause', { membershipId, reason: 'travel' });

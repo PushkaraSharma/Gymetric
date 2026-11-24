@@ -13,6 +13,8 @@ import {
     resumeMembership,
     upgradeOptions,
     upgradeMembership,
+    editPayment,
+    deletePayment,
 } from "../controllers/clientController.js";
 import { requirePermission as need } from "../services/access.js";
 
@@ -33,4 +35,7 @@ export async function clientRoutes(fastify: any) {
     fastify.get('/upgrade/options', { preHandler: need('clients.upgrade') }, upgradeOptions);
     fastify.post('/upgrade', { preHandler: need('clients.upgrade') }, upgradeMembership);
     fastify.delete('/delete', { preHandler: need('clients.archive') }, deleteClient);
+    // Same paths as CoreWave's invoice edit/delete; a GymKarta bill is a single payment line.
+    fastify.patch('/:id/payments/:paymentId', { preHandler: need('clients.edit') }, editPayment);
+    fastify.delete('/:id/payments/:paymentId', { preHandler: need('data.delete') }, deletePayment);
 }

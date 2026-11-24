@@ -508,6 +508,108 @@ export const collectPayment = async (request: FastifyRequest, reply: FastifyRepl
     }
 };
 
+// Correcting a recorded payment (CoreWave: PATCH/DELETE /api/members/:id/payments/:paymentId). A payment only
+// ever reduces what the client owes, so the balance moves by the change in amount: a smaller or deleted payment
+// puts the difference back on the balance. The balance changes with one SQL increment so concurrent edits add up.
+const paymentForChange = async (exec: Executor, gymId: string, clientId: unknown, paymentId: unknown) => {
+    const client = await findMember(exec, clientId, gymId);
+    if (!client) throw new HttpError(404, { success: false, message: 'Client not found' });
+    const [payment] = await exec.select().from(payments)
+        .where(and(eq(payments.id, String(paymentId)), eq(payments.branchId, gymId), eq(payments.memberId, client.id)))
+        .for('update')
+        .limit(1);
+    if (!payment) throw new HttpError(404, { success: false, message: 'Payment not found' });
+    return { client, payment };
+};
+
+const moveBalance = (exec: Executor, memberId: string, delta: number) =>
+    exec.update(members).set({ balance: sql`${members.balance} + ${delta}`, updatedAt: new Date() })
+        .where(eq(members.id, memberId))
+        .returning();
+
+const rupees = (value: number | null | undefined) => `₹${(value ?? 0).toLocaleString('en-IN')}`;
+
+export const editPayment = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
+        const { id, paymentId } = request.params as { id: string; paymentId: string };
+        const body = (request.body ?? {}) as { amount?: number; method?: string; date?: string; reason?: string };
+        const amount = Math.round(Number(body.amount));
+        const reason = String(body.reason ?? '').trim();
+        if (!Number.isFinite(amount) || amount <= 0) return reply.status(400).send({ success: false, message: 'Amount must be more than 0' });
+        if (!reason) return reply.status(400).send({ success: false, message: 'Add a reason for the change' });
+        const paidAt = body.date ? new Date(body.date) : null;
+        if (paidAt && (Number.isNaN(paidAt.getTime()) || paidAt > new Date())) {
+            return reply.status(400).send({ success: false, message: 'Pick a payment date that is not in the future' });
+        }
+
+        const saved = await db.transaction(async (tx) => {
+            const { client, payment } = await paymentForChange(tx, gymId, id, paymentId);
+            const delta = (payment.amount ?? 0) - amount;
+            if ((client.balance ?? 0) + delta < 0) {
+                throw new HttpError(400, { success: false, message: `This is ${rupees(-delta)} more than the client owes` });
+            }
+            await tx.update(payments).set({
+                amount,
+                method: body.method || payment.method,
+                ...(paidAt ? { paidAt } : {}),
+            }).where(eq(payments.id, payment.id));
+            const [member] = await moveBalance(tx, client.id, delta);
+            await addActivity(tx, {
+                gymId,
+                actorUserId: userId,
+                type: 'PAYMENT',
+                title: 'Payment edited',
+                description: `${rupees(payment.amount)} ${payment.method ?? ''} changed to ${rupees(amount)} ${body.method || payment.method || ''} (${reason})`.replace(/\s+/g, ' '),
+                amount,
+                memberId: client.id,
+                date: new Date(),
+            });
+            return member;
+        });
+
+        invalidateClientCaches(gymId);
+        await syncMemberDoor(saved.id);
+        return reply.send({ success: true, data: await memberDoc(db, saved) });
+    } catch (error: any) {
+        return sendError(request, reply, error, 'Edit Payment Error');
+    }
+};
+
+export const deletePayment = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const gymId = (request.user as any).gymId;
+        const userId = (request.user as any).userId as string;
+        const { id, paymentId } = request.params as { id: string; paymentId: string };
+        const reason = String((request.query as { reason?: string })?.reason ?? '').trim();
+        if (!reason) return reply.status(400).send({ success: false, message: 'Add a reason for deleting this payment' });
+
+        const saved = await db.transaction(async (tx) => {
+            const { client, payment } = await paymentForChange(tx, gymId, id, paymentId);
+            await tx.delete(payments).where(eq(payments.id, payment.id));
+            const [member] = await moveBalance(tx, client.id, payment.amount ?? 0);
+            await addActivity(tx, {
+                gymId,
+                actorUserId: userId,
+                type: 'PAYMENT',
+                title: 'Payment deleted',
+                description: `${rupees(payment.amount)} ${payment.method ?? ''} from ${formatShortDate(payment.paidAt)} removed; added back to the balance (${reason})`.replace(/\s+/g, ' '),
+                amount: 0,
+                memberId: client.id,
+                date: new Date(),
+            });
+            return member;
+        });
+
+        invalidateClientCaches(gymId);
+        await syncMemberDoor(saved.id);
+        return reply.send({ success: true, data: await memberDoc(db, saved) });
+    } catch (error: any) {
+        return sendError(request, reply, error, 'Delete Payment Error');
+    }
+};
+
 // Upgrade keeps the start date and gives the whole price of the current plan as credit,
 // so the client pays only the difference. Same plan type and seats; trials cannot be upgraded.
 const upgradeContext = async (exec: Executor, gymId: string, clientId: unknown) => {

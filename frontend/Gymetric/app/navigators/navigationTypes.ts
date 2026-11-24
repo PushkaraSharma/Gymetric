@@ -38,6 +38,7 @@ export type AppStackParamList = {
   "Seed Data": undefined
   "My Profile": undefined
   Plans: undefined
+  "Upgrade Membership": { clientId: string }
   Entrance: undefined
   Attendance: undefined
   Reports: undefined

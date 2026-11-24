@@ -41,6 +41,7 @@ import PushNotificationSettings from "@/screens/Setting/PushNotificationSettings
 import SeedDataScreen from "@/screens/Setting/SeedDataScreen"
 import MyProfileScreen from "@/screens/Profile/MyProfileScreen"
 import PlansScreen from "@/screens/Plans/PlansScreen"
+import UpgradeMembershipScreen from "@/screens/Clients/UpgradeMembershipScreen"
 import StaffScreen from "@/screens/Setting/Staff/StaffScreen"
 import StaffFormScreen from "@/screens/Setting/Staff/StaffFormScreen"
 import StaffProfileScreen from "@/screens/Setting/Staff/StaffProfileScreen"
@@ -133,6 +134,7 @@ const AppStack = () => {
                 options={{ animation: 'slide_from_left' }}
               />
               <Stack.Screen name="Plans" component={PlansScreen} />
+              <Stack.Screen name="Upgrade Membership" component={UpgradeMembershipScreen} />
             </Stack.Group>
           </>
         ) : (

@@ -18,12 +18,34 @@ import CollectPaymentModal from './CollectPaymentModal'
 import { ThemedStyle } from '@/theme/types'
 import { spacing } from '@/theme/spacing'
 import {
-    Wallet, Calendar, Pause, Play, Pencil, RefreshCw, Receipt, Activity
+    Wallet, Calendar, Pause, Play, Pencil, RefreshCw, Receipt, Activity, TrendingUp, ChevronRight
 } from 'lucide-react-native'
 import { Header } from '@/components/Header'
 import { ImagePreviewModal } from '@/components/common/ImagePreviewModal'
 import { whatsappStatusLabel } from '@/utils/whatsappLabels'
 import { LinearGradient } from 'expo-linear-gradient'
+import { useFeatures, usePermissions } from '@/utils/permissions'
+import EditPaymentModal from './EditPaymentModal'
+import { FingerprintCard } from '@/components/biometric/FingerprintCard'
+
+const ACTIVITY_GROUPS = ['Membership', 'Payment', 'Freeze', 'Edits', 'WhatsApp'] as const
+type ActivityGroup = 'All' | (typeof ACTIVITY_GROUPS)[number]
+
+const groupOf = (item: any): ActivityGroup => {
+    switch (item?.activityType) {
+        case 'PAYMENT':
+            return 'Payment'
+        case 'PAUSE':
+        case 'RESUME':
+            return 'Freeze'
+        case 'MEMBERSHIP_AMENDED':
+            return 'Edits'
+        case 'WHATSAPP':
+            return 'WhatsApp'
+        default:
+            return 'Membership'
+    }
+}
 
 const ClientDetails = ({ route }: any) => {
     const { theme: { colors }, themed, isDark } = useAppTheme()
@@ -38,6 +60,13 @@ const ClientDetails = ({ route }: any) => {
     const [showImagePreview, setShowImagePreview] = useState(false)
     const [activity, setActivity] = useState<any[]>([])
     const [activeTab, setActiveTab] = useState<'Payments' | 'Activity' | 'History'>('Payments')
+    const [activityGroup, setActivityGroup] = useState<ActivityGroup>('All')
+    const [editingPayment, setEditingPayment] = useState<any>(null)
+    const can = usePermissions()
+    const has = useFeatures()
+    // In-app chat needs WhatsApp on the plan and chat access; otherwise WhatsApp opens on the phone.
+    const inAppChat = has('whatsapp') && can('whatsapp.chat')
+    const canFixPayments = can('clients.edit') || can('data.delete')
 
     const handleDelete = async () => {
         setLoader(true)
@@ -122,6 +151,8 @@ const ClientDetails = ({ route }: any) => {
     const displayMembership = client?.activeMembership || client?.upcomingMembership
     const isPaused = client?.membershipStatus === 'paused'
     const canEdit = displayMembership && ['active', 'future', 'trial', 'paused'].includes(displayMembership?.status)
+    // Same conditions the server checks: an active plan paid for by this client, nothing queued after it.
+    const canUpgrade = can('clients.upgrade') && client?.activeMembership?.status === 'active' && client?.role === 'primary' && !client?.upcomingMembership
 
     const totalPaid = useMemo(() => {
         if (!client?.paymentHistory?.length) return 0
@@ -153,6 +184,16 @@ const ClientDetails = ({ route }: any) => {
     const sortedPayments = useMemo(() =>
         client?.paymentHistory?.slice().sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],
         [client?.paymentHistory]
+    )
+
+    // Chips only for groups that actually appear in this client's feed (CoreWave's activity filters).
+    const activityGroups = useMemo(() => {
+        const present = new Set(activity.map(groupOf))
+        return (['All', ...ACTIVITY_GROUPS.filter((g) => present.has(g))] as ActivityGroup[])
+    }, [activity])
+    const visibleActivity = useMemo(
+        () => (activityGroup === 'All' ? activity : activity.filter((a) => groupOf(a) === activityGroup)),
+        [activity, activityGroup],
     )
 
     useFocusEffect(useCallback(() => { clientInfo() }, []))
@@ -187,11 +228,11 @@ const ClientDetails = ({ route }: any) => {
                 leftIcon="caretLeft"
                 onLeftPress={goBack}
                 safeAreaTop={true}
-                rightAction={
-                    <Pressable onPress={() => setShowDeleteModal(true)} style={themed($iconBtn)}>
+                rightAction={can('clients.archive') ? (
+                    <Pressable onPress={() => setShowDeleteModal(true)} style={themed($iconBtn)} accessibilityLabel="Delete client">
                         <Ionicons name="trash-outline" size={20} color={colors.error} />
                     </Pressable>
-                }
+                ) : undefined}
             />
 
             <CustomModal
@@ -217,6 +258,15 @@ const ClientDetails = ({ route }: any) => {
             />
 
             <CollectPaymentModal visible={showCollectModal} onClose={() => setShowCollectModal(false)} client={client} onSuccess={clientInfo} />
+            <EditPaymentModal
+                visible={!!editingPayment}
+                onClose={() => setEditingPayment(null)}
+                clientId={client?._id}
+                payment={editingPayment}
+                canEdit={can('clients.edit')}
+                canDelete={can('data.delete')}
+                onSaved={clientInfo}
+            />
             <ImagePreviewModal visible={showImagePreview} imageUrl={client?.profilePicture} onClose={() => setShowImagePreview(false)} />
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
@@ -250,13 +300,15 @@ const ClientDetails = ({ route }: any) => {
                                     </View>
                                 </View>
                             </View>
-                            <Pressable
-                                style={themed($editBtn)}
-                                onPress={() => navigate('Update Basic Information', { client })}
-                                accessibilityLabel="Edit member"
-                            >
-                                <Pencil size={18} color="#FFFFFF" />
-                            </Pressable>
+                            {can('clients.edit') ? (
+                                <Pressable
+                                    style={themed($editBtn)}
+                                    onPress={() => navigate('Update Basic Information', { client })}
+                                    accessibilityLabel="Edit client"
+                                >
+                                    <Pencil size={18} color="#FFFFFF" />
+                                </Pressable>
+                            ) : null}
                         </View>
                     </LinearGradient>
 
@@ -294,7 +346,9 @@ const ClientDetails = ({ route }: any) => {
                                 <Text size="xxs" weight="semiBold" style={{ color: colors.primary, marginLeft: 6 }}>Call</Text>
                             </Pressable>
                             <Pressable
-                                onPress={() => openWhatsAppChat(client?.phoneNumber)}
+                                onPress={() => inAppChat
+                                    ? navigate('WhatsApp Chat', { memberId: client?._id, name: client?.name, phone: client?.phoneNumber })
+                                    : openWhatsAppChat(client?.phoneNumber)}
                                 style={themed($contactPill)}
                                 accessibilityLabel="Message on WhatsApp"
                             >
@@ -308,35 +362,43 @@ const ClientDetails = ({ route }: any) => {
                 {/* Quick actions */}
                 <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
-                        {client?.balance > 0 && client?.role === 'primary' && (
+                        {can('clients.collect') && client?.balance > 0 && client?.role === 'primary' && (
                             <Pressable style={themed($actionChip)} onPress={() => setShowCollectModal(true)}>
                                 <Wallet size={16} color={colors.primary} />
                                 <Text size="xs" weight="semiBold" style={{ marginLeft: 6, color: colors.primary }}>Collect</Text>
                             </Pressable>
                         )}
-                        <Pressable
-                            style={themed($actionChip)}
-                            onPress={() => client?.upcomingMembership
-                                ? Toast.show({ type: 'error', text1: 'Already has upcoming plan' })
-                                : navigate('Renew Membership', { client })}
-                            disabled={membershipDays?.used === 0 && !!client?.activeMembership}
-                        >
-                            <RefreshCw size={16} color={colors.primary} />
-                            <Text size="xs" weight="semiBold" style={{ marginLeft: 6, color: colors.primary }}>Renew</Text>
-                        </Pressable>
-                        {canEdit && (
+                        {can('clients.renew') ? (
+                            <Pressable
+                                style={themed($actionChip)}
+                                onPress={() => client?.upcomingMembership
+                                    ? Toast.show({ type: 'error', text1: 'Already has upcoming plan' })
+                                    : navigate('Renew Membership', { client })}
+                                disabled={membershipDays?.used === 0 && !!client?.activeMembership}
+                            >
+                                <RefreshCw size={16} color={colors.primary} />
+                                <Text size="xs" weight="semiBold" style={{ marginLeft: 6, color: colors.primary }}>Renew</Text>
+                            </Pressable>
+                        ) : null}
+                        {canUpgrade && (
+                            <Pressable style={themed($actionChip)} onPress={() => navigate('Upgrade Membership', { clientId: client?._id })}>
+                                <TrendingUp size={16} color={colors.primary} />
+                                <Text size="xs" weight="semiBold" style={{ marginLeft: 6, color: colors.primary }}>Upgrade</Text>
+                            </Pressable>
+                        )}
+                        {can('clients.edit') && canEdit && (
                             <Pressable style={themed($actionChip)} onPress={() => navigate('Edit Membership', { client, membership: displayMembership })}>
                                 <Pencil size={16} color={colors.primary} />
                                 <Text size="xs" weight="semiBold" style={{ marginLeft: 6, color: colors.primary }}>Edit Plan</Text>
                             </Pressable>
                         )}
-                        {(client?.membershipStatus === 'active' || client?.membershipStatus === 'trial') && (
+                        {can('clients.freeze') && (client?.membershipStatus === 'active' || client?.membershipStatus === 'trial') && (
                             <Pressable style={themed($actionChip)} onPress={() => { setShowPause(true) }}>
                                 <Pause size={16} color={colors.primary} />
                                 <Text size="xs" weight="semiBold" style={{ marginLeft: 6, color: colors.primary }}>Pause</Text>
                             </Pressable>
                         )}
-                        {isPaused && (
+                        {can('clients.freeze') && isPaused && (
                             <Pressable style={themed($actionChip)} onPress={() => { setShowPause(true) }}>
                                 <Play size={16} color={colors.primary} />
                                 <Text size="xs" weight="semiBold" style={{ marginLeft: 6, color: colors.primary }}>Resume</Text>
@@ -347,7 +409,7 @@ const ClientDetails = ({ route }: any) => {
 
                 {/* Balance alert */}
                 {(client?.balance > 0) && client?.role === 'primary' && (
-                    <Pressable style={[themed($balanceAlert), { marginHorizontal: spacing.md, marginBottom: spacing.md }]} onPress={() => setShowCollectModal(true)}>
+                    <Pressable style={[themed($balanceAlert), { marginHorizontal: spacing.md, marginBottom: spacing.md }]} onPress={() => setShowCollectModal(true)} disabled={!can('clients.collect')}>
                         <View style={{ flex: 1 }}>
                             <Text size="xs" style={{ color: colors.error }}>Outstanding balance</Text>
                             <Text weight="bold" size="sm" style={{ color: colors.error }}>₹{client.balance}</Text>
@@ -415,6 +477,12 @@ const ClientDetails = ({ route }: any) => {
                     )}
                 </View>
 
+                {has('biometric') && client?._id ? (
+                    <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
+                        <FingerprintCard kind="member" id={client._id} canEdit={can('clients.edit')} refreshKey={client?.updatedAt} />
+                    </View>
+                ) : null}
+
                 {/* Tab selector */}
                 <View style={themed($tabContainer)}>
                     {(['Payments', 'Activity', 'History'] as const).map((tab) => (
@@ -441,7 +509,13 @@ const ClientDetails = ({ route }: any) => {
                             {sortedPayments.length ? sortedPayments.map((payment: any, index: number) => {
                                 const isPartial = payment?.remarks?.includes('Partial')
                                 return (
-                                    <View key={index} style={[themed($listRow), index === 0 && { marginTop: 0 }]}>
+                                    <Pressable
+                                        key={payment?._id ?? index}
+                                        style={[themed($listRow), index === 0 && { marginTop: 0 }]}
+                                        onPress={canFixPayments ? () => setEditingPayment(payment) : undefined}
+                                        disabled={!canFixPayments}
+                                        accessibilityHint={canFixPayments ? 'Edit or delete this payment' : undefined}
+                                    >
                                         <View style={[themed($rowIcon), { backgroundColor: colors.primaryBackground }]}>
                                             <Receipt size={16} color={colors.primary} />
                                         </View>
@@ -453,7 +527,8 @@ const ClientDetails = ({ route }: any) => {
                                             </Text>
                                         </View>
                                         <Text weight="semiBold">₹{payment?.amount}</Text>
-                                    </View>
+                                        {canFixPayments ? <ChevronRight size={16} color={colors.textDim} style={{ marginLeft: 4 }} /> : null}
+                                    </Pressable>
                                 )
                             }) : (
                                 <NoDataFound title="No Payments" msg="No payments recorded yet" />
@@ -463,7 +538,25 @@ const ClientDetails = ({ route }: any) => {
 
                     {activeTab === 'Activity' && (
                         <>
-                            {activity.length ? activity.map((item, i) => {
+                            {activityGroups.length > 1 ? (
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs, marginBottom: spacing.sm }}>
+                                    {activityGroups.map((group) => {
+                                        const selected = group === activityGroup
+                                        return (
+                                            <Pressable
+                                                key={group}
+                                                onPress={() => setActivityGroup(group)}
+                                                style={[themed($filterChip), selected && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                                                accessibilityRole="button"
+                                                accessibilityState={{ selected }}
+                                            >
+                                                <Text size="xxs" weight="semiBold" style={{ color: selected ? colors.white : colors.text }} text={`${group} ${group === 'All' ? activity.length : activity.filter((a) => groupOf(a) === group).length}`} />
+                                            </Pressable>
+                                        )
+                                    })}
+                                </ScrollView>
+                            ) : null}
+                            {visibleActivity.length ? visibleActivity.map((item, i) => {
                                 const isWhatsApp = item.activityType === 'WHATSAPP'
                                 const waStatus = item.status as string | undefined
                                 const waColors = waStatus === 'failed'
@@ -718,4 +811,13 @@ const $tabBtnActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+})
+
+const $filterChip: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
 })

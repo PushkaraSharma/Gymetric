@@ -413,6 +413,11 @@ export class Api {
 
   upgradeOptions = async (clientId: string) => this.apiRequest('get', '/api/client/upgrade/options', undefined, { clientId });
   upgradeMembership = async (body: any) => this.apiRequest('post', '/api/client/upgrade', body);
+  // Same paths as CoreWave's invoice edit/delete (a GymKarta bill is one payment line).
+  editPayment = async (clientId: string, paymentId: string, body: { amount: number; method: string; reason: string }) =>
+    this.apiRequest('patch', `/api/client/${clientId}/payments/${paymentId}`, body);
+  deletePayment = async (clientId: string, paymentId: string, reason: string) =>
+    this.apiRequest('delete', `/api/client/${clientId}/payments/${paymentId}`, undefined, { reason });
   chatUnread = async () => this.apiRequest('get', '/api/chat/unread');
   chatThreads = async (search?: string) => this.apiRequest('get', '/api/chat/threads', undefined, search ? { search } : undefined);
   chatThread = async (target: { memberId?: string | null; phone?: string }) =>

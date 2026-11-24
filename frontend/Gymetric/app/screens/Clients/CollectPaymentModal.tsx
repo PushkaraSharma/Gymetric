@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { View, TextInput, Pressable, Modal, TouchableWithoutFeedback, ViewStyle, Keyboard } from 'react-native'
 import { useAppTheme } from '@/theme/context'
 import { Text } from '@/components/Text'
@@ -30,6 +30,11 @@ const CollectPaymentModal = ({ visible, onClose, client, onSuccess }: Props) => 
     const [showReceipt, setShowReceipt] = useState(false)
     const [lastPayment, setLastPayment] = useState<any>(null)
     const [updatedClient, setUpdatedClient] = useState<any>(null)
+
+    // Opens ready to clear the whole balance; the amount can still be lowered for a part payment.
+    useEffect(() => {
+        if (visible && client?.balance > 0) setAmount(String(client.balance))
+    }, [visible, client?.balance])
 
     const handleCollect = async () => {
         const num = Number(amount)

@@ -35,7 +35,7 @@ Shape column: **same** = checked to match, **differs** = checked and different, 
 | Edit membership | `PATCH /api/client/membership/amend` | `PATCH /api/members/:id` (profile edit) | — |
 | Freeze / resume | `POST /api/client/membership/pause`, `resume` | `POST /api/members/:id/freeze`, `resume` | — |
 | Upgrade | `GET /api/client/upgrade/options`, `POST /api/client/upgrade` | `POST /api/members/:id/memberships/:membershipId/upgrade` | — |
-| Invoice edit / delete (Phase 3) | *to build* | `PATCH/DELETE /api/members/:id/payments/:paymentId` (`clients.edit` / `data.delete`) | copy CoreWave |
+| Payment edit / delete | `PATCH /api/client/:id/payments/:paymentId` {amount, method, date?, reason}, `DELETE …?reason=` (`clients.edit` / `data.delete`) | `PATCH/DELETE /api/members/:id/payments/:paymentId` (`clients.edit` / `data.delete`) | differs: same path and permissions; a GymKarta bill is one payment line, so no tenders/lines body |
 | Send invoice on WhatsApp | *to build* | `POST /api/members/:id/payments/:paymentId/whatsapp` | copy CoreWave |
 | Dashboard | `GET /api/dashboard/summary`, `revenue`, `activities` | `GET /api/dashboard` | — |
 | Reports | `GET /api/reports/:kind` (export built in the app) | `GET /api/reports`, `GET /api/exports/reports` | — |
