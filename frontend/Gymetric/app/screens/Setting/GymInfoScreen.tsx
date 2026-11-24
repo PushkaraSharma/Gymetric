@@ -1,19 +1,18 @@
 import { Image, Platform, Pressable, ScrollView, View, ViewStyle } from 'react-native'
 import React, { useState } from 'react'
 import Toast from 'react-native-toast-message'
-import { Camera, Clock, Dumbbell, FileText, Globe, Mail, MapPin, Phone, Receipt, UserRound } from 'lucide-react-native'
+import { Camera, Clock, Dumbbell, FileText, Globe, Mail, MapPin, Phone, UserRound } from 'lucide-react-native'
 import { Screen } from '@/components/Screen'
 import { Header } from '@/components/Header'
 import { Button } from '@/components/Button'
 import { Text } from '@/components/Text'
 import { TextField } from '@/components/TextField'
-import { MenuRow, MenuSection } from '@/components/common/MenuRow'
 import { useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo } from '@/redux/state/GymStates'
 import { ThemedStyle } from '@/theme/types'
 import { useAppTheme } from '@/theme/context'
 import { api } from '@/services/Api'
-import { goBack, navigate } from '@/navigators/navigationUtilities'
+import { goBack } from '@/navigators/navigationUtilities'
 import { useImagePicker } from '@/utils/useImagePicker'
 
 const FIELDS = ['name', 'ownerName', 'contactNumber', 'email', 'address', 'website', 'gstin', 'timings'] as const
@@ -94,11 +93,6 @@ const GymInfoScreen = () => {
         {field('timings', 'Opening hours', Clock, { placeholder: 'e.g. 5:30 AM – 10:30 PM, Sunday closed' })}
         {field('website', 'Website', Globe, { autoCapitalize: 'none', keyboardType: 'url' })}
         {field('gstin', 'GSTIN', FileText, { autoCapitalize: 'characters', helper: 'Printed on receipts when filled' })}
-
-        <Text size="xxs" weight="semiBold" style={{ color: colors.textDim, letterSpacing: 1, margin: 4 }} text="RECEIPTS" />
-        <MenuSection>
-          <MenuRow icon={Receipt} label="Receipt settings" description="Logo, signature, footer and share format" onPress={() => navigate('Receipt Settings')} />
-        </MenuSection>
       </ScrollView>
       <View style={themed($footer)}>
         <Button title="Save changes" onPress={save} loading={saving} />

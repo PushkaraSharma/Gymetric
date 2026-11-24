@@ -90,3 +90,43 @@ export async function shareReportPdf(report: Report, gymName: string) {
 }
 
 export { summaryText }
+
+const STATUS_LABEL: Record<string, string> = {
+  active: 'Active',
+  trial: 'Trial',
+  future: 'Starts later',
+  paused: 'Frozen',
+  expired: 'Expired',
+  trial_expired: 'Trial ended',
+}
+
+// Every client as a report, so it shares through the same PDF / CSV path as Reports.
+export const clientsReport = (clients: any[]): Report => {
+  const today = new Date().toISOString().slice(0, 10)
+  return {
+    title: 'Clients',
+    from: today,
+    to: today,
+    columns: [
+      { key: 'name', label: 'Name' },
+      { key: 'phone', label: 'Phone' },
+      { key: 'status', label: 'Status' },
+      { key: 'plan', label: 'Plan' },
+      { key: 'ends', label: 'Ends', type: 'date' },
+      { key: 'balance', label: 'Balance due', type: 'money' },
+    ],
+    rows: clients.map((client) => ({
+      name: client.name,
+      phone: client.phoneNumber,
+      status: STATUS_LABEL[client.membershipStatus] ?? client.membershipStatus,
+      plan: client.activeMembership?.planName,
+      ends: client.activeMembership?.endDate,
+      balance: client.balance || 0,
+    })),
+    summary: [
+      { label: 'Clients', value: clients.length },
+      { label: 'Active', value: clients.filter((c) => c.membershipStatus === 'active').length },
+      { label: 'Balance due', value: clients.reduce((total, c) => total + (c.balance || 0), 0), money: true },
+    ],
+  }
+}

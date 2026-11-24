@@ -7,6 +7,13 @@ import { deleteFromCloudinary, getCloudinaryPublicId } from "../utils/cloudinary
 
 type SettingsInsert = typeof branchSettings.$inferInsert;
 
+const REMINDER_DAYS = [1, 2, 3, 5, 7] as const;
+// Days before the end date that the expiry reminder goes out. Anything else falls back to 1.
+const reminderDaysOf = (value: unknown) => {
+    const days = Number(value);
+    return (REMINDER_DAYS as readonly number[]).includes(days) ? days : 1;
+};
+
 // Saving `whatsapp` replaces the whole subdocument, as Mongo `$set` did: omitted keys go back to defaults.
 const whatsappColumns = (w: any): Partial<SettingsInsert> => ({
     whatsappAccessToken: w.accessToken ?? null,
@@ -14,7 +21,7 @@ const whatsappColumns = (w: any): Partial<SettingsInsert> => ({
     whatsappActive: w.active === undefined ? false : !!w.active,
     whatsappHeaderImageUrl: w.headerImageUrl ?? null,
     whatsappHeaderImageId: w.headerImageId ?? null,
-    whatsappReminderDays: 1,
+    whatsappReminderDays: reminderDaysOf(w.reminderDays),
     whatsappSendOnOnboarding: w.sendOnOnboarding === undefined ? true : !!w.sendOnOnboarding,
     whatsappSendOnRenewal: w.sendOnRenewal === undefined ? true : !!w.sendOnRenewal,
     whatsappSendOnExpiry: w.sendOnExpiry === undefined ? true : !!w.sendOnExpiry,

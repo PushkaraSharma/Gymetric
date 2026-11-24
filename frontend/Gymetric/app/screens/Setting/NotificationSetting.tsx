@@ -19,6 +19,9 @@ import { Skeleton } from '@/components/Skeleton'
 import { useImagePicker } from '@/utils/useImagePicker'
 import { Image as ImageIcon } from 'lucide-react-native'
 
+// Same choices the server accepts (settingController REMINDER_DAYS).
+const REMINDER_DAYS = [1, 2, 3, 5, 7]
+
 const NotificationSetting = ({ navigation }: any) => {
     const { theme: { colors }, themed } = useAppTheme()
     const dispatch = useAppDispatch();
@@ -35,6 +38,7 @@ const NotificationSetting = ({ navigation }: any) => {
         sendOnRenewal: true,
         sendOnExpiry: true,
         sendOnReminder: true,
+        reminderDays: 1,
         headerImageUrl: '',
     });
 
@@ -55,6 +59,7 @@ const NotificationSetting = ({ navigation }: any) => {
                 sendOnRenewal: data.sendOnRenewal ?? true,
                 sendOnExpiry: data.sendOnExpiry ?? true,
                 sendOnReminder: data.sendOnReminder ?? true,
+                reminderDays: data.reminderDays ?? 1,
                 headerImageUrl: data.headerImageUrl ?? '',
             });
         }
@@ -78,7 +83,7 @@ const NotificationSetting = ({ navigation }: any) => {
                 sendOnRenewal: settings.sendOnRenewal,
                 sendOnExpiry: settings.sendOnExpiry,
                 sendOnReminder: settings.sendOnReminder,
-                reminderDays: 1,
+                reminderDays: settings.reminderDays,
                 headerImageUrl: settings.headerImageUrl,
             }
         };
@@ -190,7 +195,7 @@ const NotificationSetting = ({ navigation }: any) => {
 
                         {settings.active && (
                             <>
-                                <Text preset="subheading" style={{ marginBottom: spacing.sm, marginLeft: spacing.xs }}>Automated Messages</Text>
+                                <Text preset="subheading" style={{ marginBottom: spacing.sm, marginLeft: spacing.xs }}>Automatic messages</Text>
 
                                 <View style={[themed($card)]}>
                                     <Switch
@@ -216,10 +221,28 @@ const NotificationSetting = ({ navigation }: any) => {
 
                                     <Switch
                                         label="Reminder Notification"
-                                        helper="Sends 1 day before membership expires"
+                                        helper={`Sends ${settings.reminderDays} day${settings.reminderDays === 1 ? '' : 's'} before the membership ends`}
                                         value={settings.sendOnReminder}
                                         onValueChange={(val: boolean) => updateSetting('sendOnReminder', val)}
                                     />
+                                    {settings.sendOnReminder ? (
+                                        <View style={$dayRow} accessibilityRole="radiogroup" accessibilityLabel="Days before the end date">
+                                            {REMINDER_DAYS.map((days) => {
+                                                const selected = settings.reminderDays === days
+                                                return (
+                                                    <Pressable
+                                                        key={days}
+                                                        onPress={() => updateSetting('reminderDays', days)}
+                                                        style={[themed($dayChip), selected && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                                                        accessibilityRole="radio"
+                                                        accessibilityState={{ selected }}
+                                                    >
+                                                        <Text size="xs" weight="semiBold" style={{ color: selected ? colors.white : colors.text }} text={`${days} day${days === 1 ? '' : 's'}`} />
+                                                    </Pressable>
+                                                )
+                                            })}
+                                        </View>
+                                    ) : null}
                                 </View>
                             </>
                         )}
@@ -306,3 +329,12 @@ const $previewImage: ImageStyle = {
     height: '100%',
 }
 
+const $dayRow: ViewStyle = { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }
+
+const $dayChip: ThemedStyle<ViewStyle> = ({ colors }) => ({
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+})

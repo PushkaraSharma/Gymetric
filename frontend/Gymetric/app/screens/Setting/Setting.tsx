@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { ScrollView, View } from 'react-native'
-import { Database, MessageCircle, ShieldCheck } from 'lucide-react-native'
+import { Alert, ScrollView, View } from 'react-native'
+import { Database, Download, MessageCircle, Receipt, ShieldCheck } from 'lucide-react-native'
 import { Screen } from '@/components/Screen'
 import { Header } from '@/components/Header'
 import { Skeleton } from '@/components/Skeleton'
@@ -11,12 +11,19 @@ import { api } from '@/services/Api'
 import { useFeature, usePermissions, useViewer } from '@/utils/permissions'
 import { PlanChip } from '@/components/premium/PlanChip'
 import { showPremium } from '@/utils/premium'
+import { useAppSelector } from '@/redux/Hooks'
+import { selectAllClients, selectGymInfo } from '@/redux/state/GymStates'
+import { clientsReport, shareReportCsv, shareReportPdf } from '@/utils/reportExport'
+import Toast from 'react-native-toast-message'
 
 const Setting = () => {
   const { theme: { colors, spacing } } = useAppTheme()
   const can = usePermissions()
   const viewer = useViewer()
   const hasStaff = useFeature('staff')
+  const hasReports = useFeature('reports')
+  const clients = useAppSelector(selectAllClients)
+  const gym = useAppSelector(selectGymInfo)
   const canWhatsapp = can('whatsapp.settings')
   const [hasWhatsapp, setHasWhatsapp] = useState<boolean | null>(null)
 
@@ -24,6 +31,22 @@ const Setting = () => {
     if (!canWhatsapp) return
     api.getSettings().then((response) => setHasWhatsapp(response.kind === 'ok' && !!response.data?.hasWhatsappConfigured))
   }, [canWhatsapp])
+
+  // Built from the client list already on the phone, shared like a report. Paid, like report exports.
+  const exportClients = () => {
+    if (!hasReports) return showPremium('reports', 'settings_export_clients')
+    if (!clients?.length) return Toast.show({ type: 'info', text1: 'No clients to export yet' })
+    const report = clientsReport(clients)
+    const share = (format: 'pdf' | 'csv') =>
+      (format === 'pdf' ? shareReportPdf(report, gym?.name ?? 'GymKarta') : shareReportCsv(report)).catch(() =>
+        Toast.show({ type: 'error', text1: 'Could not export clients' }),
+      )
+    Alert.alert('Export clients', `${clients.length} clients`, [
+      { text: 'PDF', onPress: () => share('pdf') },
+      { text: 'CSV / Excel', onPress: () => share('csv') },
+      { text: 'Cancel', style: 'cancel' },
+    ])
+  }
 
   return (
     <Screen preset="fixed" safeAreaEdges={['bottom']} contentContainerStyle={{ flex: 1 }}>
@@ -45,6 +68,29 @@ const Setting = () => {
                 onPress={() => navigate(hasWhatsapp ? 'Notification Settings' : 'WhatsApp Premium')}
               />
             )}
+          </MenuSection>
+        ) : null}
+
+        {can('settings.branch') ? (
+          <MenuSection title="RECEIPTS">
+            <MenuRow
+              icon={Receipt}
+              label="Receipt settings"
+              description="Logo, signature, footer and share format"
+              onPress={() => navigate('Receipt Settings')}
+            />
+          </MenuSection>
+        ) : null}
+
+        {can('reports.view') ? (
+          <MenuSection title="DATA">
+            <MenuRow
+              icon={Download}
+              label="Export clients"
+              description="Every client with plan, end date and balance"
+              onPress={exportClients}
+              right={hasReports ? undefined : <PlanChip feature="reports" />}
+            />
           </MenuSection>
         ) : null}
 

@@ -101,7 +101,7 @@ export const performExpiryChecks = async (request: FastifyRequest, reply: Fastif
         const allSettings = await db.select().from(branchSettings)
             .where(and(eq(branchSettings.whatsappActive, true), eq(branchSettings.whatsappSendOnReminder, true)));
         for (const setting of allSettings) {
-            const reminderDays = 1;
+            const reminderDays = setting.whatsappReminderDays || 1;
             const targetDateStart = dayjs(today).add(reminderDays, 'day').startOf('day').toDate();
             const targetDateEnd = dayjs(today).add(reminderDays, 'day').endOf('day').toDate();
             const expiringMemberships = await db.select().from(memberships).where(and(

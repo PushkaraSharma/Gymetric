@@ -39,7 +39,7 @@ const MoreScreen = () => {
     { key: 'reports', label: 'Reports', hint: 'Day book, expiries, exports', icon: BarChart3, route: 'Reports', visible: can('reports.view') },
     { key: 'entrance', label: 'Entrance reader', hint: 'Fingerprint door access', icon: Fingerprint, route: 'Entrance', visible: can('entrance.manage') || can('door.open'), feature: 'biometric' },
     { key: 'plans', label: 'Memberships', hint: 'Plans, prices and durations', icon: CreditCard, route: 'Memberships', visible: can('settings.plans') },
-    { key: 'settings', label: 'Settings', hint: 'Notifications, WhatsApp, access', icon: Settings, route: 'Settings', visible: true },
+    { key: 'settings', label: 'Settings', hint: 'Notifications, WhatsApp, access', icon: Settings, route: 'Settings', visible: can('whatsapp.settings') || can('settings.branch') || can('reports.view') || can('settings.access') },
   ]
 
   return (
