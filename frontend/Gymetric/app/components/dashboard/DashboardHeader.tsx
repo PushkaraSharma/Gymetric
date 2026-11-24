@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, ViewStyle, TextStyle, TouchableOpacity, Pressable } from 'react-native'
+import { Image, View, ViewStyle, TextStyle, TouchableOpacity, Pressable } from 'react-native'
 import { useAppTheme } from '@/theme/context'
 import { ThemedStyle } from '@/theme/types'
 import { Text } from '@/components/Text'
@@ -7,24 +7,30 @@ import { Bell } from 'lucide-react-native'
 import ProfileInitialLogo from '@/components/ProfileInitialLogo'
 
 interface DashboardHeaderProps {
-  ownerName: string
+  // The logged-in user (owner or staff); the avatar opens their own profile.
+  name: string
+  photo?: string | null
   onAvatarPress?: () => void
   onNotificationsPress?: () => void
 }
 
-export function DashboardHeader({ ownerName, onAvatarPress, onNotificationsPress }: DashboardHeaderProps) {
+export function DashboardHeader({ name, photo, onAvatarPress, onNotificationsPress }: DashboardHeaderProps) {
   const { themed, theme: { colors } } = useAppTheme()
 
   const avatar = (
     <View style={themed($avatarRing)}>
-      <ProfileInitialLogo name={ownerName || 'Admin'} size={48} sideMargin={false} />
+      {photo ? (
+        <Image source={{ uri: photo }} style={$photo} accessibilityLabel="Your profile photo" />
+      ) : (
+        <ProfileInitialLogo name={name || 'Admin'} size={48} sideMargin={false} />
+      )}
     </View>
   )
 
   return (
     <View style={themed($header)}>
       {onAvatarPress ? (
-        <Pressable onPress={onAvatarPress} hitSlop={4}>
+        <Pressable onPress={onAvatarPress} hitSlop={4} accessibilityRole="button" accessibilityLabel="Open my profile">
           {avatar}
         </Pressable>
       ) : (
@@ -32,7 +38,7 @@ export function DashboardHeader({ ownerName, onAvatarPress, onNotificationsPress
       )}
       <View style={$headerText}>
         <Text preset="default" style={themed($greetingLabel)} text="WELCOME BACK" />
-        <Text preset="default" style={themed($greeting)} text={`${ownerName}`} />
+        <Text preset="default" style={themed($greeting)} text={name} />
       </View>
       {onNotificationsPress && (
         <TouchableOpacity onPress={onNotificationsPress} style={themed($bellButton)} hitSlop={8}>
@@ -51,6 +57,8 @@ const $header: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 })
 
 const AVATAR_SIZE = 48
+
+const $photo = { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2 }
 
 const $avatarRing: ThemedStyle<ViewStyle> = ({ colors }) => ({
   width: AVATAR_SIZE + 4,

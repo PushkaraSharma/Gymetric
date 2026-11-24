@@ -37,6 +37,7 @@ export type AppStackParamList = {
   "Push Notification Settings": undefined
   "Seed Data": undefined
   "My Profile": undefined
+  Plans: undefined
   Entrance: undefined
   Attendance: undefined
   Reports: undefined

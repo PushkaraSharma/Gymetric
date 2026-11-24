@@ -26,7 +26,7 @@ import { OTA_VERSION } from '@/utils/Constants'
 import Constants from 'expo-constants'
 import { WhatsNewModal } from '@/components/WhatsNewModal'
 import { load, save } from '@/utils/LocalStorage'
-import { useFeature } from '@/utils/permissions'
+import { useFeature, useViewer } from '@/utils/permissions'
 
 let hasShownBannerSession = false
 
@@ -71,6 +71,7 @@ const Home = () => {
   const [showBanner, setShowBanner] = useState(false)
   const [hasWhatsapp, setHasWhatsapp] = useState(false)
   const planHasWhatsapp = useFeature('whatsapp')
+  const viewer = useViewer()
   const [whatsappSummary, setWhatsappSummary] = useState<any>(null)
   const [hasMembershipPlans, setHasMembershipPlans] = useState(false)
   const [isLoading, setIsLoading] = useState(!cachedSummary)
@@ -192,8 +193,9 @@ const Home = () => {
         showsVerticalScrollIndicator={false}
       >
         <DashboardHeader
-          ownerName={gymInfo?.ownerName || 'Admin'}
-          onAvatarPress={() => navigate('Account')}
+          name={viewer.name || gymInfo?.ownerName || 'Admin'}
+          photo={viewer.photo}
+          onAvatarPress={() => navigate('My Profile')}
           onNotificationsPress={() => setShowWhatsNew(true)}
         />
 

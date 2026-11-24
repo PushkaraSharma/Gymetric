@@ -30,3 +30,4 @@ export const ONBOARDING_PURPOSES = [
 export const SUPPORT_PHONE = '+919354454113'
 export const SUPPORT_PHONE_DISPLAY = '+91 93544 54113'
 export const SUPPORT_EMAIL = 'indierootsapps@gmail.com'
+export const WEBSITE_URL = 'https://gymkarta.indieroots.in'

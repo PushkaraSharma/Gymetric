@@ -10,6 +10,7 @@ import { useAppSelector } from '@/redux/Hooks'
 import { selectGymInfo } from '@/redux/state/GymStates'
 import { FEATURE_PLAN, useViewer } from '@/utils/permissions'
 import { contactSales, FEATURE_COPY, hidePremium, usePremiumRequest } from '@/utils/premium'
+import { navigate } from '@/navigators/navigationUtilities'
 
 const PLAN_NAME = { pro: 'GymKarta Pro', max: 'GymKarta Max' } as const
 
@@ -76,6 +77,14 @@ export function PremiumSheet() {
                   variant="outline"
                   icon={<Phone size={18} color={colors.text} />}
                   onPress={() => contactSales({ gymName: gym?.name, feature, channel: 'call' })}
+                />
+                <Button
+                  title="Compare all plans"
+                  variant="ghost"
+                  onPress={() => {
+                    sheetRef.current?.dismiss()
+                    navigate('Plans')
+                  }}
                 />
                 <Text size="xxs" style={{ color: colors.textDim, textAlign: 'center' }} text="We'll set it up for you. Free trial available." />
               </View>

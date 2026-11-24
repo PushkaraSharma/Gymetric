@@ -40,6 +40,7 @@ import ReceiptSettingsScreen from "@/screens/Setting/ReceiptSettingsScreen"
 import PushNotificationSettings from "@/screens/Setting/PushNotificationSettings"
 import SeedDataScreen from "@/screens/Setting/SeedDataScreen"
 import MyProfileScreen from "@/screens/Profile/MyProfileScreen"
+import PlansScreen from "@/screens/Plans/PlansScreen"
 import StaffScreen from "@/screens/Setting/Staff/StaffScreen"
 import StaffFormScreen from "@/screens/Setting/Staff/StaffFormScreen"
 import StaffProfileScreen from "@/screens/Setting/Staff/StaffProfileScreen"
@@ -131,6 +132,7 @@ const AppStack = () => {
                 component={MyProfileScreen}
                 options={{ animation: 'slide_from_left' }}
               />
+              <Stack.Screen name="Plans" component={PlansScreen} />
             </Stack.Group>
           </>
         ) : (

@@ -1,8 +1,25 @@
-import { ActivityIndicator, Image, LayoutAnimation, Linking, Pressable, ScrollView, View, ViewStyle, TextStyle, Platform } from 'react-native'
+import { ActivityIndicator, Image, LayoutAnimation, Linking, Pressable, ScrollView, Share, View, ViewStyle, TextStyle, Platform } from 'react-native'
 import React, { useCallback, useEffect, useState } from 'react'
 import Constants from 'expo-constants'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Camera, ChevronLeft, FileText, HelpCircle, Key, LogOut, Moon, Phone, Sun, UserRound } from 'lucide-react-native'
+import { format, parseISO } from 'date-fns'
+import {
+  Bell,
+  Camera,
+  ChevronLeft,
+  Crown,
+  FileText,
+  HelpCircle,
+  Key,
+  LogOut,
+  MessageCircle,
+  Moon,
+  Phone,
+  Share2,
+  Sun,
+  UserRound,
+} from 'lucide-react-native'
 import Toast from 'react-native-toast-message'
 import { Screen } from '@/components/Screen'
 import { Text } from '@/components/Text'
@@ -16,17 +33,22 @@ import { goBack, navigate } from '@/navigators/navigationUtilities'
 import { ThemedStyle } from '@/theme/types'
 import { api } from '@/services/Api'
 import { remove } from '@/utils/LocalStorage'
-import { OTA_VERSION } from '@/utils/Constants'
+import { OTA_VERSION, WEBSITE_URL } from '@/utils/Constants'
 import { getInitials } from '@/utils/Helper'
 import { useImagePicker } from '@/utils/useImagePicker'
+import { useSubscription, useViewer } from '@/utils/permissions'
+import { openSupportChat, PLAN_LABEL } from '@/utils/premium'
 import { trackEvent, AnalyticsEvents, setAnalyticsUser, setEnrichedUserProperties } from '@/services/analyticsService'
 import { setCrashlyticsUser } from '@/services/crashlyticsService'
 
 type Me = { name: string; phoneNumber: string; photo: string | null; roleName: string; gymName: string; hasPassword: boolean }
 
+// The logged-in person only (owner or staff). Gym details live on More, gym-wide setup in Settings.
 const MyProfileScreen = () => {
   const { theme: { colors, spacing, isDark }, themed, setThemeContextOverride, themeContext } = useAppTheme()
   const insets = useSafeAreaInsets()
+  const isOwner = useViewer().roleKey === 'owner'
+  const subscription = useSubscription()
   const [me, setMe] = useState<Me | null>(null)
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState('')
@@ -77,6 +99,9 @@ const MyProfileScreen = () => {
     trackEvent(AnalyticsEvents.DARK_MODE_TOGGLED, { enabled: nextDark })
   }
 
+  const shareApp = () =>
+    Share.share({ message: `I run my gym on GymKarta: clients, renewals and payments in one app. ${WEBSITE_URL}` })
+
   const logout = () => {
     trackEvent(AnalyticsEvents.SIGN_OUT)
     setAnalyticsUser(null)
@@ -85,6 +110,13 @@ const MyProfileScreen = () => {
     api.setAuthToken(undefined)
     setShowLogout(false)
   }
+
+  const planDescription =
+    subscription.plan === 'free'
+      ? 'See what WhatsApp and staff logins add'
+      : subscription.expiresAt
+        ? `Until ${format(parseISO(subscription.expiresAt), 'd MMM yyyy')}`
+        : 'Active'
 
   return (
     <Screen
@@ -97,29 +129,41 @@ const MyProfileScreen = () => {
         style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={{ paddingBottom: spacing.xxl + insets.bottom }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={[themed($hero), { paddingTop: insets.top + spacing.xs }]}>
-          <Pressable onPress={goBack} style={$backBtn} hitSlop={12}>
-            <ChevronLeft size={26} color={colors.text} />
+        <LinearGradient
+          colors={[colors.palette.indigo400, colors.primary, colors.palette.indigo700]}
+          locations={[0, 0.45, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[$hero, { paddingTop: insets.top + spacing.xs }]}
+        >
+          <Pressable onPress={goBack} style={$backBtn} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
+            <ChevronLeft size={26} color="#FFFFFF" />
           </Pressable>
-          <View style={{ alignItems: 'center' }}>
-            <Pressable onPress={changePhoto} style={themed($avatar)}>
+          <View style={$identity}>
+            <Pressable onPress={changePhoto} style={$avatar} accessibilityRole="button" accessibilityLabel="Change profile photo">
               {me?.photo ? (
                 <Image source={{ uri: me.photo }} style={$avatarImage} />
               ) : (
-                <Text weight="bold" size="xl" style={{ color: colors.primary }} text={getInitials(me?.name || ' ')} />
+                <Text weight="bold" size="xl" style={$white} text={getInitials(me?.name || ' ')} />
               )}
-              <View style={themed($cameraBadge)}>
-                {uploading ? <ActivityIndicator size="small" color={colors.white} /> : <Camera size={14} color={colors.white} />}
+              <View style={[$cameraBadge, { backgroundColor: colors.palette.indigo700 }]}>
+                {uploading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Camera size={14} color="#FFFFFF" />}
               </View>
             </Pressable>
-            <Text weight="bold" size="lg" style={{ marginTop: spacing.sm }} text={me?.name ?? ''} />
-            <Text size="xs" style={{ color: colors.textDim }} text={me ? `${me.roleName} · ${me.gymName}` : ''} />
+            <Text weight="bold" style={$heroName} numberOfLines={1} text={me?.name ?? ''} />
+            {me ? (
+              <View style={$roleChip}>
+                <Text size="xxs" weight="semiBold" style={$white} text={me.roleName} />
+              </View>
+            ) : null}
+            <Text size="sm" style={$heroGym} numberOfLines={1} text={me?.gymName ?? ''} />
           </View>
-        </View>
+        </LinearGradient>
 
-        <View style={{ paddingHorizontal: spacing.md }}>
-          <MenuSection title="ACCOUNT">
+        <View style={themed($body)}>
+          <MenuSection>
             {editingName ? (
               <View style={{ padding: spacing.md, gap: spacing.sm }}>
                 <TextField label="Your name" value={name} onChangeText={setName} autoFocus autoCapitalize="words" />
@@ -131,7 +175,7 @@ const MyProfileScreen = () => {
             ) : (
               <MenuRow icon={UserRound} label="Name" description={me?.name} onPress={() => setEditingName(true)} divider />
             )}
-            <MenuRow icon={Phone} label="Phone" description={me?.phoneNumber} divider />
+            <MenuRow icon={Phone} label="Phone" description={me?.phoneNumber} color={colors.success} divider />
             <MenuRow
               icon={Key}
               label={me?.hasPassword ? 'Change password' : 'Set a password'}
@@ -141,18 +185,42 @@ const MyProfileScreen = () => {
             />
           </MenuSection>
 
-          <MenuSection title="APP">
+          <MenuSection title="PREFERENCES">
             <MenuRow
               icon={isDark ? Sun : Moon}
               label="Dark mode"
+              color={colors.palette.indigo500}
               right={<Switch value={isDark} onValueChange={toggleTheme} />}
               divider
             />
-            <MenuRow icon={HelpCircle} label="Help center" onPress={() => navigate('Help Center')} divider />
-            <MenuRow icon={FileText} label="Terms of service" color={colors.textDim} onPress={() => Linking.openURL('https://gymkarta.indieroots.in/terms')} />
+            <MenuRow
+              icon={Bell}
+              label="Notifications"
+              description="Expiry, dues and daily summary alerts"
+              onPress={() => navigate('Push Notification Settings')}
+            />
           </MenuSection>
 
-          <Pressable style={themed($logout)} onPress={() => setShowLogout(true)}>
+          {isOwner ? (
+            <MenuSection title="YOUR PLAN">
+              <MenuRow
+                icon={Crown}
+                label={PLAN_LABEL[subscription.plan]}
+                description={planDescription}
+                color={colors.warning}
+                onPress={() => navigate('Plans')}
+              />
+            </MenuSection>
+          ) : null}
+
+          <MenuSection title="HELP">
+            <MenuRow icon={HelpCircle} label="Help center" onPress={() => navigate('Help Center')} divider />
+            <MenuRow icon={MessageCircle} label="Chat with us" description="WhatsApp the GymKarta team" color={colors.success} onPress={openSupportChat} divider />
+            <MenuRow icon={Share2} label="Share GymKarta" description="Send the app to another gym owner" onPress={shareApp} divider />
+            <MenuRow icon={FileText} label="Terms of service" color={colors.textDim} onPress={() => Linking.openURL(`${WEBSITE_URL}/terms`)} />
+          </MenuSection>
+
+          <Pressable style={themed($logout)} onPress={() => setShowLogout(true)} accessibilityRole="button">
             <LogOut size={20} color={colors.error} />
             <Text weight="semiBold" style={{ color: colors.error }} text="Log out" />
           </Pressable>
@@ -176,40 +244,57 @@ const MyProfileScreen = () => {
 
 export default MyProfileScreen
 
-const $hero: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.primaryBackground,
-  paddingHorizontal: spacing.md,
-  paddingBottom: spacing.lg,
-  marginBottom: spacing.lg,
-})
+const $hero: ViewStyle = { paddingBottom: 56, paddingHorizontal: 16 }
 
 const $backBtn: ViewStyle = { width: 40, height: 40, justifyContent: 'center' }
 
-const $avatar: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  width: 88,
-  height: 88,
-  borderRadius: 44,
-  backgroundColor: colors.surface,
+const $identity: ViewStyle = { alignItems: 'center', paddingTop: 4, paddingBottom: 8 }
+
+const $avatar: ViewStyle = {
+  width: 84,
+  height: 84,
+  borderRadius: 42,
+  backgroundColor: 'rgba(255,255,255,0.22)',
+  borderWidth: 2,
+  borderColor: 'rgba(255,255,255,0.45)',
   alignItems: 'center',
   justifyContent: 'center',
-  borderWidth: 3,
-  borderColor: colors.surface,
-})
+  marginBottom: 12,
+}
 
-const $avatarImage = { width: 82, height: 82, borderRadius: 41 }
+const $avatarImage = { width: 80, height: 80, borderRadius: 40 }
 
-const $cameraBadge: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $cameraBadge: ViewStyle = {
   position: 'absolute',
-  bottom: 0,
-  right: 0,
+  bottom: -2,
+  right: -2,
   width: 28,
   height: 28,
   borderRadius: 14,
-  backgroundColor: colors.primary,
   alignItems: 'center',
   justifyContent: 'center',
   borderWidth: 2,
-  borderColor: colors.surface,
+  borderColor: '#FFFFFF',
+}
+
+const $white: TextStyle = { color: '#FFFFFF' }
+
+const $heroName: TextStyle = { color: '#FFFFFF', fontSize: 22 }
+
+const $roleChip: ViewStyle = {
+  marginTop: 6,
+  paddingHorizontal: 10,
+  paddingVertical: 3,
+  borderRadius: 999,
+  backgroundColor: 'rgba(255,255,255,0.2)',
+}
+
+const $heroGym: TextStyle = { color: 'rgba(255,255,255,0.85)', marginTop: 6 }
+
+const $body: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  marginTop: -28,
+  zIndex: 1,
 })
 
 const $logout: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

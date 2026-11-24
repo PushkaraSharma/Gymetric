@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { ScrollView, View } from 'react-native'
-import { Bell, Database, MessageCircle, ShieldCheck } from 'lucide-react-native'
+import { Database, MessageCircle, ShieldCheck } from 'lucide-react-native'
 import { Screen } from '@/components/Screen'
 import { Header } from '@/components/Header'
 import { Skeleton } from '@/components/Skeleton'
@@ -29,16 +29,10 @@ const Setting = () => {
     <Screen preset="fixed" safeAreaEdges={['bottom']} contentContainerStyle={{ flex: 1 }}>
       <Header title="Settings" leftIcon="caretLeft" onLeftPress={goBack} backgroundColor={colors.surface} safeAreaTop />
       <ScrollView contentContainerStyle={{ padding: spacing.md }}>
-        <MenuSection title="NOTIFICATIONS">
-          <MenuRow
-            icon={Bell}
-            label="Push notifications"
-            description="Daily expiry and balance alerts on this phone"
-            onPress={() => navigate('Push Notification Settings')}
-            divider={canWhatsapp}
-          />
-          {canWhatsapp ? (
-            hasWhatsapp === null ? (
+        {/* Push alerts are personal, so they live on My Profile. */}
+        {canWhatsapp ? (
+          <MenuSection title="WHATSAPP">
+            {hasWhatsapp === null ? (
               <View style={{ padding: spacing.md }}>
                 <Skeleton width="100%" height={40} borderRadius={12} />
               </View>
@@ -50,9 +44,9 @@ const Setting = () => {
                 color={colors.success}
                 onPress={() => navigate(hasWhatsapp ? 'Notification Settings' : 'WhatsApp Premium')}
               />
-            )
-          ) : null}
-        </MenuSection>
+            )}
+          </MenuSection>
+        ) : null}
 
         {can('settings.access') ? (
           <MenuSection title="TEAM">

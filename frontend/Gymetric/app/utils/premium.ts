@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Linking } from 'react-native'
-import type { Feature } from '@/utils/permissions'
+import type { Feature, SubscriptionPlan } from '@/utils/permissions'
 import { SUPPORT_PHONE } from '@/utils/Constants'
 import { AnalyticsEvents, trackEvent } from '@/services/analyticsService'
 
@@ -33,14 +33,20 @@ export function usePremiumRequest() {
   return request
 }
 
+export const PLAN_LABEL: Record<SubscriptionPlan, string> = { free: 'GymKarta Free', pro: 'GymKarta Pro', max: 'GymKarta Max' }
+
+const whatsappTeam = (text: string) =>
+  Linking.openURL(`https://wa.me/${SUPPORT_PHONE.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`)
+
 // Opens WhatsApp to the GymKarta team with the gym and the feature already in the message.
 export const contactSales = (opts: { gymName?: string; feature?: Feature; channel: 'whatsapp' | 'call' }) => {
   trackEvent(AnalyticsEvents.PREMIUM_CONTACT, { feature: opts.feature ?? 'plans', channel: opts.channel })
   if (opts.channel === 'call') return Linking.openURL(`tel:${SUPPORT_PHONE}`)
   const about = opts.feature ? ` about ${FEATURE_COPY[opts.feature].title}` : ' about GymKarta plans'
-  const text = `Hi GymKarta team, I'd like to know more${about}.${opts.gymName ? ` My gym: ${opts.gymName}.` : ''}`
-  return Linking.openURL(`https://wa.me/${SUPPORT_PHONE.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`)
+  return whatsappTeam(`Hi GymKarta team, I'd like to know more${about}.${opts.gymName ? ` My gym: ${opts.gymName}.` : ''}`)
 }
+
+export const openSupportChat = () => whatsappTeam('Hi GymKarta team, I need help with the app.')
 
 // Sheet copy per feature: one benefit-led title and the three things the gym gets.
 export const FEATURE_COPY: Record<Feature, { title: string; pitch: string; points: string[] }> = {
